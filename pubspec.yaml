@@ -1,0 +1,57 @@
+name: chat_app
+description: "A professional Uber clone with real-time ride matching, location tracking, and WebSocket support."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.10.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+
+  # Networking & HTTP
+  http: ^1.1.0
+  web_socket_channel: ^2.4.1
+
+  # Local Storage
+  shared_preferences: ^2.2.2
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  path_provider: ^2.1.0
+
+  # UI & Design
+  pin_code_fields: ^8.0.1
+
+  # Date & Time
+  intl: ^0.19.0
+
+  # Security
+  flutter_secure_storage: ^9.2.0
+
+  # Maps & Location
+  google_maps_flutter: ^2.5.0
+  geolocator: ^11.0.0
+  geocoding: ^3.0.0
+  # ❌ REMOVED: google_maps_webservice - not needed!
+
+  # State Management
+  provider: ^6.1.0
+
+  # Caching
+  cached_network_image: ^3.3.1
+
+  # UI Components
+  smooth_page_indicator: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
