@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import '../models/ride_model.dart';
 import 'storage_service.dart';
@@ -259,6 +260,155 @@ class RideService {
     } catch (e) {
       addDebugMessage('❌ Exception: $e');
       return [];
+    }
+  }
+
+  // Continue search with expanded radius (RIDER)
+  static Future<Ride?> continueSearch(int rideId, String token) async {
+    try {
+      addDebugMessage('🔄 Continuing search with expanded radius...');
+      
+      final url = '${StorageService.getServerUrl()}/api/rides/$rideId/continue-search';
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        addDebugMessage('✅ Search continued');
+        return Ride.fromJson(jsonDecode(response.body));
+      }
+      return null;
+    } catch (e) {
+      addDebugMessage('❌ Error continuing search: $e');
+      return null;
+    }
+  }
+
+  // Cancel ride (RIDER)
+  static Future<bool> cancelRide(int rideId, String token) async {
+    try {
+      addDebugMessage('❌ Cancelling ride...');
+      
+      final url = '${StorageService.getServerUrl()}/api/rides/$rideId/cancel';
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: jsonEncode({'reason': 'Cancelled by rider'}),
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        addDebugMessage('✅ Ride cancelled');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      addDebugMessage('❌ Error cancelling ride: $e');
+      return false;
+    }
+  }
+
+  // Notify driver arrival (DRIVER)
+  static Future<bool> driverArrived(int rideId, String token) async {
+    try {
+      addDebugMessage('📍 Notifying driver arrival...');
+      
+      final url = '${StorageService.getServerUrl()}/api/rides/$rideId/driver-arrived';
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        addDebugMessage('✅ Driver arrival notified');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      addDebugMessage('❌ Error notifying arrival: $e');
+      return false;
+    }
+  }
+
+  // Update driver location (DRIVER) - sent every 5 seconds
+  static Future<bool> updateDriverLocation({
+    required int rideId,
+    required double latitude,
+    required double longitude,
+    required String token,
+  }) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/rides/$rideId/location';
+      
+      await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: jsonEncode({
+          'latitude': latitude,
+          'longitude': longitude,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      return true;
+    } catch (e) {
+      addDebugMessage('⚠️ Error updating location: $e');
+      return false;
+    }
+  }
+
+  // Submit ride rating (RIDER)
+  static Future<bool> submitRating({
+    required int rideId,
+    required int rating,
+    required String feedback,
+    required String token,
+  }) async {
+    try {
+      addDebugMessage('⭐ Submitting rating: $rating stars');
+      
+      final url = '${StorageService.getServerUrl()}/api/ratings';
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: jsonEncode({
+          'rideId': rideId,
+          'rating': rating,
+          'feedback': feedback,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        addDebugMessage('✅ Rating submitted');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      addDebugMessage('❌ Error submitting rating: $e');
+      return false;
     }
   }
 }

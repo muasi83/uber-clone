@@ -9,6 +9,7 @@ class StorageService {
   static const String _roleKey = 'role';
   
   static const String _defaultServerUrl = 'https://catalog-staring-hamstring.ngrok-free.dev';
+  //https://catalog-staring-hamstring.ngrok-free.dev   http://localhost:8080
 
   static late SharedPreferences _prefs;
   static bool _initialized = false;

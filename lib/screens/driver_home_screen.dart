@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../models/ride_model.dart';
-import '../services/storage_service.dart';
 import '../services/ride_service.dart';
 import '../services/driver_service.dart';
 import '../services/websocket_service.dart';
-import 'settings_screen.dart';
-import 'debug_screen.dart';
+import '../services/directions_service.dart';
+import '../services/storage_service.dart';
+import '../screens/settings_screen.dart';
+import '../screens/debug_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   final int userId;
@@ -14,11 +16,11 @@ class DriverHomeScreen extends StatefulWidget {
   final String token;
 
   const DriverHomeScreen({
-    Key? key,
+    super.key,
     required this.userId,
     required this.username,
     required this.token,
-  }) : super(key: key);
+  });
 
   @override
   State<DriverHomeScreen> createState() => _DriverHomeScreenState();
@@ -31,6 +33,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   DriverProfile? _driverProfile;
   bool _isLoading = false;
   bool _isOnline = false;
+  final Map<int, RouteData> _routeCache = {};
 
   @override
   void initState() {
@@ -39,7 +42,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     addDebugMessage('🚗 DRIVER HOME SCREEN LOADED');
     addDebugMessage('User: ${widget.username}');
     addDebugMessage('═══════════════════════════════════════');
-    
+
     _loadDriverProfile();
     _connectWebSocket();
   }
@@ -47,13 +50,27 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   void _connectWebSocket() {
     addDebugMessage('🔌 Connecting WebSocket for Driver...');
     WebSocketService.connect(widget.userId, widget.username);
+    _setupWebSocketListeners();
+  }
+
+  void _setupWebSocketListeners() {
+    try {
+      WebSocketService.rideEvents.listen((event) {
+        final type = event['type'] ?? '';
+        if (type == 'ride_available') {
+          addDebugMessage('📥 New ride request received');
+          _loadAvailableRides();
+        }
+      });
+    } catch (e) {
+      addDebugMessage('⚠️ WebSocket listener error: $e');
+    }
   }
 
   Future<void> _loadDriverProfile() async {
     try {
-      final profile =
-          await DriverService.getDriverProfile(widget.token);
-      
+      final profile = await DriverService.getDriverProfile(widget.token);
+
       if (profile != null) {
         setState(() => _driverProfile = profile);
         addDebugMessage('✅ Driver profile loaded');
@@ -73,6 +90,28 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       final rides = await RideService.getAvailableRides(widget.token);
       setState(() => _availableRides = rides);
       addDebugMessage('✅ Found ${rides.length} available rides');
+
+      // Preload route data for each ride
+      for (var ride in rides) {
+        try {
+          final route = await DirectionsService.getDirections(
+            origin: LatLng(ride.pickupLatitude ?? 0, ride.pickupLongitude ?? 0),
+            destination: LatLng(ride.dropoffLatitude ?? 0, ride.dropoffLongitude ?? 0),
+          );
+
+          if (route != null && mounted) {
+            setState(() {
+              _routeCache[ride.id ?? 0] = RouteData(
+                polylinePoints: route.polylinePoints,
+                totalDistanceKm: route.distanceKm,
+                totalDurationMinutes: route.durationMinutes,
+              );
+            });
+          }
+        } catch (e) {
+          addDebugMessage('⚠️ Route preload error for ride ${ride.id}: $e');
+        }
+      }
     } catch (e) {
       addDebugMessage('❌ Error loading rides: $e');
     } finally {
@@ -84,13 +123,15 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     addDebugMessage('🔄 Toggling online status...');
     try {
       final result = await DriverService.toggleOnlineStatus(widget.token);
-      addDebugMessage('Result: $result');
-      
+
       if (result) {
         setState(() => _isOnline = !_isOnline);
-        addDebugMessage('✅ Online status toggled: $_isOnline');
+        addDebugMessage('✅ Online status: $_isOnline');
+
+        if (_isOnline) {
+          _loadAvailableRides();
+        }
       } else {
-        addDebugMessage('❌ Toggle failed');
         _showError('Failed to toggle online status');
       }
     } catch (e) {
@@ -102,60 +143,31 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   Future<void> _acceptRide(int rideId) async {
     try {
       final ride = await RideService.acceptRide(rideId, widget.token);
-      if (ride != null) {
+      if (ride != null && mounted) {
         setState(() => _currentRide = ride);
         _availableRides.removeWhere((r) => r.id == rideId);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ride accepted!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+
+        if (mounted) {
+          Navigator.pushNamed(
+            context,
+            '/driver-navigation',
+            arguments: {
+              'rideId': rideId,
+              'pickupAddress': ride.pickupAddress,
+            },
+          );
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ride accepted!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     } catch (e) {
       addDebugMessage('❌ Error accepting ride: $e');
-    }
-  }
-
-  Future<void> _startRide() async {
-    if (_currentRide == null) return;
-
-    try {
-      final ride =
-          await RideService.startRide(_currentRide!.id!, widget.token);
-      if (ride != null) {
-        setState(() => _currentRide = ride);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ride started!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      addDebugMessage('❌ Error starting ride: $e');
-    }
-  }
-
-  Future<void> _completeRide() async {
-    if (_currentRide == null) return;
-
-    try {
-      final ride =
-          await RideService.completeRide(_currentRide!.id!, widget.token);
-      if (ride != null) {
-        setState(() {
-          _currentRide = null;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ride completed! 🎉'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      addDebugMessage('❌ Error completing ride: $e');
+      _showError('Error: $e');
     }
   }
 
@@ -182,7 +194,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              
+
               try {
                 await http
                     .post(
@@ -203,8 +215,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               } catch (e) {
                 // Continue logout
               }
-
-              await StorageService.clearAllData();
 
               if (mounted) {
                 Navigator.of(context).pushNamedAndRemoveUntil(
@@ -364,6 +374,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             ),
           ),
           const SizedBox(height: 20),
+
           // Current Ride
           Card(
             elevation: 4,
@@ -406,44 +417,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                                 fontSize: 13,
                                 color: Colors.grey[600],
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: _currentRide!.status ==
-                                          'ACCEPTED'
-                                      ? _startRide
-                                      : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        const Color(0xFF6366F1),
-                                  ),
-                                  child: const Text(
-                                    'Start Ride',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                ElevatedButton(
-                                  onPressed: _currentRide!.status ==
-                                          'STARTED'
-                                      ? _completeRide
-                                      : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                  ),
-                                  child: const Text(
-                                    'Complete',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
                           ],
                         )
@@ -512,6 +485,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                           const SizedBox(height: 12),
                           ElevatedButton(
                             onPressed: _loadAvailableRides,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF6366F1),
+                            ),
                             child: const Text('Refresh'),
                           ),
                         ],
@@ -527,9 +503,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   itemCount: _availableRides.length,
                   itemBuilder: (context, index) {
                     final ride = _availableRides[index];
+                    final routeData = _routeCache[ride.id];
+
                     return Card(
                       elevation: 2,
-                      margin: const EdgeInsets.only(bottom: 12),
+                      margin: const EdgeInsets.only(bottom: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -538,6 +516,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Header
                             Row(
                               mainAxisAlignment:
                                   MainAxisAlignment.spaceBetween,
@@ -550,7 +529,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                                   ),
                                 ),
                                 Text(
-                                  '\$${ride.estimatedFare}',
+                                  '\$${ride.estimatedFare?.toStringAsFixed(2) ?? '0.00'}',
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -560,30 +539,121 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
+
+                            // Mini map
+                            if (routeData != null &&
+                                routeData.polylinePoints != null &&
+                                routeData.polylinePoints!.isNotEmpty)
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: SizedBox(
+                                  height: 150,
+                                  child: GoogleMap(
+                                    initialCameraPosition: CameraPosition(
+                                      target: routeData.polylinePoints![0],
+                                      zoom: 14,
+                                    ),
+                                    markers: {
+                                      Marker(
+                                        markerId:
+                                            const MarkerId('pickup'),
+                                        position: LatLng(
+                                          ride.pickupLatitude ?? 0,
+                                          ride.pickupLongitude ?? 0,
+                                        ),
+                                        icon: BitmapDescriptor
+                                            .defaultMarkerWithHue(
+                                          BitmapDescriptor.hueGreen,
+                                        ),
+                                      ),
+                                      Marker(
+                                        markerId:
+                                            const MarkerId('dropoff'),
+                                        position: LatLng(
+                                          ride.dropoffLatitude ?? 0,
+                                          ride.dropoffLongitude ?? 0,
+                                        ),
+                                        icon: BitmapDescriptor
+                                            .defaultMarkerWithHue(
+                                          BitmapDescriptor.hueRed,
+                                        ),
+                                      ),
+                                    },
+                                    polylines: {
+                                      Polyline(
+                                        polylineId:
+                                            const PolylineId('route'),
+                                        points:
+                                            routeData.polylinePoints!,
+                                        color: Colors.blue,
+                                        width: 4,
+                                        geodesic: true,
+                                      ),
+                                    },
+                                    zoomControlsEnabled: false,
+                                    mapToolbarEnabled: false,
+                                    myLocationButtonEnabled: false,
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                height: 150,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 30,
+                                    height: 30,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 12),
+
+                            // Details
                             Text(
                               'From: ${ride.pickupAddress}',
-                              style: const TextStyle(fontSize: 13),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'To: ${ride.dropoffAddress}',
-                              style: const TextStyle(fontSize: 13),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 12),
+
+                            // Info row
                             Row(
                               mainAxisAlignment:
                                   MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  '${ride.estimatedDistance?.toStringAsFixed(1)} km',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
+                                if (routeData != null)
+                                  Text(
+                                    '${routeData.totalDistanceKm?.toStringAsFixed(1) ?? '0.0'} km • ${routeData.totalDurationMinutes ?? 0} min',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  )
+                                else
+                                  const SizedBox(),
                                 ElevatedButton(
-                                  onPressed: () =>
-                                      _acceptRide(ride.id!),
+                                  onPressed: () => _acceptRide(ride.id ?? 0),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor:
                                         const Color(0xFF6366F1),
@@ -630,6 +700,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadDriverProfile,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+              ),
               child: const Text('Retry'),
             ),
           ],
@@ -762,4 +835,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     WebSocketService.disconnect();
     super.dispose();
   }
+}
+
+class RouteData {
+  final List<LatLng>? polylinePoints;
+  final double? totalDistanceKm;
+  final int? totalDurationMinutes;
+
+  RouteData({
+    this.polylinePoints,
+    this.totalDistanceKm,
+    this.totalDurationMinutes,
+  });
 }
