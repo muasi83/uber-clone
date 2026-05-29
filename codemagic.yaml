@@ -33,7 +33,7 @@ workflows:
           CERT_DIR=$(mktemp -d)
           openssl genrsa -out "$CERT_DIR/key.pem" 2048
           BUNDLE_ID=$(app-store-connect bundle-ids list --json \
-            | python3 -c "import json,sys; d=json.load(sys.stdin)['data']; print([b['id'] for b in d if b['attributes']['identifier']=='com.muasi.Drivers-app'][0])")
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print([b['id'] for b in d if b['attributes']['identifier']=='com.muasi.Drivers-app'][0])")
           echo "Bundle ID resource: $BUNDLE_ID"
           app-store-connect certificates create \
             --type DISTRIBUTION \
