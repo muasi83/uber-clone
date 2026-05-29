@@ -4,6 +4,11 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
+      ios_signing:
+        app_store_connect:
+          issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+          key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+          private_key: $APP_STORE_CONNECT_PRIVATE_KEY
       vars:
         APP_ID: com.muasi.Drivers-app
         APP_NAME: muasidivoapp
@@ -27,10 +32,6 @@ workflows:
           find . -name "Podfile" -execdir pod install \;
       - name: Set up code signing
         script: |
-          app-store-connect fetch-signing-files \
-            "$APP_ID" \
-            --type IOS_APP_STORE \
-            --create
           keychain initialize
           xcode-project use-profiles
       - name: Build iOS Release IPA
