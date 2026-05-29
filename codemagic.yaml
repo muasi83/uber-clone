@@ -6,6 +6,10 @@ workflows:
     environment:
       groups:
         - a
+      app_store_connect:
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        private_key: $APP_STORE_CONNECT_PRIVATE_KEY
       vars:
         APP_ID: com.muasi.Drivers-app
         APP_NAME: muasidivoapp
@@ -31,8 +35,7 @@ workflows:
         script: |
           app-store-connect fetch-signing-files \
             com.muasi.Drivers-app \
-            --type IOS_APP_STORE \
-            --create
+            --type IOS_APP_STORE
           keychain initialize
           xcode-project use-profiles
       - name: Build iOS Release IPA
