@@ -29,16 +29,30 @@ workflows:
           find . -name "Podfile" -execdir pod install \;
       - name: Set up code signing
         script: |
+          set -e
           CERT_DIR=$(mktemp -d)
           openssl genrsa -out "$CERT_DIR/key.pem" 2048
+          BUNDLE_ID=$(app-store-connect bundle-ids list \
+            --identifier com.muasi.Drivers-app --json \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['id'])")
+          echo "Bundle ID resource: $BUNDLE_ID"
           app-store-connect certificates create \
             --type DISTRIBUTION \
             --certificate-key "@file:$CERT_DIR/key.pem" \
             --save
-          app-store-connect fetch-signing-files \
-            com.muasi.Drivers-app \
-            --type IOS_APP_STORE
+          CERT_ID=$(app-store-connect certificates list \
+            --type DISTRIBUTION --json \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['id'])")
+          echo "Certificate ID: $CERT_ID"
+          app-store-connect profiles create \
+            "$BUNDLE_ID" \
+            --certificate-ids "$CERT_ID" \
+            --type IOS_APP_STORE \
+            --name "iOS App Store com.muasi.Drivers-app" \
+            --save
           keychain initialize
+          security import \
+            /Users/builder/Library/Developer/Xcode/UserData/Certificates/*.p12
           xcode-project use-profiles
       - name: Build iOS Release IPA
         script: |
