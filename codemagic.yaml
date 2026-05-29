@@ -29,10 +29,12 @@ workflows:
           find . -name "Podfile" -execdir pod install \;
       - name: Set up code signing
         script: |
+          echo "=== Listing existing certificates ==="
+          app-store-connect certificates list || true
+          echo "=== Fetching signing files ==="
           app-store-connect fetch-signing-files \
             com.muasi.Drivers-app \
-            --type IOS_APP_STORE \
-            --create
+            --type IOS_APP_STORE
           keychain initialize
           xcode-project use-profiles
       - name: Build iOS Release IPA
