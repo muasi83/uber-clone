@@ -4,16 +4,9 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
-      ios_signing:
-        provisioning_profiles:
-          - profile_name: ChatApp App Store
-        certificates:
-          - certificate_name: Apple Distribution
-      groups:
-        - app_store_credentials
       vars:
         APP_ID: com.muasi.Drivers-app
-        APP_NAME: Chat App
+        APP_NAME: muasidivoapp
         XCODE_WORKSPACE: ios/Runner.xcworkspace
         XCODE_SCHEME: Runner
       flutter: stable
@@ -32,17 +25,18 @@ workflows:
       - name: Install iOS pods
         script: |
           find . -name "Podfile" -execdir pod install \;
-      - name: Build iOS Release
+      - name: Set up code signing
         script: |
-          flutter build ios --release \
-            --no-codesign \
-            --build-name=$(flutter pub run cider version 2>/dev/null || echo "1.0.0") \
+          app-store-connect fetch-signing-files \
+            "$APP_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain initialize
+          xcode-project use-profiles
+      - name: Build iOS Release IPA
+        script: |
+          flutter build ipa --release \
             --build-number=$(($(app-store-connect get-latest-testflight-build-number --app-id "$APP_ID" 2>/dev/null || echo "0") + 1))
-      - name: Code signing
-        script: |
-          xcode-project use-profiles \
-            --archive \
-            --archive-path build/ios/archive/Runner.xcarchive
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
