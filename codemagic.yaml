@@ -29,9 +29,14 @@ workflows:
           find . -name "Podfile" -execdir pod install \;
       - name: Set up code signing
         script: |
+          CERT_KEY=$(mktemp)
+          openssl genrsa -out "$CERT_KEY" 2048
           app-store-connect fetch-signing-files \
             com.muasi.Drivers-app \
-            --type IOS_APP_STORE
+            --type IOS_APP_STORE \
+            --create \
+            --certificate-private-key "$CERT_KEY"
+          rm -f "$CERT_KEY"
           keychain initialize
           xcode-project use-profiles
       - name: Build iOS Release IPA
