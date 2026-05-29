@@ -29,19 +29,13 @@ workflows:
           find . -name "Podfile" -execdir pod install \;
       - name: Set up code signing
         script: |
-          echo "=== Creating Distribution Certificate ==="
-          CERT_DIR=$(mktemp -d)
-          openssl genrsa -out "$CERT_DIR/key.pem" 2048
-          openssl req -new -key "$CERT_DIR/key.pem" \
-            -out "$CERT_DIR/csr.pem" \
-            -subj "/C=US/ST=CA/O=Muasi/CN=Apple Distribution"
-          app-store-connect certificates create \
-            --csr "$CERT_DIR/csr.pem" \
-            --type DISTRIBUTION || true
+          echo "=== Checking certificate commands ==="
+          app-store-connect certificates --help 2>&1 || true
           echo "=== Fetching signing files ==="
           app-store-connect fetch-signing-files \
             com.muasi.Drivers-app \
-            --type IOS_APP_STORE
+            --type IOS_APP_STORE \
+            --create
           keychain initialize
           xcode-project use-profiles
       - name: Build iOS Release IPA
