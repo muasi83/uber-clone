@@ -4,12 +4,6 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
-      ios_signing:
-        provisioning_profiles:
-          - bundle_identifier: com.muasi.Drivers-app
-            profile_type: IOS_APP_STORE
-        certificates:
-          - certificate_type: DISTRIBUTION
       vars:
         APP_ID: com.muasi.Drivers-app
         APP_NAME: muasidivoapp
@@ -33,12 +27,16 @@ workflows:
           find . -name "Podfile" -execdir pod install \;
       - name: Set up code signing
         script: |
+          app-store-connect fetch-signing-files \
+            com.muasi.Drivers-app \
+            --type IOS_APP_STORE \
+            --create
           keychain initialize
           xcode-project use-profiles
       - name: Build iOS Release IPA
         script: |
           flutter build ipa --release \
-            --build-number=$(($(app-store-connect get-latest-testflight-build-number --app-id "$APP_ID" 2>/dev/null || echo "0") + 1))
+            --build-number=$(($(app-store-connect get-latest-testflight-build-number --app-id "com.muasi.Drivers-app" 2>/dev/null || echo "0") + 1))
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
