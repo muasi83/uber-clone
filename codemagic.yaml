@@ -31,10 +31,9 @@ workflows:
         script: |
           CERT_DIR=$(mktemp -d)
           openssl genrsa -out "$CERT_DIR/key.pem" 2048
-          app-store-connect certificates delete XZFKFQVMRG || true
           app-store-connect certificates create \
             --type DISTRIBUTION \
-            --certificate-key "$CERT_DIR/key.pem" \
+            --certificate-key "@file:$CERT_DIR/key.pem" \
             --save
           app-store-connect fetch-signing-files \
             com.muasi.Drivers-app \
