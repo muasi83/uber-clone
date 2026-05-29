@@ -3,6 +3,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/location_model.dart';
 import '../services/location_service.dart';
 import '../screens/debug_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
 
 class RiderConfirmationScreen extends StatefulWidget {
   final LocationData pickupLocation;
@@ -79,7 +82,6 @@ class _RiderConfirmationScreenState extends State<RiderConfirmationScreen> {
   }
 
   void _initializeMap() {
-    // Pickup marker (GREEN)
     _markers.add(
       Marker(
         markerId: const MarkerId('pickup'),
@@ -97,7 +99,6 @@ class _RiderConfirmationScreenState extends State<RiderConfirmationScreen> {
       ),
     );
 
-    // Dropoff marker (RED)
     _markers.add(
       Marker(
         markerId: const MarkerId('dropoff'),
@@ -115,7 +116,6 @@ class _RiderConfirmationScreenState extends State<RiderConfirmationScreen> {
       ),
     );
 
-    // Polyline between pickup and dropoff
     _polylines.add(
       Polyline(
         polylineId: const PolylineId('route'),
@@ -129,7 +129,7 @@ class _RiderConfirmationScreenState extends State<RiderConfirmationScreen> {
             widget.dropoffLocation.longitude,
           ),
         ],
-        color: const Color(0xFF6366F1),
+        color: AppColors.primary,
         width: 5,
         geodesic: true,
       ),
@@ -187,23 +187,11 @@ class _RiderConfirmationScreenState extends State<RiderConfirmationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Confirm Your Ride',
-          style: TextStyle(color: Colors.white),
-        ),
-        centerTitle: true,
-      ),
       body: Stack(
         children: [
-          // Map
           GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
@@ -219,435 +207,407 @@ class _RiderConfirmationScreenState extends State<RiderConfirmationScreen> {
             zoomControlsEnabled: true,
             myLocationButtonEnabled: false,
           ),
-
-          // Bottom Sheet with Options
           Positioned(
-            bottom: 0,
+            top: 0,
             left: 0,
             right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Drag Handle
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Trip Summary
-                      _buildTripSummary(),
-
-                      const SizedBox(height: 24),
-
-                      // Ride Type Selection
-                      const Text(
-                        'Select Ride Type',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      ...rideTypes.map((rideType) {
-                        final fare = _fares[rideType.name] ?? 0.0;
-                        final isSelected = _selectedRideType == rideType.name;
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildRideTypeCard(
-                            rideType: rideType,
-                            fare: fare,
-                            isSelected: isSelected,
-                            onTap: () {
-                              setState(() => _selectedRideType = rideType.name);
-                              addDebugMessage(
-                                  '✅ Selected: ${rideType.name}');
-                            },
-                          ),
-                        );
-                      }).toList(),
-
-                      const SizedBox(height: 24),
-
-                      // Confirm Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _confirmRide,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6366F1),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 4,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.check_circle_outline,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Confirm ${_selectedRideType} - \$${_fares[_selectedRideType]?.toStringAsFixed(2) ?? '0.00'}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Info Text
-                      Center(
-                        child: Text(
-                          'You will be matched with a nearby driver',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            child: _buildPremiumAppBar(),
+          ),
+          Positioned(
+            top: screenHeight * 0.40,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _buildBottomSheet(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTripSummary() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey[200]!,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Pickup
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.green.withValues(alpha: 0.2),
-                ),
-                child: const Icon(
-                  Icons.location_on,
-                  color: Colors.green,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Pickup',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.pickupLocation.address,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Divider with dashed line
-          Padding(
-            padding: const EdgeInsets.only(left: 16),
-            child: Container(
-              height: 24,
-              width: 1,
-              color: Colors.grey[300],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Dropoff
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.red.withValues(alpha: 0.2),
-                ),
-                child: const Icon(
-                  Icons.location_on,
-                  color: Colors.red,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Dropoff',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.dropoffLocation.address,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Distance and Duration
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildSummaryMetric(
-                icon: Icons.straighten,
-                label: 'Distance',
-                value: '${_distance.toStringAsFixed(1)} km',
-              ),
-              Container(
-                width: 1,
-                height: 40,
-                color: Colors.grey[300],
-              ),
-              _buildSummaryMetric(
-                icon: Icons.access_time,
-                label: 'Est. Time',
-                value: '${(_distance * 1.5).toStringAsFixed(0)} min',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryMetric({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.grey[600], size: 20),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRideTypeCard({
-    required RideType rideType,
-    required double fare,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF6366F1).withValues(alpha: 0.1)
-              : Colors.grey[50],
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFF6366F1)
-                : Colors.grey[200]!,
-            width: isSelected ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
+  Widget _buildPremiumAppBar() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         child: Row(
           children: [
-            // Icon
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.grey[100],
-              ),
-              child: Center(
-                child: Text(
-                  rideType.icon,
-                  style: const TextStyle(fontSize: 28),
+            Material(
+              color: Colors.black.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => Navigator.pop(context),
+                child: const Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
                 ),
               ),
             ),
-
-            const SizedBox(width: 12),
-
-            // Details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    rideType.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    rideType.description,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Price
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '\$${fare.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF6366F1),
-                  ),
-                ),
-                if (isSelected)
-                  Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Selected',
+            const Spacer(),
+            Material(
+              color: Colors.black.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(12),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.map_outlined, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Confirm Ride',
                       style: TextStyle(
-                        fontSize: 10,
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-              ],
-            ),
-
-            // Checkmark
-            if (isSelected)
-              const Padding(
-                padding: EdgeInsets.only(left: 12),
-                child: Icon(
-                  Icons.check_circle,
-                  color: Color(0xFF6366F1),
-                  size: 24,
+                  ],
                 ),
               ),
+            ),
+            const SizedBox(width: 48),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBottomSheet() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.radiusXxl),
+        ),
+        boxShadow: AppSpacing.shadowXl,
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDragHandle(),
+            AppSpacing.gapLg,
+            _buildTripCard(),
+            AppSpacing.gapXxl,
+            _buildSectionTitle('Select Ride Type'),
+            AppSpacing.gapMd,
+            _buildRideTypeSelector(),
+            AppSpacing.gapXxl,
+            _buildSectionTitle('Price Breakdown'),
+            AppSpacing.gapSm,
+            _buildPriceBreakdown(),
+            AppSpacing.gapXxl,
+            PremiumButton(
+              label: 'Confirm Ride',
+              icon: Icons.check_circle_outline,
+              onPressed: _confirmRide,
+              variant: ButtonVariant.gradient,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDragHandle() {
+    return Center(
+      child: Container(
+        width: 36,
+        height: 4,
+        decoration: BoxDecoration(
+          color: AppColors.outlineVariant,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
+      ),
+    );
+  }
+
+  Widget _buildTripCard() {
+    final eta = '${(_distance * 1.5).toStringAsFixed(0)} min';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: AppColors.outline),
+      ),
+      child: Column(
+        children: [
+          _buildLocationRow(
+            icon: Icons.circle,
+            iconColor: AppColors.success,
+            label: 'Pickup',
+            address: widget.pickupLocation.address,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 14),
+            child: SizedBox(
+              height: 28,
+              child: CustomPaint(
+                size: const Size(2, 28),
+                painter: _DottedLinePainter(color: AppColors.outlineVariant),
+              ),
+            ),
+          ),
+          _buildLocationRow(
+            icon: Icons.location_on,
+            iconColor: AppColors.error,
+            label: 'Dropoff',
+            address: widget.dropoffLocation.address,
+          ),
+          const Divider(height: 24, color: AppColors.outline),
+          Row(
+            children: [
+              _buildMetricChip(Icons.straighten, 'Distance',
+                  '${_distance.toStringAsFixed(1)} km'),
+              const SizedBox(width: 12),
+              _buildMetricChip(Icons.access_time, 'Est. Time', eta),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationRow({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String address,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+        AppSpacing.hGapMd,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textTertiary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                address,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricChip(IconData icon, String label, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          border: Border.all(color: AppColors.outline),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.textTertiary, size: 16),
+            AppSpacing.hGapSm,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRideTypeSelector() {
+    return SizedBox(
+      height: 104,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: rideTypes.length,
+        separatorBuilder: (_, __) => AppSpacing.hGapMd,
+        itemBuilder: (context, index) {
+          final rideType = rideTypes[index];
+          final fare = _fares[rideType.name] ?? 0.0;
+          final isSelected = _selectedRideType == rideType.name;
+          final eta = '${(_distance * 1.5).toStringAsFixed(0)} min';
+
+          return GestureDetector(
+            onTap: () {
+              setState(() => _selectedRideType = rideType.name);
+              addDebugMessage('✅ Selected: ${rideType.name}');
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 100,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.primaryContainer
+                    : AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : AppColors.outline,
+                  width: isSelected ? 1.5 : 1,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(rideType.icon, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(height: 4),
+                  Text(
+                    rideType.name,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? AppColors.primaryDark
+                          : AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '\$${fare.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected
+                          ? AppColors.primaryDark
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    eta,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPriceBreakdown() {
+    final selected = rideTypes.firstWhere(
+      (rt) => rt.name == _selectedRideType,
+      orElse: () => rideTypes.first,
+    );
+    final total = _fares[_selectedRideType] ?? 0.0;
+    final distanceCharge = _distance * selected.perKmRate;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: AppColors.outline),
+      ),
+      child: Column(
+        children: [
+          _buildPriceRow('Base fare',
+              '\$${selected.baseFare.toStringAsFixed(2)}'),
+          const SizedBox(height: 10),
+          _buildPriceRow(
+            'Distance (${_distance.toStringAsFixed(1)} km × \$${selected.perKmRate.toStringAsFixed(2)}/km)',
+            '\$${distanceCharge.toStringAsFixed(2)}',
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Divider(height: 1, color: AppColors.outline),
+          ),
+          _buildPriceRow(
+            'Total',
+            '\$${total.toStringAsFixed(2)}',
+            isTotal: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceRow(String label, String amount, {bool isTotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: isTotal ? 15 : 13,
+              fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          amount,
+          style: TextStyle(
+            fontSize: isTotal ? 16 : 14,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
+            color: isTotal ? AppColors.primary : AppColors.textPrimary,
+          ),
+        ),
+      ],
     );
   }
 
@@ -656,4 +616,33 @@ class _RiderConfirmationScreenState extends State<RiderConfirmationScreen> {
     mapController.dispose();
     super.dispose();
   }
+}
+
+class _DottedLinePainter extends CustomPainter {
+  final Color color;
+
+  _DottedLinePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    const dashWidth = 4.0;
+    const dashSpace = 3.0;
+    double startY = 0;
+    while (startY < size.height) {
+      canvas.drawLine(
+        Offset(0, startY),
+        Offset(0, (startY + dashWidth).clamp(0, size.height)),
+        paint,
+      );
+      startY += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

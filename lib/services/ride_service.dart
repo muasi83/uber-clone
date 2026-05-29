@@ -1,13 +1,40 @@
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import '../models/ride_model.dart';
 import 'storage_service.dart';
 import '../screens/debug_screen.dart';
 
 class RideService {
-  
-  /// Request a ride (RIDER) - NOW SENDS ACTUAL DISTANCE AND FARE
+  static String _normalizeToken(String token) {
+    var t = token.trim();
+    // remove wrapping quotes if any
+    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+      t = t.substring(1, t.length - 1).trim();
+    }
+    // if token already contains "Bearer ", strip it
+    final lower = t.toLowerCase();
+    if (lower.startsWith('bearer ')) {
+      t = t.substring(7).trim();
+    }
+    return t;
+  }
+
+  static Map<String, String> _headers({String? token, bool json = true}) {
+    final headers = <String, String>{
+      'ngrok-skip-browser-warning': 'true',
+    };
+
+    if (json) headers['Content-Type'] = 'application/json';
+
+    if (token != null && token.trim().isNotEmpty) {
+      final normalized = _normalizeToken(token);
+      headers['Authorization'] = 'Bearer $normalized';
+    }
+
+    return headers;
+  }
+
+  /// Request a ride (RIDER)
   static Future<Ride?> requestRide({
     required double pickupLat,
     required double pickupLng,
@@ -16,9 +43,9 @@ class RideService {
     required double dropoffLng,
     required String dropoffAddress,
     required String rideType,
-    required double estimatedDistance,  // ✅ NOW REQUIRED
-    required double estimatedFare,      // ✅ NOW REQUIRED
-    required int estimatedDuration,     // ✅ NOW REQUIRED
+    required double estimatedDistance,
+    required double estimatedFare,
+    required int estimatedDuration,
     required String token,
   }) async {
     try {
@@ -32,8 +59,7 @@ class RideService {
       addDebugMessage('Fare: \$${estimatedFare.toStringAsFixed(2)} (REAL)');
 
       final url = '${StorageService.getServerUrl()}/api/rides/request';
-      
-      // ✅ NOW INCLUDES estimatedDistance AND estimatedFare
+
       final requestBody = {
         'pickupLatitude': pickupLat,
         'pickupLongitude': pickupLng,
@@ -42,25 +68,23 @@ class RideService {
         'dropoffLongitude': dropoffLng,
         'dropoffAddress': dropoffAddress,
         'rideType': rideType,
-        'estimatedDistance': estimatedDistance,  // ✅ REAL DISTANCE FROM GOOGLE MAPS
-        'estimatedFare': estimatedFare,          // ✅ REAL FARE CALCULATED FROM REAL DISTANCE
-        'estimatedDuration': estimatedDuration,  // ✅ DURATION FROM GOOGLE MAPS
+        'estimatedDistance': estimatedDistance,
+        'estimatedFare': estimatedFare,
+        'estimatedDuration': estimatedDuration,
       };
 
       addDebugMessage('Request body: ${jsonEncode(requestBody)}');
-      
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: jsonEncode(requestBody),
-      ).timeout(const Duration(seconds: 15));
+
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+            body: jsonEncode(requestBody),
+          )
+          .timeout(const Duration(seconds: 15));
 
       addDebugMessage('Response Status: ${response.statusCode}');
-      
+
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         addDebugMessage('✅ Ride requested: ID ${json['id']}');
@@ -70,6 +94,13 @@ class RideService {
       } else {
         addDebugMessage('❌ Error: ${response.statusCode}');
         addDebugMessage(response.body);
+
+        // Helpful debug for 401
+        if (response.statusCode == 401) {
+          final normalized = _normalizeToken(token);
+          addDebugMessage('⚠️ 401 DEBUG: tokenLength=${normalized.length}, tokenPrefix=${normalized.substring(0, normalized.length >= 12 ? 12 : normalized.length)}');
+        }
+
         return null;
       }
     } catch (e) {
@@ -85,23 +116,19 @@ class RideService {
       addDebugMessage('🔍 FETCHING AVAILABLE RIDES');
 
       final url = '${StorageService.getServerUrl()}/api/rides/available';
-      
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: _headers(token: token),
+          )
+          .timeout(const Duration(seconds: 10));
 
       addDebugMessage('Response Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonList = jsonDecode(response.body) as List;
-        final rides = jsonList
-            .map((r) => Ride.fromJson(r as Map<String, dynamic>))
-            .toList();
+        final rides = jsonList.map((r) => Ride.fromJson(r as Map<String, dynamic>)).toList();
         addDebugMessage('✅ Found ${rides.length} available rides');
         addDebugMessage('═══════════════════════════════════════');
         return rides;
@@ -122,15 +149,13 @@ class RideService {
       addDebugMessage('✅ ACCEPTING RIDE #$rideId');
 
       final url = '${StorageService.getServerUrl()}/api/rides/$rideId/accept';
-      
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+          )
+          .timeout(const Duration(seconds: 10));
 
       addDebugMessage('Response Status: ${response.statusCode}');
 
@@ -149,21 +174,18 @@ class RideService {
     }
   }
 
-  // Start ride (DRIVER)
   static Future<Ride?> startRide(int rideId, String token) async {
     try {
       addDebugMessage('🚗 STARTING RIDE #$rideId');
 
       final url = '${StorageService.getServerUrl()}/api/rides/$rideId/start';
-      
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -179,21 +201,18 @@ class RideService {
     }
   }
 
-  // Complete ride (DRIVER)
   static Future<Ride?> completeRide(int rideId, String token) async {
     try {
       addDebugMessage('✅ COMPLETING RIDE #$rideId');
 
       final url = '${StorageService.getServerUrl()}/api/rides/$rideId/complete';
-      
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -209,18 +228,16 @@ class RideService {
     }
   }
 
-  // Get ride details
   static Future<Ride?> getRideDetails(int rideId, String token) async {
     try {
       final url = '${StorageService.getServerUrl()}/api/rides/$rideId';
-      
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: _headers(token: token, json: false),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -233,26 +250,22 @@ class RideService {
     }
   }
 
-  // Get user's ride history
   static Future<List<Ride>> getRideHistory(String token) async {
     try {
       addDebugMessage('📋 FETCHING RIDE HISTORY');
 
       final url = '${StorageService.getServerUrl()}/api/rides/user/history';
-      
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: _headers(token: token, json: false),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final jsonList = jsonDecode(response.body) as List;
-        final rides = jsonList
-            .map((r) => Ride.fromJson(r as Map<String, dynamic>))
-            .toList();
+        final rides = jsonList.map((r) => Ride.fromJson(r as Map<String, dynamic>)).toList();
         addDebugMessage('✅ Found ${rides.length} rides in history');
         return rides;
       }
@@ -263,21 +276,18 @@ class RideService {
     }
   }
 
-  // Continue search with expanded radius (RIDER)
   static Future<Ride?> continueSearch(int rideId, String token) async {
     try {
       addDebugMessage('🔄 Continuing search with expanded radius...');
-      
+
       final url = '${StorageService.getServerUrl()}/api/rides/$rideId/continue-search';
-      
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 30));
+
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         addDebugMessage('✅ Search continued');
@@ -290,22 +300,19 @@ class RideService {
     }
   }
 
-  // Cancel ride (RIDER)
   static Future<bool> cancelRide(int rideId, String token) async {
     try {
       addDebugMessage('❌ Cancelling ride...');
-      
+
       final url = '${StorageService.getServerUrl()}/api/rides/$rideId/cancel';
-      
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: jsonEncode({'reason': 'Cancelled by rider'}),
-      ).timeout(const Duration(seconds: 30));
+
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+            body: jsonEncode({'reason': 'Cancelled by rider'}),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         addDebugMessage('✅ Ride cancelled');
@@ -318,21 +325,18 @@ class RideService {
     }
   }
 
-  // Notify driver arrival (DRIVER)
   static Future<bool> driverArrived(int rideId, String token) async {
     try {
       addDebugMessage('📍 Notifying driver arrival...');
-      
+
       final url = '${StorageService.getServerUrl()}/api/rides/$rideId/driver-arrived';
-      
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 30));
+
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         addDebugMessage('✅ Driver arrival notified');
@@ -345,7 +349,6 @@ class RideService {
     }
   }
 
-  // Update driver location (DRIVER) - sent every 5 seconds
   static Future<bool> updateDriverLocation({
     required int rideId,
     required double latitude,
@@ -354,19 +357,14 @@ class RideService {
   }) async {
     try {
       final url = '${StorageService.getServerUrl()}/api/rides/$rideId/location';
-      
-      await http.post(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: jsonEncode({
-          'latitude': latitude,
-          'longitude': longitude,
-        }),
-      ).timeout(const Duration(seconds: 10));
+
+      await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+            body: jsonEncode({'latitude': latitude, 'longitude': longitude}),
+          )
+          .timeout(const Duration(seconds: 10));
 
       return true;
     } catch (e) {
@@ -375,7 +373,6 @@ class RideService {
     }
   }
 
-  // Submit ride rating (RIDER)
   static Future<bool> submitRating({
     required int rideId,
     required int rating,
@@ -384,22 +381,16 @@ class RideService {
   }) async {
     try {
       addDebugMessage('⭐ Submitting rating: $rating stars');
-      
+
       final url = '${StorageService.getServerUrl()}/api/ratings';
-      
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: jsonEncode({
-          'rideId': rideId,
-          'rating': rating,
-          'feedback': feedback,
-        }),
-      ).timeout(const Duration(seconds: 30));
+
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+            body: jsonEncode({'rideId': rideId, 'rating': rating, 'feedback': feedback}),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         addDebugMessage('✅ Rating submitted');

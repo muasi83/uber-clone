@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../screens/debug_screen.dart';
+import '../screens/chat_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
 
 class RiderRideCompletedScreen extends StatefulWidget {
   final int rideId;
@@ -109,56 +113,68 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, color: AppColors.textPrimary),
+            tooltip: 'Chat with Driver',
+            onPressed: _openChat,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.xxl, AppSpacing.xxxl + AppSpacing.giant, AppSpacing.xxl, AppSpacing.xxl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Success icon
-            Center(
-              child: Icon(
-                Icons.check_circle,
-                size: 80,
-                color: Colors.green[400],
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: AppColors.successContainer,
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                size: 56,
+                color: AppColors.success,
               ),
             ),
-            const SizedBox(height: 20),
-
-            // Title
-            Text(
+            AppSpacing.gapXxl,
+            const Text(
               'Trip Completed!',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 26,
+                color: AppColors.textPrimary,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
-
-            // Trip summary
+            AppSpacing.gapXxxl,
             Card(
-              elevation: 2,
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                side: BorderSide(color: AppColors.outline),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: AppSpacing.cardPadding,
                 child: Column(
                   children: [
                     _buildSummaryRow(
                       'Distance',
                       '${widget.distance?.toStringAsFixed(2) ?? '0.00'} km',
                     ),
-                    const Divider(),
+                    const Divider(height: 1, color: AppColors.outline),
                     _buildSummaryRow(
                       'Duration',
-                      '${widget.duration ?? 0} minutes',
+                      '${widget.duration ?? 0} min',
                     ),
-                    const Divider(),
+                    const Divider(height: 1, color: AppColors.outline),
                     _buildSummaryRow(
                       'Total Fare',
                       '\$${widget.totalFare?.toStringAsFixed(2) ?? '0.00'}',
@@ -168,74 +184,72 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Rating
-            Text(
+            AppSpacing.gapXxxl,
+            const Text(
               'Rate your driver',
-              style: Theme.of(context).textTheme.titleMedium,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: AppColors.textPrimary,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            AppSpacing.gapLg,
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (index) {
                 return GestureDetector(
                   onTap: () => setState(() => _rating = index + 1),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
                     child: Icon(
                       index < _rating ? Icons.star : Icons.star_border,
                       color: Colors.amber,
-                      size: 40,
+                      size: 42,
                     ),
                   ),
                 );
               }),
             ),
-            const SizedBox(height: 24),
-
-            // Feedback
-            Text(
-              'Additional Feedback (Optional)',
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: Colors.grey[600]),
+            AppSpacing.gapXxl,
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Additional feedback (optional)',
+                style: TextStyle(
+                  color: AppColors.textTertiary,
+                  fontSize: 13,
+                ),
+              ),
             ),
-            const SizedBox(height: 8),
+            AppSpacing.gapSm,
             TextField(
               controller: _feedbackController,
               maxLines: 3,
               decoration: InputDecoration(
                 hintText: 'Share your experience...',
+                hintStyle: TextStyle(color: AppColors.textTertiary),
+                filled: true,
+                fillColor: AppColors.surfaceVariant,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.all(12),
+                contentPadding: const EdgeInsets.all(AppSpacing.lg),
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Submit button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submitRating,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
-                  disabledBackgroundColor: Colors.grey[300],
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  _isSubmitting ? 'Submitting...' : 'Submit Rating',
-                  style: TextStyle(
-                    color: _isSubmitting ? Colors.grey : Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+            AppSpacing.gapXxl,
+            PremiumButton(
+              label: _isSubmitting ? 'Submitting...' : 'Submit Rating',
+              onPressed: _isSubmitting ? null : _submitRating,
+              isLoading: _isSubmitting,
+            ),
+            AppSpacing.gapMd,
+            TextButton(
+              onPressed: _skipRating,
+              child: Text(
+                'Skip rating',
+                style: TextStyle(color: AppColors.textTertiary),
               ),
             ),
           ],
@@ -250,14 +264,14 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
     bool isPrice = false,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: TextStyle(
-              color: Colors.grey[600],
+              color: AppColors.textSecondary,
               fontSize: 14,
             ),
           ),
@@ -266,12 +280,49 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
-              color: isPrice ? const Color(0xFF6366F1) : Colors.black,
+              color: isPrice ? AppColors.primary : AppColors.textPrimary,
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _skipRating() {
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/rider-home',
+      (route) => false,
+    );
+  }
+
+  Future<void> _openChat() async {
+    final token = StorageService.getToken();
+    final currentUserId = StorageService.getUserId();
+    final currentUsername = StorageService.getUsername();
+    if (token == null || currentUserId == null || currentUsername == null) return;
+
+    try {
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride == null || ride.driver == null || ride.driver!.id == null) return;
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              currentUserId: currentUserId,
+              currentUsername: currentUsername,
+              receiverId: ride.driver!.id!,
+              receiverName: ride.driver!.fullName,
+              token: token,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      addDebugMessage('❌ Chat error: $e');
+    }
   }
 
   @override

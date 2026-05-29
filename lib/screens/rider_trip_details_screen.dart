@@ -3,6 +3,10 @@ import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../screens/rider_searching_driver_screen.dart';
 import '../screens/debug_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
+import '../widgets/premium_card.dart';
 
 class RiderTripDetailsScreen extends StatefulWidget {
   final double pickupLat;
@@ -153,10 +157,10 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
 
   Widget _buildPaymentOption(String method, IconData icon) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF6366F1)),
+      leading: Icon(icon, color: AppColors.primary),
       title: Text(method),
       trailing: _selectedPaymentMethod == method
-          ? const Icon(Icons.check_circle, color: Color(0xFF6366F1))
+          ? const Icon(Icons.check_circle, color: AppColors.primary)
           : null,
       onTap: () {
         setState(() => _selectedPaymentMethod = method);
@@ -178,288 +182,361 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'Trip Details',
-          style: TextStyle(color: Colors.white),
+          'Choose Ride',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Route Summary Card
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+            // Map preview
+            Container(
+              height: 200,
+              margin: AppSpacing.screenPadding,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                color: AppColors.surfaceVariant,
+                boxShadow: AppSpacing.shadowMd,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                child: Stack(
                   children: [
-                    Text(
-                      'Route Summary',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    // From
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.location_on_outlined,
-                            color: Colors.green, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'From',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 11,
-                                ),
-                              ),
-                              Text(
-                                widget.pickupAddress,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // To
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.location_on,
-                            color: Colors.red, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'To',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 11,
-                                ),
-                              ),
-                              Text(
-                                widget.dropoffAddress,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Summary row
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Column(
-                            children: [
-                              const Icon(Icons.straighten,
-                                  color: Colors.grey, size: 18),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Distance',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${widget.estimatedDistance.toStringAsFixed(2)} km',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Column(
-                            children: [
-                              const Icon(Icons.access_time,
-                                  color: Colors.grey, size: 18),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Duration',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${widget.estimatedDuration} min',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                          Icon(Icons.map_outlined, size: 48, color: AppColors.textTertiary),
+                          AppSpacing.gapSm,
+                          Text(
+                            '${widget.estimatedDistance.toStringAsFixed(2)} km · ${widget.estimatedDuration} min',
+                            style: TextStyle(
+                              color: AppColors.textTertiary,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
                     ),
+                    Positioned(
+                      top: AppSpacing.md,
+                      left: AppSpacing.md,
+                      child: Container(
+                        padding: AppSpacing.chipPadding,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                          boxShadow: AppSpacing.shadowSm,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.route, size: 14, color: AppColors.primary),
+                            AppSpacing.hGapXs,
+                            Text(
+                              '${widget.estimatedDistance.toStringAsFixed(1)} km',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
 
-            // Ride Type Selection
-            Text(
-              'Choose Ride Type',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            // ECONOMY Card
-            _buildRideTypeCard(
-              type: 'ECONOMY',
-              icon: Icons.local_taxi,
-              description: 'Affordable, everyday rides',
-              rate: '\$0.20/km',
-              isSelected: _selectedRideType == 'ECONOMY',
-            ),
-            const SizedBox(height: 12),
-            // LUXURY Card
-            _buildRideTypeCard(
-              type: 'LUXURY',
-              icon: Icons.directions_car,
-              description: 'Premium vehicles, top drivers',
-              rate: '\$0.35/km',
-              isSelected: _selectedRideType == 'LUXURY',
-            ),
-            const SizedBox(height: 24),
-
-            // Payment Method
-            Text(
-              'Payment Method',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            GestureDetector(
-              onTap: _showPaymentMethodSelector,
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+            // Address cards
+            Padding(
+              padding: AppSpacing.screenPadding,
+              child: Column(
+                children: [
+                  PremiumCard(
+                    padding: AppSpacing.cardPaddingCompact,
+                    shadows: AppSpacing.shadowSm,
+                    child: Row(
                       children: [
-                        Icon(
-                          _selectedPaymentMethod == 'WALLET'
-                              ? Icons.account_balance_wallet
-                              : _selectedPaymentMethod == 'CASH'
-                                  ? Icons.money
-                                  : Icons.credit_card,
-                          color: const Color(0xFF6366F1),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.successContainer,
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                          ),
+                          child: const Icon(Icons.location_on_outlined, color: AppColors.success, size: 20),
                         ),
-                        const SizedBox(width: 12),
-                        Text(_selectedPaymentMethod),
+                        AppSpacing.hGapMd,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pickup',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textTertiary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              AppSpacing.gapXs,
+                              Text(
+                                widget.pickupAddress,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: AppColors.textPrimary,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                    const Icon(Icons.arrow_forward_ios, size: 16),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Fare Display
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6366F1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Estimated Fare',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 18),
+                    child: Column(
+                      children: List.generate(3, (i) => Container(
+                        width: 2,
+                        height: 4,
+                        margin: EdgeInsets.symmetric(vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.outlineVariant,
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      )),
                     ),
                   ),
-                  Text(
-                    '\$${_selectedFare.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                  PremiumCard(
+                    padding: AppSpacing.cardPaddingCompact,
+                    shadows: AppSpacing.shadowSm,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.errorContainer,
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                          ),
+                          child: const Icon(Icons.location_on, color: AppColors.error, size: 20),
+                        ),
+                        AppSpacing.hGapMd,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Dropoff',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textTertiary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              AppSpacing.gapXs,
+                              Text(
+                                widget.dropoffAddress,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: AppColors.textPrimary,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
 
-            // Confirm Button
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submitRideRequest,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
-                  disabledBackgroundColor: Colors.grey[300],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // Ride type selection
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Select ride type',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                child: Text(
-                  _isSubmitting ? 'Requesting...' : 'Confirm Trip',
-                  style: TextStyle(
-                    color: _isSubmitting ? Colors.grey : Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                  AppSpacing.gapMd,
+                  _buildRideTypeCard(
+                    type: 'ECONOMY',
+                    icon: Icons.local_taxi,
+                    description: 'Affordable, everyday rides',
+                    rate: '\$0.20/km',
+                    isSelected: _selectedRideType == 'ECONOMY',
                   ),
+                  AppSpacing.gapMd,
+                  _buildRideTypeCard(
+                    type: 'LUXURY',
+                    icon: Icons.directions_car,
+                    description: 'Premium vehicles, top drivers',
+                    rate: '\$0.35/km',
+                    isSelected: _selectedRideType == 'LUXURY',
+                  ),
+                ],
+              ),
+            ),
+            AppSpacing.gapXxl,
+
+            // Payment method
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Payment method',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  AppSpacing.gapMd,
+                  GestureDetector(
+                    onTap: _showPaymentMethodSelector,
+                    child: PremiumCard(
+                      padding: AppSpacing.cardPaddingCompact,
+                      shadows: AppSpacing.shadowSm,
+                      hasRipple: true,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryContainer,
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                            ),
+                            child: Icon(
+                              _selectedPaymentMethod == 'WALLET'
+                                  ? Icons.account_balance_wallet
+                                  : _selectedPaymentMethod == 'CASH'
+                                      ? Icons.money
+                                      : Icons.credit_card,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                          ),
+                          AppSpacing.hGapMd,
+                          Expanded(
+                            child: Text(
+                              _selectedPaymentMethod,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 22),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AppSpacing.gapXxl,
+
+            // Price breakdown
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: PremiumCard(
+                padding: AppSpacing.cardPadding,
+                shadows: AppSpacing.shadowSm,
+                child: Column(
+                  children: [
+                    _priceRow('Base fare', '\$2.00'),
+                    AppSpacing.gapMd,
+                    _priceRow(
+                      'Distance (${widget.estimatedDistance.toStringAsFixed(1)} km)',
+                      '\$${(widget.estimatedDistance * (_selectedRideType == 'ECONOMY' ? 0.20 : 0.35)).toStringAsFixed(2)}',
+                    ),
+                    const Divider(height: 32, color: AppColors.outline),
+                    _priceRow(
+                      'Total',
+                      '\$${_selectedFare.toStringAsFixed(2)}',
+                      isTotal: true,
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            AppSpacing.gapXxl,
+
+            // Confirm button
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: PremiumButton(
+                label: _isSubmitting ? 'Requesting...' : 'Confirm Ride',
+                isLoading: _isSubmitting,
+                onPressed: _isSubmitting ? null : _submitRideRequest,
+                icon: _isSubmitting ? null : Icons.check_circle_outline,
+                variant: ButtonVariant.gradient,
+                height: 60,
+              ),
+            ),
+            AppSpacing.gapHuge,
           ],
         ),
       ),
+    );
+  }
+
+  Widget _priceRow(String label, String value, {bool isTotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isTotal ? 14 : 13,
+            fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400,
+            color: isTotal ? AppColors.textPrimary : AppColors.textSecondary,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: isTotal ? 16 : 13,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
+            color: isTotal ? AppColors.primary : AppColors.textPrimary,
+          ),
+        ),
+      ],
     );
   }
 
@@ -472,75 +549,98 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
   }) {
     return GestureDetector(
       onTap: () => _updateRideType(type),
-      child: Container(
-        padding: const EdgeInsets.all(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isSelected ? AppColors.surface : AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF6366F1)
-                : Colors.grey[300]!,
+            color: isSelected ? AppColors.primary : AppColors.outline,
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(12),
+          boxShadow: isSelected ? AppSpacing.shadowMd : [],
         ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: isSelected
-                  ? const Color(0xFF6366F1)
-                  : Colors.grey[400],
-              size: 32,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: AppSpacing.cardPadding,
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary.withValues(alpha: 0.1)
+                      : AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                child: Icon(
+                  icon,
+                  color: isSelected ? AppColors.primary : AppColors.textTertiary,
+                  size: 24,
+                ),
+              ),
+              AppSpacing.hGapLg,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      type,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                      ),
+                    ),
+                    AppSpacing.gapXs,
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    type,
+                    rate,
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: isSelected
-                          ? const Color(0xFF6366F1)
-                          : Colors.black,
+                      fontSize: 11,
+                      color: AppColors.textTertiary,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
+                  AppSpacing.gapXs,
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 250),
                     style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
                     ),
+                    child: Text('\$${_calculateFare(type).toStringAsFixed(2)}'),
                   ),
                 ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  rate,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
+              if (isSelected) ...[
+                AppSpacing.hGapSm,
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '\$${_selectedFare.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Color(0xFF6366F1),
-                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 16),
                 ),
               ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

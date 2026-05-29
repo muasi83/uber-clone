@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/storage_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
+import '../widgets/premium_text_field.dart';
+import '../widgets/premium_card.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String username;
@@ -20,6 +25,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _urlController = TextEditingController(
       text: StorageService.getServerUrl(),
     );
+    _urlController.addListener(() {
+      setState(() => _isChanged = true);
+    });
   }
 
   Future<void> _saveUrl() async {
@@ -32,7 +40,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     await StorageService.setServerUrl(_urlController.text);
     setState(() => _isChanged = false);
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Server URL updated'),
@@ -41,11 +49,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _logout() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            child: Text(
+              'Logout',
+              style: TextStyle(
+                color: AppColors.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
+        backgroundColor: AppColors.primary,
         title: const Text(
           'Settings',
           style: TextStyle(color: Colors.white),
@@ -57,134 +101,145 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.screenPadding,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'User Information',
+            PremiumCard(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: AppColors.primaryContainer,
+                    child: Text(
+                      widget.username.isNotEmpty
+                          ? widget.username[0].toUpperCase()
+                          : '?',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
+                  ),
+                  AppSpacing.hGapLg,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.person, color: Colors.grey[600]),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Username',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                              Text(
-                                widget.username,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                        Text(
+                          widget.username,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        AppSpacing.gapXs,
+                        Text(
+                          'Settings',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textTertiary,
                           ),
                         ),
                       ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Server Configuration',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _urlController,
-              onChanged: (_) => setState(() => _isChanged = true),
-              decoration: InputDecoration(
-                labelText: 'Server URL',
-                hintText: 'https://your-ngrok-url.ngrok-free.dev',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: const Icon(Icons.link),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '📱 How to get ngrok URL:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '1. Download ngrok from ngrok.com\n'
-                    '2. Run: ngrok http 8080\n'
-                    '3. Copy the HTTPS URL\n'
-                    '4. Paste it here',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[700],
-                      height: 1.6,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isChanged ? _saveUrl : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Save Server URL',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+            AppSpacing.gapXxl,
+            Text(
+              'Server Configuration',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+                letterSpacing: 0.5,
               ),
+            ),
+            AppSpacing.gapMd,
+            PremiumCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  PremiumTextField(
+                    controller: _urlController,
+                    label: 'Server URL',
+                    hint: 'https://your-ngrok-url.ngrok-free.dev',
+                    prefixIcon: Icons.link,
+                  ),
+                  AppSpacing.gapLg,
+                  PremiumButton(
+                    label: 'Save Server URL',
+                    onPressed: _isChanged ? _saveUrl : null,
+                    isDisabled: !_isChanged,
+                    icon: Icons.save_outlined,
+                  ),
+                ],
+              ),
+            ),
+            AppSpacing.gapXxl,
+            Text(
+              'About',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+                letterSpacing: 0.5,
+              ),
+            ),
+            AppSpacing.gapMd,
+            PremiumCard(
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.infoContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.info_outline,
+                      color: AppColors.info,
+                      size: 20,
+                    ),
+                  ),
+                  AppSpacing.hGapMd,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Chat App',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        AppSpacing.gapXs,
+                        Text(
+                          'Version 1.0.0',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AppSpacing.gapXxl,
+            PremiumButton(
+              label: 'Logout',
+              onPressed: _logout,
+              variant: ButtonVariant.danger,
+              icon: Icons.logout_rounded,
             ),
           ],
         ),

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../screens/debug_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
 
 class DriverRideSummaryScreen extends StatefulWidget {
   final int rideId;
@@ -34,117 +37,128 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
     final fare = 35.50;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
+        title: const Text(
+          'Ride Summary',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: AppSpacing.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Success icon
-            Center(
-              child: Icon(
-                Icons.check_circle,
-                size: 80,
-                color: Colors.green[400],
+            const SizedBox(height: 32),
+            // Success check icon
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.successContainer,
+              ),
+              child: const Icon(
+                Icons.check,
+                size: 56,
+                color: AppColors.success,
               ),
             ),
-            const SizedBox(height: 20),
-
-            // Title
-            Text(
-              'Ride Completed!',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+            AppSpacing.gapXxl,
+            const Text(
+              'Ride Complete!',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
-
+            AppSpacing.gapXxl,
             // Earnings card
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              color: Colors.green[50],
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'EARNINGS',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '\$$fare',
-                      style: const TextStyle(
-                        color: Colors.green,
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Trip details
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildDetailRow('Distance', '$distance km'),
-                    const Divider(),
-                    _buildDetailRow('Duration', '$duration minutes'),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Back to home button
-            SizedBox(
+            Container(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/driver-home',
-                    (route) => false,
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              padding: AppSpacing.cardPadding,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                boxShadow: AppSpacing.shadowMd,
+              ),
+              child: Column(
+                children: [
+                  _buildDetailRow('Distance', '$distance km'),
+                  const Divider(color: AppColors.outline),
+                  _buildDetailRow('Duration', '$duration minutes'),
+                  const Divider(color: AppColors.outline),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Total Fare',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '\$${fare.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                child: const Text(
-                  'Back to Home',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                ],
+              ),
+            ),
+            AppSpacing.gapXxl,
+            // Rating section
+            const Text(
+              'Rate your rider',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            AppSpacing.gapMd,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                5,
+                (i) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(
+                    i < 4 ? Icons.star : Icons.star_border,
+                    color: AppColors.warning,
+                    size: 36,
                   ),
                 ),
               ),
+            ),
+            AppSpacing.gapXxxl,
+            PremiumButton(
+              label: 'Back to Home',
+              onPressed: () {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/driver-home',
+                  (route) => false,
+                );
+              },
+              icon: Icons.home_outlined,
             ),
           ],
         ),
@@ -160,16 +174,17 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(
-              color: Colors.grey[600],
+            style: const TextStyle(
+              color: AppColors.textSecondary,
               fontSize: 14,
             ),
           ),
           Text(
             value,
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               fontSize: 14,
+              color: AppColors.textPrimary,
             ),
           ),
         ],

@@ -4,7 +4,42 @@ import '../screens/debug_screen.dart';
 import '../models/location_model.dart';
 
 class LocationService {
-  static const double _kMetersPerSecond = 1.0;
+  static Future<bool> ensureServiceAndPermission({bool openSettingsIfNeeded = false}) async {
+    try {
+      final enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) {
+        addDebugMessage('❌ Location services disabled');
+        if (openSettingsIfNeeded) {
+          await Geolocator.openLocationSettings();
+        }
+        return false;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied || permission == LocationPermission.unableToDetermine) {
+        addDebugMessage('❌ Location permission not granted: $permission');
+        return false;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        addDebugMessage('❌ Location permission denied forever');
+        if (openSettingsIfNeeded) {
+          await Geolocator.openAppSettings();
+        }
+        return false;
+      }
+
+      addDebugMessage('✅ Location service+permission OK: $permission');
+      return true;
+    } catch (e) {
+      addDebugMessage('❌ ensureServiceAndPermission error: $e');
+      return false;
+    }
+  }
 
   // Get current location with address
   static Future<LocationData?> getCurrentLocation() async {
@@ -12,53 +47,37 @@ class LocationService {
       addDebugMessage('═══════════════════════════════════════');
       addDebugMessage('📍 GETTING CURRENT LOCATION');
 
-      // Check permission status
-      LocationPermission permission = await Geolocator.checkPermission();
-      
-      if (permission == LocationPermission.denied) {
-        addDebugMessage('❌ Location permission denied');
-        addDebugMessage('Requesting permission...');
-        permission = await Geolocator.requestPermission();
-      }
+      final ok = await ensureServiceAndPermission();
+      if (!ok) return null;
 
-      if (permission == LocationPermission.deniedForever) {
-        addDebugMessage('❌ Location permission denied forever');
-        addDebugMessage('User must enable it in app settings');
-        return null;
-      }
+      // Try last known first (fast), then current (accurate)
+      final lastKnown = await Geolocator.getLastKnownPosition();
 
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        addDebugMessage('✅ Location permission granted');
-
-        final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.best,
-          timeLimit: const Duration(seconds: 10),
-        );
-
-        addDebugMessage('✅ Location obtained');
-        addDebugMessage('Latitude: ${position.latitude}');
-        addDebugMessage('Longitude: ${position.longitude}');
-
-        // Get address from coordinates
-        final address = await getAddressFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-
-        addDebugMessage('✅ Address: $address');
-        addDebugMessage('═══════════════════════════════════════');
-
-        return LocationData(
-          latitude: position.latitude,
-          longitude: position.longitude,
-          address: address ?? 'Unknown Location',
-          timestamp: DateTime.now(),
+      Position position;
+      if (lastKnown != null) {
+        position = lastKnown;
+      } else {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.bestForNavigation,
+          timeLimit: const Duration(seconds: 12),
         );
       }
 
-      addDebugMessage('❌ Location permission status: $permission');
-      return null;
+      addDebugMessage('✅ Location obtained');
+      addDebugMessage('Latitude: ${position.latitude}');
+      addDebugMessage('Longitude: ${position.longitude}');
+
+      final address = await getAddressFromCoordinates(position.latitude, position.longitude);
+
+      addDebugMessage('✅ Address: $address');
+      addDebugMessage('═══════════════════════════════════════');
+
+      return LocationData(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        address: address ?? 'Unknown Location',
+        timestamp: DateTime.now(),
+      );
     } catch (e) {
       addDebugMessage('❌ Error getting current location: $e');
       return null;
@@ -109,20 +128,15 @@ class LocationService {
     }
   }
 
-  // Get address from coordinates (Reverse Geocoding)
-  static Future<String?> getAddressFromCoordinates(
-    double latitude,
-    double longitude,
-  ) async {
+  // Reverse Geocoding
+  static Future<String?> getAddressFromCoordinates(double latitude, double longitude) async {
     try {
       addDebugMessage('🔄 Reverse geocoding...');
-
       final placemarks = await placemarkFromCoordinates(latitude, longitude);
 
       if (placemarks.isNotEmpty) {
         final place = placemarks[0];
-        final address =
-            '${place.street}, ${place.locality}, ${place.administrativeArea} ${place.postalCode}';
+        final address = '${place.street}, ${place.locality}, ${place.administrativeArea} ${place.postalCode}';
         addDebugMessage('✅ Address found: $address');
         return address;
       }
@@ -135,7 +149,7 @@ class LocationService {
     }
   }
 
-  // Get coordinates from address (Forward Geocoding)
+  // Forward Geocoding
   static Future<LocationData?> getCoordinatesFromAddress(String address) async {
     try {
       addDebugMessage('═══════════════════════════════════════');
@@ -151,11 +165,7 @@ class LocationService {
         addDebugMessage('Longitude: ${location.longitude}');
         addDebugMessage('═══════════════════════════════════════');
 
-        // Get full address
-        final fullAddress = await getAddressFromCoordinates(
-          location.latitude,
-          location.longitude,
-        );
+        final fullAddress = await getAddressFromCoordinates(location.latitude, location.longitude);
 
         return LocationData(
           latitude: location.latitude,
@@ -175,23 +185,16 @@ class LocationService {
     }
   }
 
-  // Calculate distance between two points (in km)
-  static double calculateDistance(
-    double lat1,
-    double lon1,
-    double lat2,
-    double lon2,
-  ) {
+  static double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     try {
       final distance = Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
-      return distance / 1000; // Convert meters to km
+      return distance / 1000;
     } catch (e) {
       addDebugMessage('❌ Error calculating distance: $e');
       return 0.0;
     }
   }
 
-  // Calculate fare based on distance and ride type
   static double calculateFare(double distance, RideType rideType) {
     try {
       final fare = rideType.baseFare + (distance * rideType.perKmRate);
@@ -202,14 +205,16 @@ class LocationService {
     }
   }
 
-  // Watch user location in real-time
   static Stream<LocationData> watchLocation({
-    LocationAccuracy accuracy = LocationAccuracy.best,
-    int distanceFilter = 10, // Update every 10 meters
+    LocationAccuracy accuracy = LocationAccuracy.bestForNavigation,
+    int distanceFilter = 10,
   }) async* {
     try {
       addDebugMessage('═══════════════════════════════════════');
       addDebugMessage('👁️ WATCHING LOCATION IN REAL-TIME');
+
+      final ok = await ensureServiceAndPermission();
+      if (!ok) return;
 
       final positionStream = Geolocator.getPositionStream(
         locationSettings: LocationSettings(
@@ -219,11 +224,7 @@ class LocationService {
       );
 
       await for (final position in positionStream) {
-        final address = await getAddressFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-
+        final address = await getAddressFromCoordinates(position.latitude, position.longitude);
         addDebugMessage('📍 Location update: ${position.latitude}, ${position.longitude}');
 
         yield LocationData(
@@ -238,7 +239,6 @@ class LocationService {
     }
   }
 
-  // Open location settings
   static Future<bool> openLocationSettings() async {
     try {
       return await Geolocator.openLocationSettings();
@@ -248,7 +248,6 @@ class LocationService {
     }
   }
 
-  // Open app settings
   static Future<bool> openAppSettings() async {
     try {
       return await Geolocator.openAppSettings();
@@ -258,7 +257,6 @@ class LocationService {
     }
   }
 
-  // Check permission status
   static Future<LocationPermission> checkPermissionStatus() async {
     try {
       return await Geolocator.checkPermission();

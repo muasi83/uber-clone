@@ -6,6 +6,10 @@ import 'package:flutter/foundation.dart';
 import '../services/directions_service.dart';
 import '../screens/rider_dropoff_location_screen.dart';
 import '../screens/debug_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
+import '../widgets/glass_card.dart';
 
 class RiderPickupLocationScreen extends StatefulWidget {
   final double initialLat;
@@ -32,7 +36,6 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
   bool _isLoadingAddress = false;
   Timer? _addressLookupTimer;
 
-  // ✅ Prevent spam lookups
   LatLng? _lastLookupCenter;
   bool _loggedGeocodingErrorOnce = false;
 
@@ -65,7 +68,6 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
         (position.northeast.longitude + position.southwest.longitude) / 2,
       );
 
-      // ✅ Ignore tiny movements to avoid repeated reverse-geocoding spam
       if (_lastLookupCenter != null) {
         final dLat = (center.latitude - _lastLookupCenter!.latitude).abs();
         final dLng = (center.longitude - _lastLookupCenter!.longitude).abs();
@@ -82,7 +84,6 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
 
       _lookupAddress(center);
     } catch (e) {
-      // Don't use addDebugMessage here (async spam can cause ancestor issues)
       if (kDebugMode) debugPrint('⚠️ Camera idle error: $e');
     }
   }
@@ -119,7 +120,6 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
           _isLoadingAddress = true;
         });
 
-        // ✅ Always have a safe fallback
         String address =
             'Lat: ${location.latitude.toStringAsFixed(4)}, '
             'Lng: ${location.longitude.toStringAsFixed(4)}';
@@ -162,12 +162,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
             _pickupAddress = address;
             _isLoadingAddress = false;
           });
-
-          // ✅ log only when meaningful (not spam)
-          // addDebugMessage('📍 Pickup address: $address');
         } catch (e) {
-          // ✅ This is where "Unexpected null value" happens sometimes.
-          // Avoid spamming terminal/logs.
           if (!_loggedGeocodingErrorOnce) {
             _loggedGeocodingErrorOnce = true;
             if (kDebugMode) {
@@ -179,7 +174,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
           if (!mounted) return;
 
           setState(() {
-            _pickupAddress = address; // fallback
+            _pickupAddress = address;
             _isLoadingAddress = false;
           });
         }
@@ -220,17 +215,6 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
       body: Stack(
         children: [
           GoogleMap(
@@ -246,140 +230,132 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
             myLocationButtonEnabled: false,
           ),
 
-          // Center pin
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: const Text(
+                'Set Pickup Location',
+                style: TextStyle(color: Colors.white),
+              ),
+              centerTitle: true,
+            ),
+          ),
+
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(
-                          alpha: 0.2,
-                        ),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.location_on,
-                    color: Colors.black,
-                    size: 48,
-                  ),
+                Icon(
+                  Icons.location_on,
+                  color: AppColors.primary,
+                  size: 48,
                 ),
                 const SizedBox(height: 60),
               ],
             ),
           ),
 
-          // Address card
           Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: 0.1,
-                    ),
-                    blurRadius: 8,
-                  ),
-                ],
-              ),
-              child: Row(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: GlassCard(
+              borderRadius: AppSpacing.radiusXxl,
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.location_on_outlined,
-                    color: Colors.grey,
-                    size: 20,
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  if (_isLoadingAddress)
+                    Row(
                       children: [
-                        Text(
-                          'Pickup address',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 11,
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primary,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        AppSpacing.hGapMd,
                         Text(
-                          _pickupAddress.isEmpty
-                              ? 'Select location'
-                              : _pickupAddress,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                          'Finding address...',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                        AppSpacing.hGapMd,
+                        Expanded(
+                          child: Text(
+                            _pickupAddress.isEmpty
+                                ? 'Tap map to set pickup'
+                                : _pickupAddress,
+                            style: TextStyle(
+                              fontSize: _pickupAddress.isEmpty ? 15 : 18,
+                              fontWeight: FontWeight.bold,
+                              color: _pickupAddress.isEmpty
+                                  ? AppColors.textTertiary
+                                  : AppColors.textPrimary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
+                  ],
+                  AppSpacing.gapLg,
+                  PremiumButton(
+                    label: 'Confirm Pickup',
+                    onPressed: _confirmPickup,
+                    variant: ButtonVariant.gradient,
                   ),
-                  if (!_isLoadingAddress && _pickupAddress.isNotEmpty)
-                    const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                      size: 20,
-                    ),
-                  if (_isLoadingAddress)
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.grey,
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
           ),
 
-          // Confirm button
           Positioned(
-            bottom: 24,
-            left: 16,
-            right: 16,
-            child: SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _confirmPickup,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(
-                    0xFFD4AF37,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                      12,
-                    ),
-                  ),
-                ),
-                child: const Text(
-                  'Confirm point',
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+            right: AppSpacing.lg,
+            bottom: MediaQuery.of(context).padding.bottom + 180,
+            child: FloatingActionButton.small(
+              heroTag: 'centerPickupMap',
+              onPressed: () {
+                if (_pickupLocation != null && mapController != null) {
+                  mapController!.animateCamera(
+                    CameraUpdate.newLatLngZoom(_pickupLocation!, 17),
+                  );
+                }
+              },
+              backgroundColor: Colors.white,
+              child: Icon(Icons.my_location, color: AppColors.primary),
             ),
           ),
         ],

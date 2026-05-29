@@ -11,9 +11,11 @@
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-    <string>We need your location to show you available rides and drivers near you</string>
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>We need your location to provide the best ride-sharing experience</string>
+	<string>We need your location to show you available rides and drivers near you</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We need your location to provide the best ride-sharing experience</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs your location even when backgrounded to provide real-time driver tracking</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>

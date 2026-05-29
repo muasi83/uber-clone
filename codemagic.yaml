@@ -1,0 +1,68 @@
+workflows:
+  ios-release:
+    name: iOS Release to TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      ios_signing:
+        provisioning_profiles:
+          - profile_name: ChatApp App Store
+        certificates:
+          - certificate_name: Apple Distribution
+      groups:
+        - app_store_credentials
+      vars:
+        APP_ID: com.muasi.Drivers-app
+        APP_NAME: Chat App
+        XCODE_WORKSPACE: ios/Runner.xcworkspace
+        XCODE_SCHEME: Runner
+      flutter: stable
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Flutter pub get
+        script: flutter pub get
+      - name: Flutter clean
+        script: flutter clean
+      - name: Install iOS pods
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Build iOS Release
+        script: |
+          flutter build ios --release \
+            --no-codesign \
+            --build-name=$(flutter pub run cider version 2>/dev/null || echo "1.0.0") \
+            --build-number=$(($(app-store-connect get-latest-testflight-build-number --app-id "$APP_ID" 2>/dev/null || echo "0") + 1))
+      - name: Code signing
+        script: |
+          xcode-project use-profiles \
+            --archive \
+            --archive-path build/ios/archive/Runner.xcarchive
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - build/ios/archive/Runner.xcarchive/**/*.dSYM.zip
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        submit_to_app_store: false
+      email:
+        recipients:
+          - developer@example.com
+        notify:
+          success: true
+          failure: true
+      slack:
+        channel: '#builds'
+        notify_on_build_start: true
+        notify:
+          success: true
+          failure: true

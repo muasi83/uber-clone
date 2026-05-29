@@ -120,6 +120,32 @@ class StorageService {
     }
   }
 
+    static Future<void> clearToken() async {
+    try {
+      if (!_initialized) {
+        addDebugMessage('⚠️ StorageService not initialized');
+        return;
+      }
+      await _prefs.remove(_tokenKey);
+      addDebugMessage('✅ Token cleared');
+    } catch (e) {
+      addDebugMessage('❌ Error clearing token: $e');
+    }
+  }
+
+  static Future<void> clearUserId() async {
+    try {
+      if (!_initialized) {
+        addDebugMessage('⚠️ StorageService not initialized');
+        return;
+      }
+      await _prefs.remove(_userIdKey);
+      addDebugMessage('✅ User ID cleared');
+    } catch (e) {
+      addDebugMessage('❌ Error clearing user ID: $e');
+    }
+  }
+
   static Future<void> saveUsername(String username) async {
     try {
       if (!_initialized) {

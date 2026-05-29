@@ -7,6 +7,10 @@ import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../services/directions_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
+import '../widgets/glass_card.dart';
 
 class RiderDropoffLocationScreen extends StatefulWidget {
   final double pickupLat;
@@ -40,14 +44,11 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
 
   Timer? _addressLookupTimer;
 
-  // ✅ Two-phase flow
   bool _isDropoffConfirmed = false;
 
-  // ✅ prevent spam route calls
   LatLng? _lastRoutedDestination;
   DateTime? _lastRouteAt;
 
-  // ✅ prevent spam geocoding errors
   bool _loggedGeocodingErrorOnce = false;
 
   double? _routeDistanceKm;
@@ -60,7 +61,6 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
     _dropoffLocation = LatLng(widget.pickupLat, widget.pickupLng);
     _updateMarkers();
 
-    // Lookup once (safe fallback). Route calculation happens after user moves enough.
     _lookupAddress(_dropoffLocation!);
   }
 
@@ -75,7 +75,6 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
     try {
       if (mapController == null) return;
 
-      // ✅ IMPORTANT: During review phase, moving map must NOT change dropoff
       if (_isDropoffConfirmed) return;
 
       final region = await mapController!.getVisibleRegion();
@@ -126,12 +125,10 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
 
       setState(() => _isLoadingAddress = true);
 
-      // Always safe fallback
       String address =
           'Lat: ${location.latitude.toStringAsFixed(4)}, Lng: ${location.longitude.toStringAsFixed(4)}';
 
       try {
-        // ✅ Reverse geocoding is unstable on Web; skip it on web
         if (!kIsWeb) {
           final placemarks = await placemarkFromCoordinates(
             location.latitude,
@@ -164,7 +161,6 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
           _isLoadingAddress = false;
         });
 
-        // ✅ During selection phase, keep calculating route as user moves
         if (!_isDropoffConfirmed) {
           await _calculateRouteIfNeeded();
         }
@@ -197,7 +193,6 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
     final origin = LatLng(widget.pickupLat, widget.pickupLng);
     final dest = _dropoffLocation!;
 
-    // Only calculate if moved enough away from pickup
     final kmFromPickup = _haversineKm(origin, dest);
     if (kmFromPickup < 0.05) {
       if (mounted) {
@@ -212,13 +207,11 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
       return;
     }
 
-    // Rate limit route calls
     final now = DateTime.now();
     if (_lastRouteAt != null && now.difference(_lastRouteAt!).inMilliseconds < 900) {
       return;
     }
 
-    // Destination must change enough
     if (_lastRoutedDestination != null) {
       final movedKm = _haversineKm(_lastRoutedDestination!, dest);
       if (movedKm < 0.07) return;
@@ -258,7 +251,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
           Polyline(
             polylineId: const PolylineId('route'),
             points: points,
-            color: Colors.blue,
+            color: AppColors.primary,
             width: 5,
             geodesic: true,
           ),
@@ -289,12 +282,10 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
       return;
     }
 
-    // ✅ Lock selection (review phase)
     setState(() {
       _isDropoffConfirmed = true;
     });
 
-    // Optional: fit bounds ONCE to show the whole route for review
     _fitBoundsToRouteForReview();
   }
 
@@ -323,7 +314,6 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
   }
 
   void _changeDropoff() {
-    // Return to selection phase
     setState(() {
       _isDropoffConfirmed = false;
     });
@@ -385,21 +375,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
     final routeReady =
         !_isLoadingRoute && _routeDistanceKm != null && _routeDurationMin != null;
 
-    final primaryEnabled = _isDropoffConfirmed ? routeReady : routeReady;
-
-    final primaryText = _isDropoffConfirmed ? 'Request Ride' : 'Confirm drop-off point';
-
-    final primaryOnPressed = _isDropoffConfirmed ? _requestRide : _confirmDropoffPoint;
-
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
       body: Stack(
         children: [
           GoogleMap(
@@ -413,7 +389,25 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
             myLocationButtonEnabled: false,
           ),
 
-          // Center red pin ONLY while selecting
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: const Text(
+                'Set Destination',
+                style: TextStyle(color: Colors.white),
+              ),
+              centerTitle: true,
+            ),
+          ),
+
           if (!_isDropoffConfirmed)
             Center(
               child: Padding(
@@ -438,41 +432,32 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
               ),
             ),
 
-          // Bottom sheet
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
+            child: GlassCard(
+              borderRadius: AppSpacing.radiusXxl,
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.lg,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    const SizedBox(height: 12),
-
+                  ),
+                  if (!_isDropoffConfirmed) ...[
+                    // Phase 1: Selecting dropoff
                     Row(
                       children: [
                         Container(
@@ -489,7 +474,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                                     fontWeight: FontWeight.bold)),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        AppSpacing.hGapMd,
                         Expanded(
                           child: Text(
                             widget.pickupAddress,
@@ -501,8 +486,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-
+                    AppSpacing.gapMd,
                     Row(
                       children: [
                         Container(
@@ -519,13 +503,11 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                                     fontWeight: FontWeight.bold)),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        AppSpacing.hGapMd,
                         Expanded(
                           child: Text(
                             _dropoffAddress.isEmpty
-                                ? (_isDropoffConfirmed
-                                    ? 'Drop-off selected'
-                                    : 'Move map to set dropoff')
+                                ? 'Move map to set dropoff'
                                 : _dropoffAddress,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -541,9 +523,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                           ),
                       ],
                     ),
-
-                    const SizedBox(height: 12),
-
+                    AppSpacing.gapMd,
                     if (_isLoadingRoute)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -553,7 +533,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                          SizedBox(width: 10),
+                          AppSpacing.hGapSm,
                           Text('Calculating route...'),
                         ],
                       )
@@ -561,54 +541,144 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('${_routeDistanceKm!.toStringAsFixed(2)} km',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold)),
-                          Text('$_routeDurationMin min',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold)),
+                          Row(
+                            children: [
+                              Icon(Icons.route, size: 16, color: AppColors.primary),
+                              AppSpacing.hGapXs,
+                              Text('${_routeDistanceKm!.toStringAsFixed(2)} km',
+                                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Icon(Icons.access_time, size: 16, color: AppColors.primary),
+                              AppSpacing.hGapXs,
+                              Text('$_routeDurationMin min',
+                                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
                         ],
                       ),
-
-                    const SizedBox(height: 14),
-
-                    if (_isDropoffConfirmed)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: _changeDropoff,
-                          child: const Text('Change drop-off'),
+                    AppSpacing.gapMd,
+                    PremiumButton(
+                      label: 'Confirm drop-off point',
+                      onPressed: routeReady ? _confirmDropoffPoint : null,
+                      variant: ButtonVariant.gradient,
+                    ),
+                  ] else ...[
+                    // Phase 2: Reviewing dropoff
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.trip_origin, color: Colors.green, size: 24),
+                        AppSpacing.hGapMd,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Pickup',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary)),
+                              const SizedBox(height: 2),
+                              Text(widget.pickupAddress,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13)),
+                            ],
+                          ),
                         ),
+                      ],
+                    ),
+                    AppSpacing.gapMd,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.location_on, color: Colors.red, size: 24),
+                        AppSpacing.hGapMd,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Dropoff',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary)),
+                              const SizedBox(height: 2),
+                              Text(
+                                _dropoffAddress.isEmpty
+                                    ? 'Lat: ${_dropoffLocation!.latitude.toStringAsFixed(4)}, Lng: ${_dropoffLocation!.longitude.toStringAsFixed(4)}'
+                                    : _dropoffAddress,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: AppSpacing.xxl),
+                    if (_routeDistanceKm != null && _routeDurationMin != null)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _routeInfoChip(
+                              Icons.route,
+                              '${_routeDistanceKm!.toStringAsFixed(1)} km'),
+                          _routeInfoChip(
+                              Icons.access_time,
+                              '$_routeDurationMin min'),
+                        ],
                       ),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton(
-                        onPressed: primaryEnabled ? primaryOnPressed : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFD4AF37),
-                          disabledBackgroundColor: Colors.grey[300],
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          primaryText,
-                          style: TextStyle(
-                            color: primaryEnabled ? Colors.black87 : Colors.grey,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
+                    AppSpacing.gapSm,
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: _changeDropoff,
+                        child: Text('Change drop-off',
+                            style: TextStyle(color: AppColors.primary)),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.gapSm,
+                    PremiumButton(
+                      label: 'Request Ride',
+                      onPressed: routeReady ? _requestRide : null,
+                      variant: ButtonVariant.gradient,
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _routeInfoChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.primaryContainer.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppColors.primary),
+          AppSpacing.hGapXs,
+          Text(text,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+                fontSize: 13,
+              )),
         ],
       ),
     );

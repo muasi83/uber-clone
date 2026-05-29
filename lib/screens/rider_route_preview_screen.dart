@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/directions_service.dart';
 import '../screens/debug_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/status_badge.dart';
 
 class RiderRoutePreviewScreen extends StatefulWidget {
   final double pickupLat;
@@ -54,7 +59,6 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
       addDebugMessage('From: ${widget.pickupAddress}');
       addDebugMessage('To: ${widget.dropoffAddress}');
 
-      // Get real route
       final route = await DirectionsService.getDirections(
         origin: LatLng(widget.pickupLat, widget.pickupLng),
         destination: LatLng(widget.dropoffLat, widget.dropoffLng),
@@ -71,7 +75,6 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
         return;
       }
 
-      // Add markers
       _markers.add(
         Marker(
           markerId: const MarkerId('pickup'),
@@ -94,14 +97,12 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
         ),
       );
 
-      // Add polyline
-         // Add polyline
       if (route.polylinePoints != null && route.polylinePoints!.isNotEmpty) {
         _polylines.add(
           Polyline(
             polylineId: const PolylineId('route'),
             points: route.polylinePoints!,
-            color: Colors.blue,
+            color: AppColors.primary,
             width: 5,
             geodesic: true,
             patterns: [
@@ -116,7 +117,6 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
 
       setState(() => _isLoading = false);
 
-      // Animate to show both
       _fitBounds();
 
       addDebugMessage('═══════════════════════════════════════');
@@ -164,21 +164,9 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
-        elevation: 0,
-        title: const Text(
-          'Route Preview',
-          style: TextStyle(color: Colors.white),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      backgroundColor: AppColors.textPrimary,
       body: Stack(
         children: [
-          // Map
           GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
@@ -192,7 +180,6 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
             myLocationButtonEnabled: false,
           ),
 
-          // Loading overlay
           if (_isLoading)
             Container(
               color: Colors.black.withValues(alpha: 0.3),
@@ -203,7 +190,6 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
               ),
             ),
 
-          // Error overlay
           if (_error != null)
             Container(
               color: Colors.black.withValues(alpha: 0.3),
@@ -232,7 +218,7 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
                             _initializeRoute();
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6366F1),
+                            backgroundColor: AppColors.primary,
                           ),
                           child: const Text('Retry'),
                         ),
@@ -243,28 +229,46 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
               ),
             ),
 
-          // Bottom card
+          // Transparent AppBar
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              title: const Text(
+                'Route Preview',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                ),
+              ),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+                onPressed: () => Navigator.pop(context),
+              ),
+              centerTitle: true,
+            ),
+          ),
+
+          // Bottom glass card
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
+            child: GlassCard(
+              borderRadius: AppSpacing.radiusXxl,
+              blur: 30,
+              padding: EdgeInsets.zero,
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.only(
+                  left: AppSpacing.xl,
+                  right: AppSpacing.xl,
+                  top: AppSpacing.xs,
+                  bottom: AppSpacing.xxl,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,40 +279,50 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.grey[300],
+                          color: Colors.white.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    AppSpacing.gapLg,
 
                     // Pickup
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.location_on_outlined,
-                          color: Colors.green,
-                          size: 20,
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.location_on_outlined,
+                            color: AppColors.success,
+                            size: 18,
+                          ),
                         ),
-                        const SizedBox(width: 12),
+                        AppSpacing.hGapMd,
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'From',
+                                'Pickup',
                                 style: TextStyle(
-                                  color: Colors.grey[600],
+                                  color: Colors.white.withValues(alpha: 0.5),
                                   fontSize: 11,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              AppSpacing.gapXs,
                               Text(
                                 widget.pickupAddress,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                   fontSize: 13,
+                                  color: Colors.white,
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -318,35 +332,45 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    AppSpacing.gapMd,
 
                     // Dropoff
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.location_on,
-                          color: Colors.red,
-                          size: 20,
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.location_on,
+                            color: AppColors.error,
+                            size: 18,
+                          ),
                         ),
-                        const SizedBox(width: 12),
+                        AppSpacing.hGapMd,
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'To',
+                                'Dropoff',
                                 style: TextStyle(
-                                  color: Colors.grey[600],
+                                  color: Colors.white.withValues(alpha: 0.5),
                                   fontSize: 11,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              AppSpacing.gapXs,
                               Text(
                                 widget.dropoffAddress,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                   fontSize: 13,
+                                  color: Colors.white,
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -356,108 +380,90 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    AppSpacing.gapLg,
 
-                    // Route details
+                    // Divider
                     Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        border: Border.all(color: Colors.blue[200]!),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildDetailItem(
+                      height: 1,
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                    AppSpacing.gapLg,
+
+                    // Stats row: Distance | Duration | Fare
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatItem(
                             icon: Icons.straighten,
                             label: 'Distance',
-                            value:
-                                '${widget.estimatedDistance.toStringAsFixed(2)} km',
+                            value: '${widget.estimatedDistance.toStringAsFixed(2)} km',
                           ),
-                          Container(
-                            width: 1,
-                            height: 40,
-                            color: Colors.blue[200],
-                          ),
-                          _buildDetailItem(
+                        ),
+                        Container(
+                          width: 1,
+                          height: 36,
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
+                        Expanded(
+                          child: _buildStatItem(
                             icon: Icons.access_time,
                             label: 'Duration',
                             value: '${widget.estimatedDuration} min',
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(
-                                color: Color(0xFF6366F1),
-                                width: 2,
-                              ),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: const Text(
-                              'Change Route',
-                              style: TextStyle(
-                                color: Color(0xFF6366F1),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
                         ),
-                        const SizedBox(width: 12),
+                        Container(
+                          width: 1,
+                          height: 36,
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: _isLoading
-                                ? null
-                                : () => Navigator.pop(context, {
-                                      'routeConfirmed': true,
-                                      'pickupLat': widget.pickupLat,
-                                      'pickupLng': widget.pickupLng,
-                                      'pickupAddress':
-                                          widget.pickupAddress,
-                                      'dropoffLat': widget.dropoffLat,
-                                      'dropoffLng': widget.dropoffLng,
-                                      'dropoffAddress':
-                                          widget.dropoffAddress,
-                                      'estimatedDistance':
-                                          widget.estimatedDistance,
-                                      'estimatedFare': widget.estimatedFare,
-                                      'estimatedDuration':
-                                          widget.estimatedDuration,
-                                      'rideType': widget.rideType,
-                                    }),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF6366F1),
-                              disabledBackgroundColor: Colors.grey[300],
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              _isLoading ? 'Loading...' : 'Confirm Route',
-                              style: TextStyle(
-                                color: _isLoading
-                                    ? Colors.grey
-                                    : Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                          child: _buildStatItem(
+                            icon: Icons.attach_money,
+                            label: 'Fare',
+                            value: '\$${widget.estimatedFare.toStringAsFixed(2)}',
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    AppSpacing.gapMd,
+
+                    // Ride type badge
+                    Row(
+                      children: [
+                        StatusBadge(
+                          label: widget.rideType,
+                          icon: widget.rideType == 'LUXURY'
+                              ? Icons.directions_car
+                              : Icons.local_taxi,
+                          color: AppColors.primaryLight,
+                        ),
+                      ],
+                    ),
+                    AppSpacing.gapLg,
+
+                    // Request Ride button
+                    PremiumButton(
+                      label: _isLoading ? 'Loading...' : 'Request Ride',
+                      isLoading: _isLoading,
+                      onPressed: _isLoading
+                          ? null
+                          : () => Navigator.pop(context, {
+                                'routeConfirmed': true,
+                                'pickupLat': widget.pickupLat,
+                                'pickupLng': widget.pickupLng,
+                                'pickupAddress': widget.pickupAddress,
+                                'dropoffLat': widget.dropoffLat,
+                                'dropoffLng': widget.dropoffLng,
+                                'dropoffAddress': widget.dropoffAddress,
+                                'estimatedDistance': widget.estimatedDistance,
+                                'estimatedFare': widget.estimatedFare,
+                                'estimatedDuration': widget.estimatedDuration,
+                                'rideType': widget.rideType,
+                              }),
+                      icon: _isLoading ? null : Icons.navigation,
+                      variant: ButtonVariant.gradient,
+                      height: 56,
+                    ),
                   ],
                 ),
               ),
@@ -468,34 +474,32 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
     );
   }
 
-  Widget _buildDetailItem({
+  Widget _buildStatItem({
     required IconData icon,
     required String label,
     required String value,
   }) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.blue, size: 18),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey[600],
-            ),
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white.withValues(alpha: 0.6), size: 18),
+        AppSpacing.gapXs,
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.white.withValues(alpha: 0.4),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: Colors.blue,
-            ),
+        ),
+        AppSpacing.gapXs,
+        Text(
+          value,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: Colors.white,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

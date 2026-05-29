@@ -4,6 +4,9 @@ import 'dart:convert';
 import '../services/storage_service.dart';
 import 'home_screen.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
 
 class OtpScreen extends StatefulWidget {
   final String email;
@@ -17,7 +20,7 @@ class OtpScreen extends StatefulWidget {
 class _OtpScreenState extends State<OtpScreen> {
   final _otpController = TextEditingController();
   bool _isLoading = false;
-  int _remainingSeconds = 600; // 10 minutes
+  int _remainingSeconds = 600;
 
   @override
   void initState() {
@@ -100,62 +103,53 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isExpired = _remainingSeconds <= 0;
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_rounded,
+              color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF6366F1),
-              const Color(0xFF8B5CF6),
-            ],
-          ),
-        ),
-        child: SafeArea(
+      body: SafeArea(
+        child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.2),
-                  ),
-                  child: const Icon(
-                    Icons.mark_email_read_outlined,
-                    size: 60,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 30),
+                _buildMailIcon(),
+                AppSpacing.gapXxl,
                 const Text(
-                  'Verify Email',
+                  'Check your email',
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 12),
+                AppSpacing.gapMd,
                 Text(
-                  'A verification code has been sent to\n${widget.email}',
-                  textAlign: TextAlign.center,
+                  'We sent a verification code to',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 50),
+                const SizedBox(height: 4),
+                Text(
+                  widget.email,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                AppSpacing.gapXxxl,
                 PinCodeTextField(
                   appContext: context,
                   length: 6,
@@ -164,65 +158,99 @@ class _OtpScreenState extends State<OtpScreen> {
                   pinTheme: PinTheme(
                     shape: PinCodeFieldShape.box,
                     borderRadius: BorderRadius.circular(12),
-                    fieldHeight: 60,
-                    fieldWidth: 50,
-                    activeFillColor: Colors.white,
-                    selectedFillColor: Colors.white,
-                    inactiveFillColor: Colors.white.withValues(alpha: 0.3),
-                    activeColor: const Color(0xFF6366F1),
-                    selectedColor: const Color(0xFF6366F1),
-                    inactiveColor: Colors.white.withValues(alpha: 0.3),
+                    fieldHeight: 56,
+                    fieldWidth: 48,
+                    activeFillColor: AppColors.surface,
+                    selectedFillColor: AppColors.surface,
+                    inactiveFillColor: AppColors.surfaceVariant,
+                    activeColor: AppColors.primary,
+                    selectedColor: AppColors.primary,
+                    inactiveColor: AppColors.outline,
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                   onChanged: (String value) {},
                 ),
-                const SizedBox(height: 30),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _verifyOtp,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color(0xFF6366F1)),
-                            ),
-                          )
-                        : const Text(
-                            'Verify Code',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF6366F1),
-                            ),
-                          ),
-                  ),
+                AppSpacing.gapXxl,
+                PremiumButton(
+                  label: 'Verify',
+                  isLoading: _isLoading,
+                  onPressed: _isLoading ? null : _verifyOtp,
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  'Code expires in ${_formatTime(_remainingSeconds)}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: _remainingSeconds < 60
-                        ? Colors.red
-                        : Colors.white.withValues(alpha: 0.8),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                AppSpacing.gapLg,
+                _buildTimerOrResend(isExpired),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMailIcon() {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        color: AppColors.primaryContainer,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Icon(
+        Icons.mark_email_read_outlined,
+        size: 40,
+        color: AppColors.primary,
+      ),
+    );
+  }
+
+  Widget _buildTimerOrResend(bool isExpired) {
+    if (isExpired) {
+      return TextButton(
+        onPressed: _isLoading
+            ? null
+            : () {
+                setState(() {
+                  _remainingSeconds = 600;
+                  _otpController.clear();
+                });
+                _startTimer();
+              },
+        child: const Text(
+          'Resend code',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.access_time,
+          size: 16,
+          color: _remainingSeconds < 60
+              ? AppColors.error
+              : AppColors.textTertiary,
+        ),
+        AppSpacing.hGapSm,
+        Text(
+          'Resend code in ${_formatTime(_remainingSeconds)}',
+          style: TextStyle(
+            fontSize: 14,
+            color: _remainingSeconds < 60
+                ? AppColors.error
+                : AppColors.textTertiary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 

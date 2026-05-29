@@ -55,7 +55,6 @@ class _DebugScreenState extends State<DebugScreen> {
       appBar: AppBar(
         title: const Text('Debug Console'),
         centerTitle: true,
-        backgroundColor: const Color(0xFF6366F1),
         actions: [
           IconButton(
             icon: const Icon(Icons.copy),

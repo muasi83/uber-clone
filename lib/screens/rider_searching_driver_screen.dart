@@ -4,6 +4,9 @@ import '../services/websocket_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../screens/debug_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
 
 class RiderSearchingDriverScreen extends StatefulWidget {
   final int rideId;
@@ -32,18 +35,79 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
   bool _showTimeoutDialog = false;
   Timer? _acceptanceTimer;
   int _searchSeconds = 0;
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     _setupAnimations();
+    _ensureWebSocketConnected();
     _setupWebSocketListeners();
     _startSearchTimeout();
+    _startPolling();
 
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('🔍 SEARCHING FOR DRIVER');
     addDebugMessage('Ride ID: ${widget.rideId}');
     addDebugMessage('═══════════════════════════════════════');
+  }
+
+  void _ensureWebSocketConnected() {
+    if (!WebSocketService.isConnected()) {
+      final userId = StorageService.getUserId();
+      final username = StorageService.getUsername();
+      if (userId != null && username != null) {
+        addDebugMessage('🔌 Connecting WebSocket for rider...');
+        WebSocketService.connect(userId, username);
+      }
+    }
+  }
+
+  void _startPolling() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (_driverFound || !mounted) return;
+      _checkRideStatus();
+    });
+  }
+
+  Future<void> _checkRideStatus() async {
+    try {
+      final token = StorageService.getToken();
+      if (token == null) return;
+
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride == null || !mounted) return;
+
+      if (ride.status == 'ACCEPTED' && ride.driver != null) {
+        addDebugMessage('✅ Poll detected ride ACCEPTED by ${ride.driver!.fullName}');
+
+        WebSocketService.sendRideMessage('ride_accepted', {
+          'rideId': widget.rideId,
+          'driverName': ride.driver!.fullName,
+          'driverId': ride.driver!.id,
+          'pickupLatitude': ride.pickupLatitude,
+          'pickupLongitude': ride.pickupLongitude,
+          'vehicleColor': '',
+          'vehicleModel': '',
+          'licensePlate': '',
+        });
+
+        _handleRideAccepted({
+          'payload': {
+            'rideId': widget.rideId,
+            'driverName': ride.driver!.fullName,
+            'driverId': ride.driver!.id,
+            'pickupLatitude': ride.pickupLatitude,
+            'pickupLongitude': ride.pickupLongitude,
+            'vehicleColor': '',
+            'vehicleModel': '',
+            'licensePlate': '',
+          },
+        });
+      }
+    } catch (e) {
+      addDebugMessage('⚠️ Poll error: $e');
+    }
   }
 
   void _setupAnimations() {
@@ -103,7 +167,6 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       _acceptanceTimer?.cancel();
       _pulseController.stop();
 
-      // Show brief success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('🎉 Driver Found!'),
@@ -112,7 +175,6 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
         ),
       );
 
-      // Navigate to tracking after 2 seconds
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           Navigator.pushReplacementNamed(
@@ -145,7 +207,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Close dialog
+                Navigator.pop(context);
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   '/rider-home',
@@ -249,6 +311,11 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       addDebugMessage('✅ Search cancelled');
 
       if (mounted) {
+        WebSocketService.sendRideMessage('ride_cancelled', {
+          'rideId': widget.rideId,
+          'reason': 'Rider cancelled search',
+        });
+
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/rider-home',
@@ -262,163 +329,100 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
 
   @override
   Widget build(BuildContext context) {
+    final progressString = List.generate(3, (i) {
+      final cycle = (_searchSeconds % 3);
+      return i <= cycle ? '.' : '  ';
+    }).join(' ');
+
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
-        elevation: 0,
-        title: const Text(
-          'Finding Driver',
-          style: TextStyle(color: Colors.white),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: _cancelSearch,
-        ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+        child: _driverFound
+            ? _buildDriverFoundContent()
+            : _buildSearchingContent(progressString),
       ),
-      body: Center(
+    );
+  }
+
+  Widget _buildSearchingContent(String progressString) {
+    return SafeArea(
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Animated pulse
             ScaleTransition(
               scale: _pulseAnimation,
               child: Container(
-                width: 120,
-                height: 120,
+                width: 130,
+                height: 130,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                  color: Colors.white.withValues(alpha: 0.15),
                 ),
                 child: Center(
                   child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
+                    width: 110,
+                    height: 110,
+                    decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      color: const Color(0xFF6366F1),
+                      color: Colors.white24,
                     ),
                     child: const Center(
                       child: Icon(
                         Icons.local_taxi,
                         color: Colors.white,
-                        size: 50,
+                        size: 54,
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 40),
-
-            // Status text
-            Text(
-              'Looking for nearby drivers...',
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'This may take a moment',
+            AppSpacing.gapHuge,
+            const Text(
+              'Finding your driver',
               style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
-
-            // Search timer
+            AppSpacing.gapMd,
+            Text(
+              'Searching nearby drivers$progressString',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 15,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            AppSpacing.gapXl,
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(20),
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
               ),
               child: Text(
-                'Searching: ${_searchSeconds}s',
-                style: TextStyle(
-                  color: Colors.grey[700],
-                  fontWeight: FontWeight.bold,
+                '${_searchSeconds}s',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
               ),
             ),
-
-            const SizedBox(height: 60),
-
-            // Route info
+            const Spacer(),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Route',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on_outlined,
-                            color: Colors.green, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            widget.pickupAddress,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Icon(Icons.arrow_downward,
-                        color: Colors.grey, size: 16),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on,
-                            color: Colors.red, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            widget.dropoffAddress,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 40),
-
-            // Cancel button
-            ElevatedButton.icon(
-              onPressed: _cancelSearch,
-              icon: const Icon(Icons.close),
-              label: const Text('Cancel Search'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+              padding: const EdgeInsets.only(bottom: AppSpacing.colossal),
+              child: PremiumButton(
+                label: 'Cancel Search',
+                onPressed: _cancelSearch,
+                variant: ButtonVariant.outline,
+                icon: Icons.close,
               ),
             ),
           ],
@@ -427,10 +431,51 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
     );
   }
 
+  Widget _buildDriverFoundContent() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: const Icon(
+              Icons.check_circle_rounded,
+              size: 56,
+              color: Colors.green,
+            ),
+          ),
+          AppSpacing.gapXl,
+          const Text(
+            'Driver Found!',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          AppSpacing.gapSm,
+          Text(
+            'Redirecting to tracking...',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _pulseController.dispose();
     _acceptanceTimer?.cancel();
+    _pollTimer?.cancel();
     super.dispose();
   }
 }

@@ -1,8 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/directions_service.dart';
+import '../services/ride_service.dart';
+import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../screens/debug_screen.dart';
+import '../screens/chat_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/status_badge.dart';
 
 class RiderTrackingScreen extends StatefulWidget {
   final int rideId;
@@ -18,35 +25,85 @@ class RiderTrackingScreen extends StatefulWidget {
   State<RiderTrackingScreen> createState() => _RiderTrackingScreenState();
 }
 
-class _RiderTrackingScreenState extends State<RiderTrackingScreen> {
-  late GoogleMapController mapController;
+class _RiderTrackingScreenState extends State<RiderTrackingScreen>
+    with TickerProviderStateMixin {
+  GoogleMapController? mapController;
   LatLng? _driverLocation;
   LatLng? _pickupLocation;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   bool _driverArrived = false;
+  int _remainingMinutes = 0;
+
+  Timer? _statusPollTimer;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
     _initializeTracking();
     _setupWebSocketListeners();
+    _startStatusPolling();
 
     addDebugMessage('═══════════════════════════════════════');
-    addDebugMessage('👁️  TRACKING DRIVER');
+    addDebugMessage('TRACKING DRIVER');
     addDebugMessage('Ride ID: ${widget.rideId}');
     addDebugMessage('═══════════════════════════════════════');
   }
 
+  void _startStatusPolling() {
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (!mounted) return;
+      try {
+        final token = StorageService.getToken();
+        if (token == null) return;
+        final ride = await RideService.getRideDetails(widget.rideId, token);
+        if (ride == null || !mounted) return;
+
+        if (ride.status == 'STARTED') {
+          addDebugMessage('Poll detected ride STARTED');
+          _statusPollTimer?.cancel();
+          Navigator.pushReplacementNamed(
+            context,
+            '/rider-active-ride',
+            arguments: {
+              'rideId': widget.rideId,
+              'pickupLat': ride.pickupLatitude,
+              'pickupLng': ride.pickupLongitude,
+              'dropoffLat': ride.dropoffLatitude,
+              'dropoffLng': ride.dropoffLongitude,
+              'dropoffAddress': ride.dropoffAddress,
+            },
+          );
+        }
+      } catch (e) {
+        addDebugMessage('Status poll error: $e');
+      }
+    });
+  }
+
   void _initializeTracking() {
-    _driverLocation = LatLng(
-      widget.driverData['currentLatitude'] as double? ?? 0,
-      widget.driverData['currentLongitude'] as double? ?? 0,
-    );
+    final driverLat = widget.driverData['currentLatitude'] as double?;
+    final driverLng = widget.driverData['currentLongitude'] as double?;
+    if (driverLat != null && driverLng != null && driverLat != 0 && driverLng != 0) {
+      _driverLocation = LatLng(driverLat, driverLng);
+    }
 
     _pickupLocation = LatLng(
-      widget.driverData['pickupLatitude'] as double? ?? 0,
-      widget.driverData['pickupLongitude'] as double? ?? 0,
+      widget.driverData['pickupLatitude'] as double? ??
+          widget.driverData['pickupLat'] as double? ??
+          0,
+      widget.driverData['pickupLongitude'] as double? ??
+          widget.driverData['pickupLng'] as double? ??
+          0,
     );
 
     _updateMarkers();
@@ -70,31 +127,47 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen> {
               _fitBounds();
             });
 
-            addDebugMessage('📍 Driver location updated: $lat, $lng');
+            addDebugMessage('Driver location updated: $lat, $lng');
+          }
+        } else if (type == 'ride_started') {
+          addDebugMessage('Ride started — navigating to active ride');
+          final payload = event['payload'] as Map<String, dynamic>? ?? {};
+          if (mounted) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/rider-active-ride',
+              arguments: {
+                'rideId': widget.rideId,
+                'pickupLat': widget.driverData['pickupLatitude'] ?? 0,
+                'pickupLng': widget.driverData['pickupLongitude'] ?? 0,
+                'dropoffLat': payload['dropoffLatitude'] ?? widget.driverData['dropoffLatitude'] ?? 0,
+                'dropoffLng': payload['dropoffLongitude'] ?? widget.driverData['dropoffLongitude'] ?? 0,
+                'dropoffAddress': payload['dropoffAddress'] ?? widget.driverData['dropoffAddress'] ?? '',
+              },
+            );
           }
         } else if (type == 'driver_arrived' && mounted) {
           setState(() => _driverArrived = true);
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✅ Your driver has arrived!'),
+              content: Text('Your driver has arrived!'),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 5),
             ),
           );
 
-          addDebugMessage('✅ Driver arrived notification');
+          addDebugMessage('Driver arrived notification');
         }
       });
     } catch (e) {
-      addDebugMessage('❌ Error setting up listeners: $e');
+      addDebugMessage('Error setting up listeners: $e');
     }
   }
 
   void _updateMarkers() {
     _markers.clear();
 
-    // Pickup (green)
     if (_pickupLocation != null) {
       _markers.add(
         Marker(
@@ -108,7 +181,6 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen> {
       );
     }
 
-    // Driver (blue)
     if (_driverLocation != null) {
       _markers.add(
         Marker(
@@ -145,17 +217,19 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen> {
             Polyline(
               polylineId: const PolylineId('route'),
               points: route.polylinePoints!,
-              color: Colors.blue,
+              color: AppColors.primary,
               width: 5,
               geodesic: true,
             ),
           );
         }
 
-        setState(() {});
+        setState(() {
+          _remainingMinutes = route.durationMinutes ?? 0;
+        });
       }
     } catch (e) {
-      addDebugMessage('⚠️ Route error: $e');
+      addDebugMessage('Route error: $e');
     }
   }
 
@@ -186,29 +260,83 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen> {
       ),
     );
 
-    mapController.animateCamera(
+    mapController?.animateCamera(
       CameraUpdate.newLatLngBounds(bounds, 100),
     );
   }
 
+  Future<void> _openChat() async {
+    final token = StorageService.getToken();
+    final currentUserId = StorageService.getUserId();
+    final currentUsername = StorageService.getUsername();
+    if (token == null || currentUserId == null || currentUsername == null) return;
+
+    try {
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride == null || ride.driver == null || ride.driver!.id == null) return;
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              currentUserId: currentUserId,
+              currentUsername: currentUsername,
+              receiverId: ride.driver!.id!,
+              receiverName: ride.driver!.fullName,
+              token: token,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      addDebugMessage('Chat error: $e');
+    }
+  }
+
+  String _driverName() =>
+      widget.driverData['driverName'] as String? ?? 'Driver';
+
+  String _vehicleInfo() =>
+      '${widget.driverData['vehicleColor'] as String? ?? ''} ${widget.driverData['vehicleModel'] as String? ?? ''} • ${widget.driverData['licensePlate'] as String? ?? 'N/A'}';
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'Driver on the Way',
-          style: TextStyle(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context),
         ),
+        title: const Text(
+          'Trip to Destination',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
+            tooltip: 'Chat with Driver',
+            onPressed: _openChat,
+          ),
+        ],
       ),
       body: Stack(
         children: [
-          // Map
           GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
-              target: _driverLocation ?? const LatLng(0, 0),
+              target: (_driverLocation != null && _driverLocation!.latitude != 0)
+                  ? _driverLocation!
+                  : _pickupLocation ?? const LatLng(0, 0),
               zoom: 15,
             ),
             markers: _markers,
@@ -216,80 +344,9 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen> {
             compassEnabled: true,
             zoomControlsEnabled: false,
             myLocationButtonEnabled: false,
+            padding: const EdgeInsets.only(bottom: 220),
           ),
 
-          // Top card - Driver info
-          Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: Colors.grey[300],
-                      child: const Icon(Icons.person, color: Colors.grey),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.driverData['driverName'] as String? ??
-                                'Driver',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${widget.driverData['vehicleColor'] as String? ?? 'Unknown'} ${widget.driverData['vehicleModel'] as String? ?? ''}',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.driverData['licensePlate'] as String? ??
-                                'N/A',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                              color: Color(0xFF6366F1),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.phone,
-                          color: Color(0xFF6366F1)),
-                      onPressed: () {
-                        // TODO: Implement call driver
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Call driver feature coming soon'),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Bottom card - Status
           Positioned(
             bottom: 0,
             left: 0,
@@ -297,74 +354,192 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen> {
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppSpacing.radiusXxl),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
+                boxShadow: AppSpacing.shadowXl,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Drag handle
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, AppSpacing.xxl + 8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: AppColors.outlineVariant,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                  ),
 
-                    // Status
-                    Text(
-                      _driverArrived
-                          ? '✅ Driver has arrived!'
-                          : '🚗 Driver is on the way',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: _driverArrived ? Colors.green : Colors.blue,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _driverArrived
-                          ? 'Meet your driver at the pickup location'
-                          : 'Driver is approaching your pickup location',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Progress indicator
-                    if (!_driverArrived)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          minHeight: 6,
-                          backgroundColor: Colors.grey[300],
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Color(0xFF6366F1),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        child: Text(
+                          _driverName().isNotEmpty
+                              ? _driverName()[0].toUpperCase()
+                              : 'D',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
                           ),
                         ),
                       ),
-                  ],
-                ),
+                      AppSpacing.hGapMd,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _driverName(),
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            AppSpacing.gapXs,
+                            Text(
+                              _vehicleInfo(),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            AppSpacing.gapXs,
+                            Row(
+                              children: List.generate(5, (i) {
+                                return Icon(
+                                  Icons.star_rounded,
+                                  size: 16,
+                                  color: i < 4
+                                      ? AppColors.warning
+                                      : AppColors.outlineVariant,
+                                );
+                              }),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.chat_rounded,
+                              color: AppColors.primary, size: 20),
+                          onPressed: _openChat,
+                        ),
+                      ),
+                    ],
+                  ),
+                  AppSpacing.gapXl,
+
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            if (!_driverArrived)
+                              AnimatedBuilder(
+                                animation: _pulseAnimation,
+                                builder: (context, _) {
+                                  return Transform.scale(
+                                    scale: _pulseAnimation.value,
+                                    child: Container(
+                                      width: 22,
+                                      height: 22,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: AppColors.primary.withValues(alpha: 0.2),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _driverArrived
+                                    ? AppColors.success
+                                    : AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      AppSpacing.hGapSm,
+                      StatusBadge(
+                        label: _driverArrived
+                            ? 'Arrived'
+                            : 'Arriving',
+                        color: _driverArrived
+                            ? AppColors.success
+                            : AppColors.primary,
+                        icon: _driverArrived
+                            ? Icons.check_circle
+                            : Icons.navigation,
+                      ),
+                      const Spacer(),
+                      if (_remainingMinutes > 0)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.access_time_rounded,
+                              size: 18,
+                              color: AppColors.textSecondary,
+                            ),
+                            AppSpacing.hGapXs,
+                            Text(
+                              '$_remainingMinutes min',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  AppSpacing.gapMd,
+
+                  Text(
+                    _driverArrived
+                        ? 'Meet your driver at the pickup location'
+                        : 'Approaching your pickup',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                  AppSpacing.gapLg,
+
+                  if (!_driverArrived)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        minHeight: 4,
+                        backgroundColor: AppColors.outline.withValues(alpha: 0.5),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -375,7 +550,9 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen> {
 
   @override
   void dispose() {
-    mapController.dispose();
+    _statusPollTimer?.cancel();
+    mapController?.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 }

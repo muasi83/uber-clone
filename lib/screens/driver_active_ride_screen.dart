@@ -1,20 +1,29 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:async';
 import '../services/ride_service.dart';
 import '../services/directions_service.dart';
 import '../services/storage_service.dart';
+import '../services/websocket_service.dart';
 import '../screens/debug_screen.dart';
+import '../screens/chat_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
 
 class DriverActiveRideScreen extends StatefulWidget {
   final int rideId;
   final String dropoffAddress;
+  final double dropoffLat;
+  final double dropoffLng;
 
   const DriverActiveRideScreen({
     Key? key,
     required this.rideId,
     required this.dropoffAddress,
+    required this.dropoffLat,
+    required this.dropoffLng,
   }) : super(key: key);
 
   @override
@@ -25,23 +34,32 @@ class DriverActiveRideScreen extends StatefulWidget {
 class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   late GoogleMapController mapController;
   LatLng? _driverLocation;
-  LatLng? _destinationLocation;
+  late final LatLng _destinationLocation;
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
-  Timer? _locationTimer;
   bool _rideStarted = false;
   bool _isCompleting = false;
   int _remainingMinutes = 0;
+  double? _distanceKm;
+  DateTime? _startTime;
+  Timer? _rideTimer;
+
+  StreamSubscription<Position>? _positionStream;
 
   @override
   void initState() {
     super.initState();
-    _initializeRide();
+
+    _destinationLocation = LatLng(widget.dropoffLat, widget.dropoffLng);
 
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('🚗 ACTIVE RIDE - HEADING TO DESTINATION');
     addDebugMessage('Ride ID: ${widget.rideId}');
+    addDebugMessage('Destination: ${widget.dropoffLat}, ${widget.dropoffLng}');
+    addDebugMessage('Address: ${widget.dropoffAddress}');
     addDebugMessage('═══════════════════════════════════════');
+
+    _initializeRide();
   }
 
   Future<void> _initializeRide() async {
@@ -51,48 +69,77 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       );
 
       _driverLocation = LatLng(position.latitude, position.longitude);
-      _destinationLocation = const LatLng(0, 0); // TODO: Get from ride data
+      addDebugMessage('✅ Driver location: ${position.latitude}, ${position.longitude}');
 
       _updateMarkers();
       _updateRoute();
-      _startLocationUpdates();
+      _startLocationStream();
 
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
     } catch (e) {
       addDebugMessage('❌ Init error: $e');
     }
   }
 
-  void _startLocationUpdates() {
-    _locationTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      try {
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
+  void _startLocationStream() {
+    _stopLocationStream();
+
+    addDebugMessage('▶️ Starting active ride location stream (50m filter)');
+
+    const locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 50,
+    );
+
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: locationSettings,
+    ).listen(
+      (Position position) async {
+        if (!mounted) return;
+
+        _driverLocation = LatLng(position.latitude, position.longitude);
+
+        addDebugMessage(
+          '📍 Driver moved 50m+ — ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
         );
 
-        final token = StorageService.getToken();
-        if (token != null) {
-          await RideService.updateDriverLocation(
-            rideId: widget.rideId,
-            latitude: position.latitude,
-            longitude: position.longitude,
-            token: token,
-          );
+        try {
+          final token = StorageService.getToken();
+          if (token != null) {
+            await RideService.updateDriverLocation(
+              rideId: widget.rideId,
+              latitude: position.latitude,
+              longitude: position.longitude,
+              token: token,
+            );
+            addDebugMessage('✅ Rider notified of driver location');
+          }
+        } catch (e) {
+          addDebugMessage('⚠️ Failed to update rider location: $e');
         }
 
         if (mounted) {
           setState(() {
-            _driverLocation = LatLng(position.latitude, position.longitude);
             _updateMarkers();
             _updateRoute();
           });
         }
-      } catch (e) {
-        addDebugMessage('⚠️ Location update error: $e');
-      }
-    });
+      },
+      onError: (error) {
+        addDebugMessage('❌ Active ride stream error: $error');
+      },
+      onDone: () {
+        addDebugMessage('⏹️ Active ride stream closed');
+      },
+    );
+  }
+
+  void _stopLocationStream() {
+    if (_positionStream != null) {
+      _positionStream!.cancel();
+      _positionStream = null;
+      addDebugMessage('⏹️ Active ride location stream stopped');
+    }
   }
 
   void _updateMarkers() {
@@ -103,42 +150,36 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         Marker(
           markerId: const MarkerId('driver'),
           position: _driverLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueBlue,
-          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
         ),
       );
     }
 
-    if (_destinationLocation != null) {
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('destination'),
-          position: _destinationLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueRed,
-          ),
-        ),
-      );
-    }
+    _markers.add(
+      Marker(
+        markerId: const MarkerId('destination'),
+        position: _destinationLocation,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: InfoWindow(title: widget.dropoffAddress),
+      ),
+    );
 
     setState(() {});
   }
 
   Future<void> _updateRoute() async {
-    if (_driverLocation == null || _destinationLocation == null) return;
+    if (_driverLocation == null) return;
 
     try {
       final route = await DirectionsService.getDirections(
         origin: _driverLocation!,
-        destination: _destinationLocation!,
+        destination: _destinationLocation,
       );
 
       if (route != null && route.isSuccess && mounted) {
         _polylines.clear();
 
-        if (route.polylinePoints != null &&
-            route.polylinePoints!.isNotEmpty) {
+        if (route.polylinePoints != null && route.polylinePoints!.isNotEmpty) {
           _polylines.add(
             Polyline(
               polylineId: const PolylineId('route'),
@@ -152,7 +193,12 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
 
         setState(() {
           _remainingMinutes = route.durationMinutes ?? 0;
+          _distanceKm = route.distanceKm;
         });
+
+        addDebugMessage(
+          '✅ Route updated — ${route.distanceKm?.toStringAsFixed(1)} km, $_remainingMinutes min',
+        );
       }
     } catch (e) {
       addDebugMessage('⚠️ Route error: $e');
@@ -165,7 +211,14 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
 
   Future<void> _startRide() async {
     try {
-      setState(() => _rideStarted = true);
+      setState(() {
+        _rideStarted = true;
+        _startTime = DateTime.now();
+      });
+
+      _rideTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
 
       final token = StorageService.getToken();
       if (token != null) {
@@ -173,6 +226,14 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       }
 
       addDebugMessage('✅ Ride started');
+
+      WebSocketService.sendRideMessage('ride_started', {
+        'rideId': widget.rideId,
+        'status': 'STARTED',
+        'dropoffLatitude': widget.dropoffLat,
+        'dropoffLongitude': widget.dropoffLng,
+        'dropoffAddress': widget.dropoffAddress,
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -199,9 +260,14 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         await RideService.completeRide(widget.rideId, token);
       }
 
-      _locationTimer?.cancel();
+      _stopLocationStream();
 
       addDebugMessage('✅ Ride completed');
+
+      WebSocketService.sendRideMessage('ride_completed', {
+        'rideId': widget.rideId,
+        'status': 'COMPLETED',
+      });
 
       if (mounted) {
         Navigator.pushReplacementNamed(
@@ -217,32 +283,49 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       if (mounted) {
         setState(() => _isCompleting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
+  String _formatElapsedTime() {
+    if (_startTime == null) return '00:00';
+    final elapsed = DateTime.now().difference(_startTime!);
+    final hours = elapsed.inHours;
+    final minutes = elapsed.inMinutes.remainder(60);
+    final seconds = elapsed.inSeconds.remainder(60);
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          _rideStarted ? 'On the Way' : 'Ready to Start',
+          _rideStarted ? 'Active Ride' : 'Ready to Start',
           style: const TextStyle(color: Colors.white),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+            tooltip: 'Chat with Rider',
+            onPressed: _openChat,
+          ),
+        ],
       ),
       body: Stack(
         children: [
           GoogleMap(
             onMapCreated: _onMapCreated,
-            initialCameraPosition: const CameraPosition(
-              target: LatLng(0, 0),
+            initialCameraPosition: CameraPosition(
+              target: _destinationLocation,
               zoom: 15,
             ),
             markers: _markers,
@@ -251,53 +334,119 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
             zoomControlsEnabled: false,
           ),
           Positioned(
-            bottom: 24,
-            left: 24,
-            right: 24,
-            child: Row(
-              children: [
-                if (_rideStarted)
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isCompleting ? null : _completeRide,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        disabledBackgroundColor: Colors.grey[300],
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(AppSpacing.radiusXxl),
+                  topRight: Radius.circular(AppSpacing.radiusXxl),
+                ),
+                boxShadow: AppSpacing.shadowXl,
+              ),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.xxxl,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, color: AppColors.error, size: 20),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Destination',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textTertiary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              widget.dropoffAddress,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
-                      child: Text(
-                        _isCompleting ? 'Completing...' : 'Complete Ride',
-                        style: TextStyle(
-                          color: _isCompleting ? Colors.grey : Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _startRide,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6366F1),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Start Ride',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                    ],
                   ),
-              ],
+                  const SizedBox(height: AppSpacing.md),
+                  Container(height: 1, color: AppColors.outline),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time, color: AppColors.primary, size: 20),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        '$_remainingMinutes min',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_distanceKm != null)
+                        Text(
+                          '${_distanceKm!.toStringAsFixed(1)} km',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (_rideStarted) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        const Icon(Icons.timer_outlined, color: AppColors.textTertiary, size: 18),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          _formatElapsedTime(),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.xxl),
+                  _rideStarted
+                      ? PremiumButton(
+                          label: _isCompleting ? 'Completing...' : 'Complete Ride',
+                          icon: _isCompleting ? Icons.hourglass_empty : Icons.flag,
+                          onPressed: _isCompleting ? null : _completeRide,
+                          variant: ButtonVariant.danger,
+                        )
+                      : PremiumButton(
+                          label: 'Start Ride',
+                          icon: Icons.play_arrow,
+                          onPressed: _startRide,
+                          variant: ButtonVariant.success,
+                        ),
+                ],
+              ),
             ),
           ),
         ],
@@ -305,9 +454,42 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
     );
   }
 
+  Future<void> _openChat() async {
+    final token = StorageService.getToken();
+    final currentUserId = StorageService.getUserId();
+    final currentUsername = StorageService.getUsername();
+    if (token == null || currentUserId == null || currentUsername == null) return;
+
+    try {
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride == null) return;
+
+      final otherUser = ride.rider;
+      if (otherUser.id == null) return;
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              currentUserId: currentUserId,
+              currentUsername: currentUsername,
+              receiverId: otherUser.id!,
+              receiverName: otherUser.fullName,
+              token: token,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      addDebugMessage('❌ Chat error: $e');
+    }
+  }
+
   @override
   void dispose() {
-    _locationTimer?.cancel();
+    _stopLocationStream();
+    _rideTimer?.cancel();
     mapController.dispose();
     super.dispose();
   }

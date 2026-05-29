@@ -19,11 +19,13 @@ class WebSocketService {
   static final _rideEventController = StreamController<Map<String, dynamic>>.broadcast();
   static final _driverLocationController = StreamController<Map<String, dynamic>>.broadcast();
   static final _connectionStateController = StreamController<String>.broadcast();
+  static final _chatMessageController = StreamController<Map<String, dynamic>>.broadcast();
   
   // ✅ Expose as streams
   static Stream<Map<String, dynamic>> get rideEvents => _rideEventController.stream;
   static Stream<Map<String, dynamic>> get driverLocationEvents => _driverLocationController.stream;
   static Stream<String> get connectionState => _connectionStateController.stream;
+  static Stream<Map<String, dynamic>> get chatMessages => _chatMessageController.stream;
 
   static Future<void> connect(int userId, String username) async {
     try {
@@ -221,6 +223,7 @@ class WebSocketService {
     switch (type) {
       case 'message':
         onMessageReceived?.call(message);
+        _chatMessageController.add(message);
         break;
       case 'user_online':
         onUserOnline?.call(message['senderId'], message['senderName'] ?? '');
@@ -266,6 +269,7 @@ class WebSocketService {
     _rideEventController.close();
     _driverLocationController.close();
     _connectionStateController.close();
+    _chatMessageController.close();
   }
 
   static void disconnect() {

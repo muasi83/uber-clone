@@ -1,8 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../services/directions_service.dart';
+import '../services/ride_service.dart';
+import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../screens/debug_screen.dart';
+import '../screens/chat_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
 
 class RiderActiveRideScreen extends StatefulWidget {
   final int rideId;
@@ -27,22 +34,42 @@ class RiderActiveRideScreen extends StatefulWidget {
 }
 
 class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
-  late GoogleMapController mapController;
+  GoogleMapController? mapController;
   LatLng? _driverLocation;
+  LatLng? _riderLocation;
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
   int _remainingMinutes = 0;
+  String? _driverName;
 
   @override
   void initState() {
     super.initState();
     _setupWebSocketListeners();
+    _getRiderLocation();
     _updateRoute();
+    _fetchDriverInfo();
 
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('🚗 ACTIVE RIDE');
     addDebugMessage('Destination: ${widget.dropoffAddress}');
     addDebugMessage('═══════════════════════════════════════');
+  }
+
+  Future<void> _getRiderLocation() async {
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      if (mounted) {
+        setState(() {
+          _riderLocation = LatLng(pos.latitude, pos.longitude);
+          _updateMarkers();
+        });
+      }
+    } catch (e) {
+      addDebugMessage('⚠️ Could not get rider location: $e');
+    }
   }
 
   void _setupWebSocketListeners() {
@@ -79,21 +106,36 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     }
   }
 
+  Future<void> _fetchDriverInfo() async {
+    final token = StorageService.getToken();
+    if (token == null) return;
+    try {
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride != null && ride.driver != null && mounted) {
+        setState(() {
+          _driverName = ride.driver!.fullName;
+        });
+      }
+    } catch (e) {
+      addDebugMessage('⚠️ Driver info error: $e');
+    }
+  }
+
   void _updateMarkers() {
     _markers.clear();
 
-    // Current location (yellow)
-    _markers.add(
-      Marker(
-        markerId: const MarkerId('current'),
-        position: const LatLng(0, 0), // TODO: Get actual current location
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueYellow,
+    if (_riderLocation != null) {
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('current'),
+          position: _riderLocation!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueYellow,
+          ),
         ),
-      ),
-    );
+      );
+    }
 
-    // Driver (blue)
     if (_driverLocation != null) {
       _markers.add(
         Marker(
@@ -106,7 +148,6 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
       );
     }
 
-    // Destination (red)
     _markers.add(
       Marker(
         markerId: const MarkerId('destination'),
@@ -121,10 +162,14 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   }
 
   Future<void> _updateRoute() async {
+    final origin = _driverLocation ?? LatLng(widget.pickupLat, widget.pickupLng);
+    final destination = LatLng(widget.dropoffLat, widget.dropoffLng);
+    if (origin.latitude == 0 && origin.longitude == 0) return;
+
     try {
       final route = await DirectionsService.getDirections(
-        origin: LatLng(widget.pickupLat, widget.pickupLng),
-        destination: LatLng(widget.dropoffLat, widget.dropoffLng),
+        origin: origin,
+        destination: destination,
       );
 
       if (route != null && route.isSuccess && mounted) {
@@ -136,7 +181,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
             Polyline(
               polylineId: const PolylineId('route'),
               points: route.polylinePoints!,
-              color: Colors.blue,
+              color: AppColors.primary,
               width: 5,
               geodesic: true,
             ),
@@ -159,17 +204,32 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6366F1),
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'On the Way',
-          style: TextStyle(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context),
         ),
+        title: const Text(
+          'En Route',
+          style: TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
+            tooltip: 'Chat with Driver',
+            onPressed: _openChat,
+          ),
+        ],
       ),
       body: Stack(
         children: [
-          // Map
           GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
@@ -181,8 +241,6 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
             compassEnabled: true,
             zoomControlsEnabled: false,
           ),
-
-          // Bottom card
           Positioned(
             bottom: 0,
             left: 0,
@@ -190,102 +248,178 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppSpacing.radiusXxl),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 12,
-                  ),
-                ],
+                boxShadow: AppSpacing.shadowXl,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Drag handle
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xxl,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: AppColors.textTertiary.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // Destination
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                  Container(
+                    width: double.infinity,
+                    padding: AppSpacing.cardPaddingCompact,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    ),
+                    child: Row(
                       children: [
-                        const Icon(
-                          Icons.location_on,
-                          color: Colors.red,
-                          size: 20,
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                          ),
+                          child: const Icon(
+                            Icons.access_time_rounded,
+                            color: AppColors.primary,
+                            size: 22,
+                          ),
                         ),
-                        const SizedBox(width: 12),
+                        AppSpacing.hGapMd,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Estimated arrival',
+                              style: TextStyle(
+                                color: AppColors.textSecondary.withValues(alpha: 0.8),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '$_remainingMinutes min remaining',
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.gapLg,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                    child: LinearProgressIndicator(
+                      backgroundColor: AppColors.outline.withValues(alpha: 0.5),
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      minHeight: 3,
+                    ),
+                  ),
+                  AppSpacing.gapLg,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                        ),
+                        child: const Icon(
+                          Icons.location_on,
+                          color: AppColors.primary,
+                          size: 18,
+                        ),
+                      ),
+                      AppSpacing.hGapMd,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Destination',
+                              style: TextStyle(
+                                color: AppColors.textTertiary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.dropoffAddress,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: AppColors.textPrimary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_driverName != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                      child: Divider(
+                        height: 1,
+                        color: AppColors.outline.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                          child: Text(
+                            _driverName![0].toUpperCase(),
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        AppSpacing.hGapMd,
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Destination',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 11,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                widget.dropoffAddress,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                          child: Text(
+                            _driverName!,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.chat_rounded,
+                                color: AppColors.primary, size: 20),
+                            onPressed: _openChat,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-
-                    // ETA
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        border: Border.all(color: Colors.blue[200]!),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.access_time,
-                            color: Colors.blue,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'ETA: $_remainingMinutes minutes',
-                            style: const TextStyle(
-                              color: Colors.blue,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
-                ),
+                ],
               ),
             ),
           ),
@@ -294,9 +428,38 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     );
   }
 
+  Future<void> _openChat() async {
+    final token = StorageService.getToken();
+    final currentUserId = StorageService.getUserId();
+    final currentUsername = StorageService.getUsername();
+    if (token == null || currentUserId == null || currentUsername == null) return;
+
+    try {
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride == null || ride.driver == null || ride.driver!.id == null) return;
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              currentUserId: currentUserId,
+              currentUsername: currentUsername,
+              receiverId: ride.driver!.id!,
+              receiverName: ride.driver!.fullName,
+              token: token,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      addDebugMessage('❌ Chat error: $e');
+    }
+  }
+
   @override
   void dispose() {
-    mapController.dispose();
+    mapController?.dispose();
     super.dispose();
   }
 }

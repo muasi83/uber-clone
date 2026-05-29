@@ -7,6 +7,9 @@ import '../services/websocket_service.dart';
 import 'chat_screen.dart';
 import 'settings_screen.dart';
 import 'debug_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_button.dart';
 
 class HomeScreen extends StatefulWidget {
   final int userId;
@@ -39,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     addDebugMessage('Username: ${widget.username}');
     addDebugMessage('Token: ${widget.token.substring(0, 20)}...');
     addDebugMessage('═══════════════════════════════════════');
-    
+
     _loadUsers();
     _connectWebSocket();
     WebSocketService.onUserOnline = _handleUserOnline;
@@ -98,7 +101,6 @@ class _HomeScreenState extends State<HomeScreen> {
       addDebugMessage('🔍 LOADING USERS');
       addDebugMessage('URL: $url');
       addDebugMessage('Authorization: Bearer ${widget.token.substring(0, 20)}...');
-    
 
 
 final response = await http.get(
@@ -112,8 +114,6 @@ final response = await http.get(
 
 
 
-
-
       addDebugMessage('📊 Response Status: ${response.statusCode}');
       addDebugMessage('Response Headers: ${response.headers}');
       addDebugMessage('Response Body: ${response.body}');
@@ -123,7 +123,7 @@ final response = await http.get(
       if (response.statusCode == 200) {
         final jsonList = jsonDecode(response.body) as List;
         addDebugMessage('✅ Parsed ${jsonList.length} users');
-        
+
         setState(() {
           users = jsonList.map((u) {
             var user = User.fromJson(u);
@@ -165,7 +165,7 @@ final response = await http.get(
 
   Future<void> _logout() async {
     if (!mounted) return;
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -181,7 +181,7 @@ final response = await http.get(
           TextButton(
             onPressed: () async {
               if (mounted) Navigator.pop(dialogContext);
-              
+
               try {
                 await http
                     .post(
@@ -193,14 +193,12 @@ final response = await http.get(
                     )
                     .timeout(const Duration(seconds: 10));
               } catch (e) {
-                // Continue logout even if API call fails
               }
 
               try {
                 WebSocketService.setOffline(widget.userId);
                 WebSocketService.disconnect();
               } catch (e) {
-                // Continue logout even if WebSocket fails
               }
 
               await StorageService.clearAllData();
@@ -225,59 +223,55 @@ final response = await http.get(
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
-
-      
-   appBar: AppBar(
-  backgroundColor: const Color(0xFF6366F1),
-  elevation: 0,
-  title: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        'Messages',
-        style: TextStyle(color: Colors.white, fontSize: 20),
-      ),
-      Text(
-        'Online now',
-        style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.8),
-          fontSize: 12,
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        title: const Text(
+          'Chats',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            color: Colors.white,
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.bug_report_outlined),
+            color: Colors.white,
+            tooltip: 'Debug Console',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const DebugScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            color: Colors.white,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => SettingsScreen(username: widget.username),
+                ),
+              );
+            },
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(0.5),
+          child: Container(color: Colors.white24, height: 0.5),
         ),
       ),
-    ],
-  ),
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.bug_report),
-      tooltip: 'Debug Console',
-      onPressed: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => const DebugScreen(),
-          ),
-        );
-      },
-    ),
-    IconButton(
-      icon: const Icon(Icons.settings),
-      onPressed: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => SettingsScreen(username: widget.username),
-          ),
-        );
-      },
-    ),
-    IconButton(
-      icon: const Icon(Icons.logout),
-      onPressed: _logout,
-    ),
-  ],
-),
-
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : users.isEmpty
               ? Center(
                   child: Column(
@@ -286,132 +280,159 @@ final response = await http.get(
                       Icon(
                         Icons.people_outline,
                         size: 80,
-                        color: Colors.grey[300],
+                        color: AppColors.textTertiary,
                       ),
-                      const SizedBox(height: 16),
+                      AppSpacing.gapLg,
                       Text(
                         'No users available',
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.grey[600],
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
+                      AppSpacing.gapLg,
+                      PremiumButton(
+                        label: 'Retry',
+                        variant: ButtonVariant.outline,
                         onPressed: _loadUsers,
-                        child: const Text('Retry'),
+                        height: 44,
                       ),
                     ],
                   ),
                 )
               : RefreshIndicator(
                   onRefresh: _loadUsers,
-                  child: ListView.builder(
+                  color: AppColors.primary,
+                  child: ListView.separated(
                     itemCount: users.length,
+                    padding: EdgeInsets.zero,
+                    separatorBuilder: (context, index) => Container(
+                      margin: const EdgeInsets.only(left: 76),
+                      height: 0.5,
+                      color: AppColors.outline,
+                    ),
                     itemBuilder: (context, index) {
                       final user = users[index];
                       final isTyping = typingStatus[user.id] ?? false;
+                      final unread = unreadCounts[user.id] ?? 0;
+                      final avatarColors = [
+                        AppColors.primary,
+                        AppColors.secondary,
+                        const Color(0xFF8B5CF6),
+                        const Color(0xFFF59E0B),
+                        const Color(0xFF10B981),
+                        const Color(0xFFEC4899),
+                        const Color(0xFF3B82F6),
+                        const Color(0xFFEF4444),
+                      ];
+                      final avatarColor = avatarColors[user.id != null ? user.id! % avatarColors.length : index % avatarColors.length];
 
-                      return Container(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        child: Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(12),
-                            leading: Stack(
-                              children: [
-                                CircleAvatar(
-                                  radius: 28,
-                                  backgroundColor: const Color(0xFF6366F1),
-                                  child: Text(
-                                    user.fullName[0].toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    width: 14,
-                                    height: 14,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: user.isOnline
-                                          ? Colors.green
-                                          : Colors.grey,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            title: Text(
-                              user.fullName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            subtitle: Text(
-                              isTyping
-                                  ? 'typing...'
-                                  : '@${user.username}',
-                              style: TextStyle(
-                                color: isTyping
-                                    ? Colors.blue
-                                    : Colors.grey[600],
-                                fontSize: 13,
-                                fontStyle: isTyping
-                                    ? FontStyle.italic
-                                    : FontStyle.normal,
-                              ),
-                            ),
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF6366F1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: avatarColor,
                               child: Text(
-                                user.isOnline ? 'Active' : 'Offline',
+                                user.fullName[0].toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 11,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => ChatScreen(
-                                    currentUserId: widget.userId,
-                                    currentUsername: widget.username,
-                                    receiverId: user.id!,
-                                    receiverName: user.fullName,
-                                    token: widget.token,
+                            if (user.isOnline)
+                              Positioned(
+                                right: 2,
+                                bottom: 2,
+                                child: Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppColors.success,
+                                    border: Border.all(
+                                      color: AppColors.surface,
+                                      width: 2,
+                                    ),
                                   ),
                                 ),
-                              );
-                            },
+                              ),
+                          ],
+                        ),
+                        title: Text(
+                          user.fullName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            color: AppColors.textPrimary,
                           ),
                         ),
+                        subtitle: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                isTyping
+                                    ? 'typing...'
+                                    : '@${user.username}',
+                                style: TextStyle(
+                                  color: isTyping
+                                      ? AppColors.primary
+                                      : AppColors.textTertiary,
+                                  fontSize: 14,
+                                  fontStyle: isTyping
+                                      ? FontStyle.italic
+                                      : FontStyle.normal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isTyping)
+                              const SizedBox(width: 4),
+                            if (isTyping)
+                              const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                          ],
+                        ),
+                        trailing: unread > 0
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '$unread',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            : null,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ChatScreen(
+                                currentUserId: widget.userId,
+                                currentUsername: widget.username,
+                                receiverId: user.id!,
+                                receiverName: user.fullName,
+                                token: widget.token,
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),

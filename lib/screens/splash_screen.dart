@@ -1,9 +1,12 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../services/storage_service.dart';
 import '../screens/debug_screen.dart';
 import '../screens/auth_screen.dart';
 import '../screens/rider_home_screen.dart';
 import '../screens/driver_home_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -12,10 +15,21 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animationController;
+  bool _logoVisible = false;
+
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _logoVisible = true);
+    });
     _initializeApp();
   }
 
@@ -36,7 +50,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
       // Check for existing session
       await _checkSession();
-      
+
       print('DEBUG: Session check complete');
     } catch (e) {
       print('DEBUG: Error in splash: $e');
@@ -61,17 +75,25 @@ class _SplashScreenState extends State<SplashScreen> {
       print('DEBUG: Username: $username');
       print('DEBUG: Role: $role');
 
-      addDebugMessage('Token: ${token != null ? '✅ Found' : '❌ Not found'}');
-      addDebugMessage('User ID: ${userId != null ? '✅ Found' : '❌ Not found'}');
-      addDebugMessage('Username: ${username != null ? '✅ Found' : '❌ Not found'}');
-      addDebugMessage('Role: ${role != null ? '✅ Found' : '❌ Not found'}');
+      addDebugMessage(
+          'Token: ${token != null ? '✅ Found' : '❌ Not found'}');
+      addDebugMessage(
+          'User ID: ${userId != null ? '✅ Found' : '❌ Not found'}');
+      addDebugMessage(
+          'Username: ${username != null ? '✅ Found' : '❌ Not found'}');
+      addDebugMessage(
+          'Role: ${role != null ? '✅ Found' : '❌ Not found'}');
 
       // Check if all required data exists
-      if (token != null && userId != null && username != null && role != null) {
+      if (token != null &&
+          userId != null &&
+          username != null &&
+          role != null) {
         addDebugMessage('✅ Valid session found');
         addDebugMessage('═══════════════════════════════════════');
-        
-        print('DEBUG: Valid session - navigating to ${role == 'DRIVER' ? 'driver' : 'rider'} home');
+
+        print(
+            'DEBUG: Valid session - navigating to ${role == 'DRIVER' ? 'driver' : 'rider'} home');
 
         // Navigate to appropriate home screen based on role
         if (mounted) {
@@ -98,7 +120,7 @@ class _SplashScreenState extends State<SplashScreen> {
       } else {
         addDebugMessage('❌ No valid session - going to AuthScreen');
         addDebugMessage('═══════════════════════════════════════');
-        
+
         print('DEBUG: No valid session - navigating to auth');
         _navigateToAuth();
       }
@@ -123,67 +145,135 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF6366F1),
-      body: Center(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: AppColors.darkGradient,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // App Logo
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.directions_car,
-                size: 60,
-                color: Color(0xFF6366F1),
+            const Spacer(),
+            // Animated logo with fade-in and scale bounce
+            AnimatedOpacity(
+              opacity: _logoVisible ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOut,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.elasticOut,
+                builder: (context, scale, child) {
+                  return Transform.scale(
+                    scale: scale,
+                    child: child,
+                  );
+                },
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusXl),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.4),
+                        blurRadius: 30,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.directions_car,
+                    size: 60,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-
-            // App Name
+            const SizedBox(height: AppSpacing.xxl),
             const Text(
-              'Uber Clone',
+              'RideNow',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 28,
+                fontSize: 32,
                 fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
               ),
             ),
-            const SizedBox(height: 8),
-
-            // Tagline
+            const SizedBox(height: AppSpacing.sm),
             const Text(
-              'Your Ride, Your Way',
+              'Premium Ride Sharing',
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
+                letterSpacing: 1.0,
               ),
             ),
-            const SizedBox(height: 48),
-
-            // Loading Indicator
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-            const SizedBox(height: 16),
-
-            // Loading Text
+            const Spacer(),
+            _BouncingDots(controller: _animationController),
+            const SizedBox(height: AppSpacing.lg),
             const Text(
-              'Loading...',
+              'v1.0.0',
               style: TextStyle(
-                color: Colors.white70,
+                color: Colors.white38,
                 fontSize: 12,
+                letterSpacing: 0.5,
               ),
             ),
+            const SizedBox(height: AppSpacing.xxl),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BouncingDots extends StatelessWidget {
+  final AnimationController controller;
+
+  const _BouncingDots({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (index) {
+            final delay = index * 0.25;
+            final t = (controller.value + delay) % 1.0;
+            final scale =
+                0.4 + 0.6 * (t < 0.5 ? t / 0.5 : (1.0 - t) / 0.5);
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

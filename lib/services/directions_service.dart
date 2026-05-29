@@ -25,6 +25,17 @@ class DirectionsResult {
 }
 
 class DirectionsService {
+  static String _normalizeToken(String token) {
+    var t = token.trim();
+    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+      t = t.substring(1, t.length - 1).trim();
+    }
+    if (t.toLowerCase().startsWith('bearer ')) {
+      t = t.substring(7).trim();
+    }
+    return t;
+  }
+
   static Future<DirectionsResult?> getDirections({
     required LatLng origin,
     required LatLng destination,
@@ -64,19 +75,23 @@ class DirectionsService {
         },
       );
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 20));
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      };
+
+      final token = StorageService.getToken();
+      if (token != null && token.trim().isNotEmpty) {
+        headers['Authorization'] = 'Bearer ${_normalizeToken(token)}';
+      }
+
+      final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 20));
 
       addDebugMessage('✅ Response Status: ${response.statusCode}');
 
       if (response.statusCode != 200) {
         addDebugMessage('❌ Backend route API error: ${response.body}');
-        return _fallback(origin, destination, warning: 'Backend route API failed');
+        return _fallback(origin, destination, warning: 'Backend route API failed (${response.statusCode})');
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -156,7 +171,8 @@ class DirectionsService {
     final dLat = _degToRad(lat2 - lat1);
     final dLon = _degToRad(lon2 - lon1);
 
-    final a = math.sin(dLat / 2) * math.sin(dLat / 2) ;
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
         math.cos(_degToRad(lat1)) *
             math.cos(_degToRad(lat2)) *
             (math.sin(dLon / 2) * math.sin(dLon / 2));
