@@ -29,9 +29,8 @@ workflows:
           find . -name "Podfile" -execdir pod install \;
       - name: Set up code signing
         script: |
-          echo "=== Checking certificate commands ==="
-          app-store-connect certificates --help 2>&1 || true
-          echo "=== Fetching signing files ==="
+          app-store-connect certificates delete \
+            --id XZFKFQVMRG || true
           app-store-connect fetch-signing-files \
             com.muasi.Drivers-app \
             --type IOS_APP_STORE \
