@@ -7,7 +7,7 @@ workflows:
       groups:
         - a
       vars:
-        APP_ID: com.muasi.Drivers-app
+        APP_ID: com.muasi.driversapp
         APP_NAME: muasidivoapp
         XCODE_WORKSPACE: ios/Runner.xcworkspace
         XCODE_SCHEME: Runner
