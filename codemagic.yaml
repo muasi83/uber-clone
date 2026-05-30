@@ -26,6 +26,12 @@ workflows:
           flutter channel stable
           flutter upgrade
 
+      - name: Flutter clean
+        script: |
+          set -euo pipefail
+          echo "Cleaning Flutter build..."
+          flutter clean
+
       - name: Flutter pub get
         script: |
           set -euo pipefail
@@ -41,11 +47,31 @@ workflows:
           pod install --repo-update
           cd ..
 
-      - name: Flutter clean
+      - name: Check App Store Connect credentials
         script: |
           set -euo pipefail
-          echo "Cleaning Flutter build..."
-          flutter clean
+          echo "=========================================="
+          echo "Checking App Store Connect credentials..."
+          echo "=========================================="
+          echo "Key ID: ${APP_STORE_CONNECT_KEY_IDENTIFIER:-NOT SET}"
+          echo "Issuer ID: ${APP_STORE_CONNECT_ISSUER_ID:-NOT SET}"
+          echo "Private key: ${APP_STORE_CONNECT_PRIVATE_KEY:+SET}${APP_STORE_CONNECT_PRIVATE_KEY:-NOT SET}"
+
+          if [ -n "${APP_STORE_CONNECT_PRIVATE_KEY:-}" ] && [ -f "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
+            echo "Private key is a file at: $APP_STORE_CONNECT_PRIVATE_KEY"
+            echo "File exists: yes"
+            echo "File size: $(wc -c < "$APP_STORE_CONNECT_PRIVATE_KEY") bytes"
+          fi
+
+          echo ""
+          echo "Testing connection to App Store Connect..."
+          if TEST=$(app-store-connect bundle-ids list --json 2>&1); then
+            echo "✅ Connection successful"
+          else
+            echo "❌ Connection failed"
+            echo "$TEST"
+            exit 1
+          fi
 
       - name: Set up code signing
         script: |
@@ -248,14 +274,14 @@ workflows:
           if [ ${#P12_FILES[@]} -eq 0 ]; then
               echo "⚠️  No .p12 files found in $P12_DIR"
           else
-              CERT_IMPORT=$(security import \
+              if CERT_IMPORT=$(security import \
                 "$P12_DIR"/*.p12 \
                 -k ~/Library/Keychains/login.keychain-db \
                 -P "" \
-                2>&1) || true
-          
-              if [ $? -eq 0 ] || [[ "$CERT_IMPORT" == *"already exists"* ]]; then
+                2>&1); then
                   echo "✅ Certificates imported/verified"
+              elif [[ "$CERT_IMPORT" == *"already exists"* ]]; then
+                  echo "✅ Certificates already imported"
               else
                   echo "⚠️  Certificate import status: $CERT_IMPORT"
               fi
