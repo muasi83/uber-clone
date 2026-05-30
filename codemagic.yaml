@@ -2,7 +2,7 @@ workflows:
   ios-release:
     name: iOS Release to TestFlight
     instance_type: mac_mini_m2
-    max_build_duration: 60
+    max_build_duration: 120
     environment:
       groups:
         - a
@@ -11,7 +11,7 @@ workflows:
         APP_NAME: muasidivoapp
         XCODE_WORKSPACE: ios/Runner.xcworkspace
         XCODE_SCHEME: Runner
-      flutter: stable
+      flutter: latest
     triggering:
       events:
         - push
@@ -20,86 +20,288 @@ workflows:
           include: true
       cancel_previous_builds: true
     scripts:
+      - name: Set Flutter version
+        script: |
+          flutter --version
+          flutter channel stable
+          flutter upgrade
+
       - name: Flutter pub get
-        script: flutter pub get
+        script: |
+          set -e
+          echo "Getting Flutter dependencies..."
+          flutter pub get
+          flutter pub upgrade --nullsafety
+
       - name: Flutter clean
-        script: flutter clean
+        script: |
+          set -e
+          echo "Cleaning Flutter build..."
+          flutter clean
+
       - name: Install iOS pods
         script: |
-          find . -name "Podfile" -execdir pod install \;
+          set -e
+          echo "Installing iOS pods..."
+          cd ios
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+          cd ..
+
       - name: Set up code signing
         script: |
           set -e
           
-          # Get Bundle ID
-          BUNDLE_ID=$(app-store-connect bundle-ids list --json \
-            | python3 -c "import json,sys; d=json.load(sys.stdin); print([b['id'] for b in d if b['attributes']['identifier']=='${APP_ID}'][0])")
-          echo "Bundle ID resource: $BUNDLE_ID"
+          export APP_ID="${APP_ID}"
           
-          # Try to get existing distribution certificate
-          CERT_ID=$(app-store-connect certificates list \
-            --type DISTRIBUTION --json \
-            | python3 -c "import json,sys; certs=json.load(sys.stdin)['data']; print(certs[0]['id'] if certs else '')" 2>/dev/null || echo "")
+          echo "=========================================="
+          echo "Step 1: Getting Bundle ID"
+          echo "=========================================="
           
-          if [ -z "$CERT_ID" ]; then
-            echo "No existing certificate found. Creating new Distribution certificate..."
-            CERT_DIR=$(mktemp -d)
-            openssl genrsa -out "$CERT_DIR/key.pem" 2048
-            app-store-connect certificates create \
-              --type DISTRIBUTION \
-              --certificate-key "@file:$CERT_DIR/key.pem" \
-              --save
-            
-            CERT_ID=$(app-store-connect certificates list \
-              --type DISTRIBUTION --json \
-              | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['id'])")
-          else
-            echo "Using existing Certificate ID: $CERT_ID"
+          BUNDLE_ID_JSON=$(app-store-connect bundle-ids list --json 2>&1)
+          if [ $? -ne 0 ]; then
+            echo "❌ Error fetching bundle IDs"
+            echo "$BUNDLE_ID_JSON"
+            exit 1
           fi
           
-          echo "Certificate ID: $CERT_ID"
+          BUNDLE_ID=$(echo "$BUNDLE_ID_JSON" | python3 << 'EOF'
+          import json, sys
+          try:
+              data = json.load(sys.stdin)
+              matching = [b['id'] for b in data if b['attributes']['identifier'] == '${APP_ID}']
+              if matching:
+                  print(matching[0])
+              else:
+                  print("ERROR: No matching bundle ID found")
+                  sys.exit(1)
+          except Exception as e:
+              print(f"ERROR: {e}")
+              sys.exit(1)
+          EOF
+          )
           
-          # Check if profile already exists
+          if [[ "$BUNDLE_ID" == "ERROR:"* ]]; then
+              echo "❌ $BUNDLE_ID"
+              exit 1
+          fi
+          
+          echo "✅ Bundle ID: $BUNDLE_ID"
+          
+          echo ""
+          echo "=========================================="
+          echo "Step 2: Managing Distribution Certificates"
+          echo "=========================================="
+          
+          CERTS_JSON=$(app-store-connect certificates list --type DISTRIBUTION --json 2>&1)
+          if [ $? -ne 0 ]; then
+              echo "❌ Error fetching certificates"
+              echo "$CERTS_JSON"
+              exit 1
+          fi
+          
+          CERT_COUNT=$(echo "$CERTS_JSON" | python3 << 'EOF'
+          import json, sys
+          try:
+              data = json.load(sys.stdin)
+              print(len(data.get('data', [])))
+          except Exception as e:
+              print("0")
+          EOF
+          )
+          
+          if [ "$CERT_COUNT" -gt 0 ]; then
+              CERT_ID=$(echo "$CERTS_JSON" | python3 << 'EOF'
+              import json, sys
+              try:
+                  data = json.load(sys.stdin)
+                  if data.get('data'):
+                      cert = data['data'][0]
+                      print(cert.get('id', ''))
+              except Exception as e:
+                  print("")
+              EOF
+              )
+              
+              if [ -z "$CERT_ID" ]; then
+                  echo "❌ Could not extract certificate ID"
+                  exit 1
+              fi
+              
+              echo "✅ Found $CERT_COUNT existing certificate(s)"
+              echo "✅ Using Certificate ID: $CERT_ID"
+          else
+              echo "⚠️  No existing certificates found. Creating new one..."
+              
+              CERT_DIR=$(mktemp -d)
+              openssl genrsa -out "$CERT_DIR/key.pem" 2048 2>&1 | grep -v "Generating RSA"
+              
+              CREATE_RESPONSE=$(app-store-connect certificates create \
+                --type DISTRIBUTION \
+                --certificate-key "@file:$CERT_DIR/key.pem" \
+                --save 2>&1)
+              
+              if [ $? -ne 0 ]; then
+                  echo "❌ Error creating certificate"
+                  echo "$CREATE_RESPONSE"
+                  exit 1
+              fi
+              
+              echo "✅ Certificate created successfully"
+              
+              # Re-fetch certificates
+              CERTS_JSON=$(app-store-connect certificates list --type DISTRIBUTION --json)
+              CERT_ID=$(echo "$CERTS_JSON" | python3 << 'EOF'
+              import json, sys
+              try:
+                  data = json.load(sys.stdin)
+                  if data.get('data'):
+                      print(data['data'][0].get('id', ''))
+              except:
+                  print("")
+              EOF
+              )
+              
+              if [ -z "$CERT_ID" ]; then
+                  echo "❌ Could not retrieve new certificate ID"
+                  exit 1
+              fi
+              
+              echo "✅ New Certificate ID: $CERT_ID"
+              
+              rm -rf "$CERT_DIR"
+          fi
+          
+          echo ""
+          echo "=========================================="
+          echo "Step 3: Managing Provisioning Profile"
+          echo "=========================================="
+          
           PROFILE_NAME="iOS App Store ${APP_ID}"
-          EXISTING_PROFILE=$(app-store-connect profiles list \
-            --type IOS_APP_STORE --json \
-            | python3 -c "import json,sys; d=json.load(sys.stdin); profiles=[p['id'] for p in d['data'] if '${APP_ID}' in p['attributes']['name']]; print(profiles[0] if profiles else '')" 2>/dev/null || echo "")
+          
+          PROFILES_JSON=$(app-store-connect profiles list --type IOS_APP_STORE --json 2>&1)
+          if [ $? -ne 0 ]; then
+              echo "❌ Error fetching profiles"
+              echo "$PROFILES_JSON"
+              exit 1
+          fi
+          
+          EXISTING_PROFILE=$(echo "$PROFILES_JSON" | python3 << 'EOF'
+          import json, sys
+          try:
+              data = json.load(sys.stdin)
+              app_id = '${APP_ID}'
+              matching = [p for p in data.get('data', []) 
+                         if app_id in p.get('attributes', {}).get('name', '')]
+              if matching:
+                  print(matching[0].get('id', ''))
+              else:
+                  print("")
+          except Exception as e:
+              print("")
+          EOF
+          )
           
           if [ -z "$EXISTING_PROFILE" ]; then
-            echo "Creating new provisioning profile..."
-            app-store-connect profiles create \
-              "$BUNDLE_ID" \
-              --certificate-ids "$CERT_ID" \
-              --type IOS_APP_STORE \
-              --name "$PROFILE_NAME" \
-              --save
+              echo "⚠️  No existing profile found. Creating new one..."
+              
+              CREATE_PROFILE=$(app-store-connect profiles create \
+                "$BUNDLE_ID" \
+                --certificate-ids "$CERT_ID" \
+                --type IOS_APP_STORE \
+                --name "$PROFILE_NAME" \
+                --save 2>&1)
+              
+              if [ $? -ne 0 ]; then
+                  echo "❌ Error creating profile"
+                  echo "$CREATE_PROFILE"
+                  exit 1
+              fi
+              
+              echo "✅ Profile created successfully"
           else
-            echo "Using existing provisioning profile: $EXISTING_PROFILE"
-            app-store-connect profiles download "$EXISTING_PROFILE" --save
+              echo "✅ Found existing profile: $EXISTING_PROFILE"
+              
+              DOWNLOAD=$(app-store-connect profiles download "$EXISTING_PROFILE" --save 2>&1)
+              if [ $? -ne 0 ]; then
+                  echo "⚠️  Could not download profile, will attempt to recreate..."
+                  app-store-connect profiles create \
+                    "$BUNDLE_ID" \
+                    --certificate-ids "$CERT_ID" \
+                    --type IOS_APP_STORE \
+                    --name "$PROFILE_NAME" \
+                    --save
+              else
+                  echo "✅ Profile downloaded successfully"
+              fi
           fi
           
-          # Initialize keychain and import certificates
-          keychain initialize
-          security import \
-            /Users/builder/Library/Developer/Xcode/UserData/Certificates/*.p12 \
-            2>/dev/null || true
+          echo ""
+          echo "=========================================="
+          echo "Step 4: Setting up Keychain"
+          echo "=========================================="
           
-          # Use profiles
+          keychain initialize
+          echo "✅ Keychain initialized"
+          
+          # Import certificates with proper error handling
+          CERT_IMPORT=$(security import \
+            /Users/builder/Library/Developer/Xcode/UserData/Certificates/*.p12 \
+            -k ~/Library/Keychains/login.keychain-db \
+            -P "" \
+            2>&1)
+          
+          if [ $? -eq 0 ] || [[ "$CERT_IMPORT" == *"already exists"* ]]; then
+              echo "✅ Certificates imported/verified"
+          else
+              echo "⚠️  Certificate import status: $CERT_IMPORT"
+          fi
+          
+          echo ""
+          echo "=========================================="
+          echo "Step 5: Applying Xcode Settings"
+          echo "=========================================="
+          
           xcode-project use-profiles
-      
+          echo "✅ Xcode profiles applied"
+          
+          echo ""
+          echo "=========================================="
+          echo "✅ Code signing setup complete!"
+          echo "=========================================="
+
       - name: Build iOS Release IPA
         script: |
-          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number --app-id "${APP_ID}" 2>/dev/null || echo "0") + 1))
-          echo "Building with build number: $BUILD_NUMBER"
+          set -e
           
-          flutter build ipa --release \
-            --build-number=$BUILD_NUMBER
-    
+          echo "=========================================="
+          echo "Determining build number..."
+          echo "=========================================="
+          
+          BUILD_NUMBER_RESPONSE=$(app-store-connect get-latest-testflight-build-number \
+            --app-id "${APP_ID}" 2>&1)
+          
+          if [ $? -eq 0 ]; then
+              LATEST_BUILD=$(echo "$BUILD_NUMBER_RESPONSE" | tail -1)
+              BUILD_NUMBER=$((LATEST_BUILD + 1))
+              echo "✅ Latest TestFlight build: $LATEST_BUILD"
+          else
+              BUILD_NUMBER=1
+              echo "⚠️  Could not fetch latest build number, starting with 1"
+          fi
+          
+          echo "🔨 Building with number: $BUILD_NUMBER"
+          echo ""
+          
+          flutter build ipa \
+            --release \
+            --build-number=$BUILD_NUMBER \
+            --verbose
+
     artifacts:
       - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
       - build/ios/archive/Runner.xcarchive/**/*.dSYM.zip
-    
+
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
