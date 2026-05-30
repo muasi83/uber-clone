@@ -219,13 +219,19 @@ workflows:
               f.write(data)
           "
           
+          openssl x509 -inform DER -in "$WORK_DIR/cert.cer" -out "$WORK_DIR/cert.pem" -outform PEM && echo "✅ PEM conversion OK" || echo "❌ PEM conversion failed"
+          
           openssl pkcs12 -export \
             -inkey "$WORK_DIR/key.pem" \
-            -in "$WORK_DIR/cert.cer" \
+            -in "$WORK_DIR/cert.pem" \
             -out "$WORK_DIR/cert.p12" \
-            -passout pass:temp 2>/dev/null
+            -passout pass:temp && echo "✅ P12 built OK" || echo "❌ P12 build failed"
           
-          security import "$WORK_DIR/cert.p12" -P "temp" 2>&1 || true
+          echo "✅ Importing certificate..."
+          security import "$WORK_DIR/cert.p12" -P "temp" 2>&1 || echo "❌ Import failed (but continuing)"
+          
+          echo "✅ Certificates in keychain:"
+          security find-identity -v -p codesigning 2>&1 || true
           
           echo ""
           echo "=========================================="
