@@ -157,46 +157,55 @@ workflows:
           
           openssl genrsa -out "$WORK_DIR/key.pem" 2048 2>/dev/null
 
-          # Create cert and capture cert content from JSON
-          CERT_INFO=$(WORK_DIR="$WORK_DIR" python3 << 'PYEOF'
-          import json, subprocess, sys, re, os
-          work = os.environ["WORK_DIR"]
+          # Create cert, parse the table output for the ID
+          CERT_ID=$(WORK_DIR="$WORK_DIR" python3 << 'PYEOF'
+          import subprocess, sys, re, os
           result = subprocess.run(
               ["app-store-connect", "certificates", "create",
                "--type", "DISTRIBUTION",
-               "--certificate-key", f"@file:{work}/key.pem"],
+               "--certificate-key", f"@file:{os.environ['WORK_DIR']}/key.pem"],
+              capture_output=True, text=True
+          )
+          clean = re.sub(r'\x1b\[[0-9;]*m', '', result.stdout)
+          for line in clean.splitlines():
+              line = line.strip()
+              if line.startswith("Id:"):
+                  print(line.split(":", 1)[1].strip())
+                  sys.exit(0)
+          print("ERROR: Could not parse cert ID", file=sys.stderr)
+          print("OUTPUT:", repr(result.stdout[:1000]), file=sys.stderr)
+          sys.exit(1)
+          PYEOF
+          ) || { echo "❌ Certificate creation failed"; exit 1; }
+          
+          echo "✅ Cert created: $CERT_ID"
+          
+          # Fetch the full certificate content via --json
+          CERT_B64=$(python3 << 'PYEOF'
+          import json, subprocess, sys, re
+          result = subprocess.run(
+              ["app-store-connect", "certificates", "list", "--type", "DISTRIBUTION", "--json"],
               capture_output=True, text=True
           )
           output = result.stdout
-          json_match = re.search(r'[\{\[]', output)
-          if not json_match:
-              print("ERROR: no JSON start found", file=sys.stderr)
-              print("RAW OUTPUT:", repr(output[:1000]), file=sys.stderr)
+          match = re.search(r'[\{\[]', output)
+          if not match:
               sys.exit(1)
-          json_str = output[json_match.start():]
           try:
-              data = json.loads(json_str)
-              items = data if isinstance(data, list) else data.get('data', [data])
-              cert = items[0]
-              cid = cert.get('id', '')
-              attr = cert.get('attributes', {})
-              content = attr.get('certificateContent', '')
-              name = attr.get('name', 'distribution')
-              print(f"{cid}|{name}|{content}")
-          except Exception as e:
-              print(f"ERROR: {e}", file=sys.stderr)
-              print("JSON_START:", repr(json_str[:500]), file=sys.stderr)
-              sys.exit(1)
+              data = json.loads(output[match.start():])
+              items = data if isinstance(data, list) else data.get('data', [])
+              if items:
+                  content = items[0].get('attributes', {}).get('certificateContent', '')
+                  if content:
+                      print(content)
+                      sys.exit(0)
+          except Exception:
+              pass
+          sys.exit(1)
           PYEOF
-          ) || {
-              echo "❌ Certificate creation failed"
-              exit 1
-          }
+          ) || { echo "❌ Could not fetch cert content"; exit 1; }
           
-          CERT_ID="${CERT_INFO%%|*}"
-          REST="${CERT_INFO#*|}"
-          CERT_NAME="${REST%%|*}"
-          CERT_B64="${REST#*|}"
+          echo "✅ Cert content fetched"
           
           echo "✅ Certificate: $CERT_ID ($CERT_NAME)"
           
