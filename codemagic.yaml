@@ -211,64 +211,57 @@ workflows:
           
           PROFILE_NAME="iOS App Store ${APP_ID}"
           
-          EXISTING_PROFILE=$(APP_ID="$APP_ID" python3 << 'PYEOF'
-          import json, os, subprocess, sys, re
+EXISTING_PROFILES=$(APP_ID="$APP_ID" python3 << 'PYEOF'
+import json, os, subprocess, sys, re
 
-          result = subprocess.run(
-              ["app-store-connect", "profiles", "list", "--type", "IOS_APP_STORE", "--json"],
-              capture_output=True, text=True
-          )
-          output = result.stdout
-          match = re.search(r'[\{\[]', output)
-          if not match:
-              print("")
-              sys.exit(0)
+result = subprocess.run(
+    ["app-store-connect", "profiles", "list", "--type", "IOS_APP_STORE", "--json"],
+    capture_output=True, text=True
+)
+output = result.stdout
+match = re.search(r'[\{\[]', output)
+if not match:
+    print("")
+    sys.exit(0)
 
-          try:
-              raw = json.loads(output[match.start():])
-              items = raw if isinstance(raw, list) else raw.get('data', [])
-              app_id = os.environ.get("APP_ID", "")
-              matching = [p for p in items
-                         if app_id in p.get('attributes', {}).get('name', '')]
-              print(matching[0].get('id', '') if matching else '')
-          except Exception:
-              print("")
-          PYEOF
-          )
-          
-          if [ -z "$EXISTING_PROFILE" ]; then
-              echo "⚠️  No existing profile found. Creating new one..."
-              
-              CREATE_PROFILE=$(app-store-connect profiles create \
-                "$BUNDLE_ID" \
-                --certificate-ids "$CERT_ID" \
-                --type IOS_APP_STORE \
-                --name "$PROFILE_NAME" \
-                --save 2>&1) || {
-                  echo "❌ Error creating profile"
-                  echo "$CREATE_PROFILE"
-                  exit 1
-              }
-              
-              echo "✅ Profile created successfully"
-          else
-              echo "✅ Found existing profile: $EXISTING_PROFILE"
-              
-              if ! DOWNLOAD=$(app-store-connect profiles download "$EXISTING_PROFILE" --save 2>&1); then
-                  echo "⚠️  Could not download profile, will attempt to recreate..."
-                  app-store-connect profiles create \
-                    "$BUNDLE_ID" \
-                    --certificate-ids "$CERT_ID" \
-                    --type IOS_APP_STORE \
-                    --name "$PROFILE_NAME" \
-                    --save || {
-                        echo "❌ Error recreating profile"
-                        exit 1
-                    }
-              else
-                  echo "✅ Profile downloaded successfully"
-              fi
-          fi
+try:
+    raw = json.loads(output[match.start():])
+    items = raw if isinstance(raw, list) else raw.get('data', [])
+    app_id = os.environ.get("APP_ID", "")
+    matching = [p for p in items
+               if app_id in p.get('attributes', {}).get('name', '')]
+    if matching:
+        print(" ".join(p.get('id', '') for p in matching))
+    else:
+        print("")
+except Exception:
+    print("")
+PYEOF
+)
+
+# Delete any existing profiles with this name to avoid duplicates
+if [ -n "$EXISTING_PROFILES" ]; then
+    echo "⚠️  Found existing profile(s): $EXISTING_PROFILES"
+    echo "⚠️  Deleting old profiles before creating a fresh one..."
+    for PROFILE_ID in $EXISTING_PROFILES; do
+        echo "  Deleting profile: $PROFILE_ID"
+        app-store-connect profiles delete "$PROFILE_ID" 2>&1 || true
+    done
+fi
+
+echo "Creating new profile..."
+CREATE_PROFILE=$(app-store-connect profiles create \
+  "$BUNDLE_ID" \
+  --certificate-ids "$CERT_ID" \
+  --type IOS_APP_STORE \
+  --name "$PROFILE_NAME" \
+  --save 2>&1) || {
+    echo "❌ Error creating profile"
+    echo "$CREATE_PROFILE"
+    exit 1
+}
+
+echo "✅ Profile created successfully"
           
           echo ""
           echo "=========================================="
