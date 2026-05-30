@@ -28,13 +28,13 @@ workflows:
 
       - name: Flutter pub get
         script: |
-          set -e
+          set -euo pipefail
           echo "Getting Flutter dependencies..."
           flutter pub get
 
       - name: Install iOS pods
         script: |
-          set -e
+          set -euo pipefail
           echo "Installing iOS pods..."
           cd ios
           rm -rf Pods Podfile.lock
@@ -43,45 +43,48 @@ workflows:
 
       - name: Flutter clean
         script: |
-          set -e
+          set -euo pipefail
           echo "Cleaning Flutter build..."
           flutter clean
 
       - name: Set up code signing
         script: |
-          set -e
+          set -euo pipefail
           
-          export APP_ID="${APP_ID}"
+          if [ -z "${APP_ID:-}" ]; then
+              echo "❌ APP_ID environment variable is not set"
+              exit 1
+          fi
           
           echo "=========================================="
           echo "Step 1: Getting Bundle ID"
           echo "=========================================="
           
-          BUNDLE_ID_JSON=$(app-store-connect bundle-ids list --json 2>&1)
-          if [ $? -ne 0 ]; then
-            echo "❌ Error fetching bundle IDs"
-            echo "$BUNDLE_ID_JSON"
-            exit 1
-          fi
+          BUNDLE_ID_JSON=$(app-store-connect bundle-ids list --json 2>&1) || {
+              echo "❌ Error fetching bundle IDs"
+              echo "$BUNDLE_ID_JSON"
+              exit 1
+          }
           
-          BUNDLE_ID=$(echo "$BUNDLE_ID_JSON" | python3 << 'EOF'
-          import json, sys
+          BUNDLE_ID=$(echo "$BUNDLE_ID_JSON" | APP_ID="$APP_ID" python3 << 'EOF'
+          import json, sys, os
           try:
               data = json.load(sys.stdin)
-              matching = [b['id'] for b in data if b['attributes']['identifier'] == '${APP_ID}']
+              app_id = os.environ.get("APP_ID")
+              matching = [b['id'] for b in data if b.get('attributes', {}).get('identifier') == app_id]
               if matching:
                   print(matching[0])
               else:
-                  print("ERROR: No matching bundle ID found")
+                  print("ERROR: No matching bundle ID found for", app_id, file=sys.stderr)
                   sys.exit(1)
           except Exception as e:
-              print(f"ERROR: {e}")
+              print(f"ERROR: {e}", file=sys.stderr)
               sys.exit(1)
           EOF
           )
           
-          if [[ "$BUNDLE_ID" == "ERROR:"* ]]; then
-              echo "❌ $BUNDLE_ID"
+          if [[ "$BUNDLE_ID" == "ERROR:"* ]] || [ -z "$BUNDLE_ID" ]; then
+              echo "❌ Failed to resolve Bundle ID for $APP_ID"
               exit 1
           fi
           
@@ -92,19 +95,18 @@ workflows:
           echo "Step 2: Managing Distribution Certificates"
           echo "=========================================="
           
-          CERTS_JSON=$(app-store-connect certificates list --type DISTRIBUTION --json 2>&1)
-          if [ $? -ne 0 ]; then
+          CERTS_JSON=$(app-store-connect certificates list --type DISTRIBUTION --json 2>&1) || {
               echo "❌ Error fetching certificates"
               echo "$CERTS_JSON"
               exit 1
-          fi
+          }
           
           CERT_COUNT=$(echo "$CERTS_JSON" | python3 << 'EOF'
           import json, sys
           try:
               data = json.load(sys.stdin)
               print(len(data.get('data', [])))
-          except Exception as e:
+          except Exception:
               print("0")
           EOF
           )
@@ -115,9 +117,8 @@ workflows:
               try:
                   data = json.load(sys.stdin)
                   if data.get('data'):
-                      cert = data['data'][0]
-                      print(cert.get('id', ''))
-              except Exception as e:
+                      print(data['data'][0].get('id', ''))
+              except Exception:
                   print("")
               EOF
               )
@@ -133,18 +134,18 @@ workflows:
               echo "⚠️  No existing certificates found. Creating new one..."
               
               CERT_DIR=$(mktemp -d)
-              openssl genrsa -out "$CERT_DIR/key.pem" 2048 2>&1 | grep -v "Generating RSA"
+              trap 'rm -rf "$CERT_DIR"' EXIT
+              
+              openssl genrsa -out "$CERT_DIR/key.pem" 2048 2>/dev/null
               
               CREATE_RESPONSE=$(app-store-connect certificates create \
                 --type DISTRIBUTION \
                 --certificate-key "@file:$CERT_DIR/key.pem" \
-                --save 2>&1)
-              
-              if [ $? -ne 0 ]; then
+                --save 2>&1) || {
                   echo "❌ Error creating certificate"
                   echo "$CREATE_RESPONSE"
                   exit 1
-              fi
+              }
               
               echo "✅ Certificate created successfully"
               
@@ -155,7 +156,7 @@ workflows:
                   data = json.load(sys.stdin)
                   if data.get('data'):
                       print(data['data'][0].get('id', ''))
-              except:
+              except Exception:
                   print("")
               EOF
               )
@@ -166,8 +167,6 @@ workflows:
               fi
               
               echo "✅ New Certificate ID: $CERT_ID"
-              
-              rm -rf "$CERT_DIR"
           fi
           
           echo ""
@@ -177,25 +176,24 @@ workflows:
           
           PROFILE_NAME="iOS App Store ${APP_ID}"
           
-          PROFILES_JSON=$(app-store-connect profiles list --type IOS_APP_STORE --json 2>&1)
-          if [ $? -ne 0 ]; then
+          PROFILES_JSON=$(app-store-connect profiles list --type IOS_APP_STORE --json 2>&1) || {
               echo "❌ Error fetching profiles"
               echo "$PROFILES_JSON"
               exit 1
-          fi
+          }
           
-          EXISTING_PROFILE=$(echo "$PROFILES_JSON" | python3 << 'EOF'
-          import json, sys
+          EXISTING_PROFILE=$(echo "$PROFILES_JSON" | APP_ID="$APP_ID" python3 << 'EOF'
+          import json, sys, os
           try:
               data = json.load(sys.stdin)
-              app_id = '${APP_ID}'
+              app_id = os.environ.get("APP_ID", "")
               matching = [p for p in data.get('data', []) 
                          if app_id in p.get('attributes', {}).get('name', '')]
               if matching:
                   print(matching[0].get('id', ''))
               else:
                   print("")
-          except Exception as e:
+          except Exception:
               print("")
           EOF
           )
@@ -208,27 +206,27 @@ workflows:
                 --certificate-ids "$CERT_ID" \
                 --type IOS_APP_STORE \
                 --name "$PROFILE_NAME" \
-                --save 2>&1)
-              
-              if [ $? -ne 0 ]; then
+                --save 2>&1) || {
                   echo "❌ Error creating profile"
                   echo "$CREATE_PROFILE"
                   exit 1
-              fi
+              }
               
               echo "✅ Profile created successfully"
           else
               echo "✅ Found existing profile: $EXISTING_PROFILE"
               
-              DOWNLOAD=$(app-store-connect profiles download "$EXISTING_PROFILE" --save 2>&1)
-              if [ $? -ne 0 ]; then
+              if ! DOWNLOAD=$(app-store-connect profiles download "$EXISTING_PROFILE" --save 2>&1); then
                   echo "⚠️  Could not download profile, will attempt to recreate..."
                   app-store-connect profiles create \
                     "$BUNDLE_ID" \
                     --certificate-ids "$CERT_ID" \
                     --type IOS_APP_STORE \
                     --name "$PROFILE_NAME" \
-                    --save
+                    --save || {
+                        echo "❌ Error recreating profile"
+                        exit 1
+                    }
               else
                   echo "✅ Profile downloaded successfully"
               fi
@@ -242,16 +240,25 @@ workflows:
           keychain initialize
           echo "✅ Keychain initialized"
           
-          CERT_IMPORT=$(security import \
-            /Users/builder/Library/Developer/Xcode/UserData/Certificates/*.p12 \
-            -k ~/Library/Keychains/login.keychain-db \
-            -P "" \
-            2>&1)
+          P12_DIR="/Users/builder/Library/Developer/Xcode/UserData/Certificates"
+          shopt -s nullglob
+          P12_FILES=("$P12_DIR"/*.p12)
+          shopt -u nullglob
           
-          if [ $? -eq 0 ] || [[ "$CERT_IMPORT" == *"already exists"* ]]; then
-              echo "✅ Certificates imported/verified"
+          if [ ${#P12_FILES[@]} -eq 0 ]; then
+              echo "⚠️  No .p12 files found in $P12_DIR"
           else
-              echo "⚠️  Certificate import status: $CERT_IMPORT"
+              CERT_IMPORT=$(security import \
+                "$P12_DIR"/*.p12 \
+                -k ~/Library/Keychains/login.keychain-db \
+                -P "" \
+                2>&1) || true
+          
+              if [ $? -eq 0 ] || [[ "$CERT_IMPORT" == *"already exists"* ]]; then
+                  echo "✅ Certificates imported/verified"
+              else
+                  echo "⚠️  Certificate import status: $CERT_IMPORT"
+              fi
           fi
           
           echo ""
@@ -269,22 +276,25 @@ workflows:
 
       - name: Build iOS Release IPA
         script: |
-          set -e
+          set -euo pipefail
           
           echo "=========================================="
           echo "Determining build number..."
           echo "=========================================="
           
-          BUILD_NUMBER_RESPONSE=$(app-store-connect get-latest-testflight-build-number \
-            --app-id "${APP_ID}" 2>&1)
-          
-          if [ $? -eq 0 ]; then
-              LATEST_BUILD=$(echo "$BUILD_NUMBER_RESPONSE" | tail -1)
-              BUILD_NUMBER=$((LATEST_BUILD + 1))
-              echo "✅ Latest TestFlight build: $LATEST_BUILD"
-          else
+          if ! BUILD_NUMBER_RESPONSE=$(app-store-connect get-latest-testflight-build-number \
+            --app-id "${APP_ID}" 2>&1); then
               BUILD_NUMBER=1
               echo "⚠️  Could not fetch latest build number, starting with 1"
+          else
+              LATEST_BUILD=$(echo "$BUILD_NUMBER_RESPONSE" | tail -1 | tr -d '[:space:]')
+              if [[ "$LATEST_BUILD" =~ ^[0-9]+$ ]]; then
+                  BUILD_NUMBER=$((LATEST_BUILD + 1))
+                  echo "✅ Latest TestFlight build: $LATEST_BUILD"
+              else
+                  BUILD_NUMBER=1
+                  echo "⚠️  Could not parse build number, starting with 1"
+              fi
           fi
           
           echo "🔨 Building with number: $BUILD_NUMBER"
