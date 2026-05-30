@@ -30,37 +30,76 @@ workflows:
       - name: Set up code signing
         script: |
           set -e
-          CERT_DIR=$(mktemp -d)
-          openssl genrsa -out "$CERT_DIR/key.pem" 2048
+          
+          # Get Bundle ID
           BUNDLE_ID=$(app-store-connect bundle-ids list --json \
-            | python3 -c "import json,sys; d=json.load(sys.stdin); print([b['id'] for b in d if b['attributes']['identifier']=='com.muasi.Drivers-app'][0])")
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print([b['id'] for b in d if b['attributes']['identifier']=='${APP_ID}'][0])")
           echo "Bundle ID resource: $BUNDLE_ID"
-          app-store-connect certificates create \
-            --type DISTRIBUTION \
-            --certificate-key "@file:$CERT_DIR/key.pem" \
-            --save
+          
+          # Try to get existing distribution certificate
           CERT_ID=$(app-store-connect certificates list \
             --type DISTRIBUTION --json \
-            | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['id'])")
+            | python3 -c "import json,sys; certs=json.load(sys.stdin)['data']; print(certs[0]['id'] if certs else '')" 2>/dev/null || echo "")
+          
+          if [ -z "$CERT_ID" ]; then
+            echo "No existing certificate found. Creating new Distribution certificate..."
+            CERT_DIR=$(mktemp -d)
+            openssl genrsa -out "$CERT_DIR/key.pem" 2048
+            app-store-connect certificates create \
+              --type DISTRIBUTION \
+              --certificate-key "@file:$CERT_DIR/key.pem" \
+              --save
+            
+            CERT_ID=$(app-store-connect certificates list \
+              --type DISTRIBUTION --json \
+              | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['id'])")
+          else
+            echo "Using existing Certificate ID: $CERT_ID"
+          fi
+          
           echo "Certificate ID: $CERT_ID"
-          app-store-connect profiles create \
-            "$BUNDLE_ID" \
-            --certificate-ids "$CERT_ID" \
-            --type IOS_APP_STORE \
-            --name "iOS App Store com.muasi.Drivers-app" \
-            --save
+          
+          # Check if profile already exists
+          PROFILE_NAME="iOS App Store ${APP_ID}"
+          EXISTING_PROFILE=$(app-store-connect profiles list \
+            --type IOS_APP_STORE --json \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); profiles=[p['id'] for p in d['data'] if '${APP_ID}' in p['attributes']['name']]; print(profiles[0] if profiles else '')" 2>/dev/null || echo "")
+          
+          if [ -z "$EXISTING_PROFILE" ]; then
+            echo "Creating new provisioning profile..."
+            app-store-connect profiles create \
+              "$BUNDLE_ID" \
+              --certificate-ids "$CERT_ID" \
+              --type IOS_APP_STORE \
+              --name "$PROFILE_NAME" \
+              --save
+          else
+            echo "Using existing provisioning profile: $EXISTING_PROFILE"
+            app-store-connect profiles download "$EXISTING_PROFILE" --save
+          fi
+          
+          # Initialize keychain and import certificates
           keychain initialize
           security import \
-            /Users/builder/Library/Developer/Xcode/UserData/Certificates/*.p12
+            /Users/builder/Library/Developer/Xcode/UserData/Certificates/*.p12 \
+            2>/dev/null || true
+          
+          # Use profiles
           xcode-project use-profiles
+      
       - name: Build iOS Release IPA
         script: |
+          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number --app-id "${APP_ID}" 2>/dev/null || echo "0") + 1))
+          echo "Building with build number: $BUILD_NUMBER"
+          
           flutter build ipa --release \
-            --build-number=$(($(app-store-connect get-latest-testflight-build-number --app-id "com.muasi.Drivers-app" 2>/dev/null || echo "0") + 1))
+            --build-number=$BUILD_NUMBER
+    
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - build/ios/archive/Runner.xcarchive/**/*.dSYM.zip
+    
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
