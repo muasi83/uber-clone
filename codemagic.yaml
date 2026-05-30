@@ -330,8 +330,7 @@ workflows:
           set +e
           flutter build ipa \
             --release \
-            --build-number=$BUILD_NUMBER \
-            --verbose > "$BUILD_LOG" 2>&1
+            --build-number=$BUILD_NUMBER > "$BUILD_LOG" 2>&1
           EXIT_CODE=$?
           set -e
           
@@ -359,12 +358,12 @@ workflows:
               echo "=========================================="
               echo "Xcode errors from build log:"
               echo "=========================================="
-              grep -n -i "error:" "$BUILD_LOG" | head -50 || echo "No 'error:' lines found"
+              grep -E "(error:|BUILD FAILED|The following build commands failed|Command .+ failed)" "$BUILD_LOG" | head -50 || echo "No Xcode errors found"
               echo ""
               echo "=========================================="
               echo "Xcode warnings from build log:"
               echo "=========================================="
-              grep -n -i "warning:" "$BUILD_LOG" | head -30 || echo "No 'warning:' lines found"
+              grep -E "warning:" "$BUILD_LOG" | head -30 || echo "No Xcode warnings found"
               exit 1
           fi
           
