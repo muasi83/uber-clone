@@ -65,13 +65,16 @@ workflows:
 
           echo ""
           echo "Testing connection to App Store Connect..."
-          if TEST=$(app-store-connect bundle-ids list --json 2>&1); then
-            echo "✅ Connection successful"
-          else
-            echo "❌ Connection failed"
-            echo "$TEST"
+          RESPONSE=$(app-store-connect bundle-ids list --json 2>&1) || {
+            echo "❌ Command failed"
+            echo "$RESPONSE"
             exit 1
-          fi
+          }
+          echo "✅ Command exited with code 0"
+          echo "Response length: $(echo "$RESPONSE" | wc -c) chars"
+          echo "Response preview (first 200 chars):"
+          echo "$RESPONSE" | head -c 200
+          echo ""
 
       - name: Set up code signing
         script: |
@@ -88,9 +91,17 @@ workflows:
           
           BUNDLE_ID_JSON=$(app-store-connect bundle-ids list --json 2>&1) || {
               echo "❌ Error fetching bundle IDs"
-              echo "$BUNDLE_ID_JSON"
+              echo "Raw output:"
+              echo "$BUNDLE_ID_JSON" | head -c 500
               exit 1
           }
+          
+          if [ -z "$BUNDLE_ID_JSON" ] || [ "$(echo "$BUNDLE_ID_JSON" | tr -d '[:space:]')" = "" ]; then
+              echo "❌ Bundle IDs response is empty"
+              echo "Your App Store Connect API key may lack permission to list bundle IDs."
+              echo "Check at: https://developer.apple.com/account/resources/identifiers/list"
+              exit 1
+          fi
           
           BUNDLE_ID=$(echo "$BUNDLE_ID_JSON" | APP_ID="$APP_ID" python3 << 'EOF'
           import json, sys, os
