@@ -93,14 +93,12 @@ workflows:
               capture_output=True, text=True
           )
           output = result.stdout
-
           import re
           match = re.search(r'[\{\[]', output)
           if not match:
               print("ERROR: No JSON found in output", file=sys.stderr)
               print(output[:500], file=sys.stderr)
               sys.exit(1)
-
           try:
               data = json.loads(output[match.start():])
               matching = [b['id'] for b in data if b.get('attributes', {}).get('identifier') == app_id]
@@ -124,21 +122,14 @@ workflows:
           
           echo ""
           echo "=========================================="
-          echo "Step 2: Setting up Keychain (before cert creation)"
+          echo "Step 2: Setup keychain & cert"
           echo "=========================================="
           
           keychain initialize
           echo "✅ Keychain initialized"
 
-          # Temp keychain is now the default — cert --save will go here
-          
-          echo ""
-          echo "=========================================="
-          echo "Step 3: Managing Distribution Certificates"
-          echo "=========================================="
-
-          # Delete old certs to stay under Apple's limit
-          OLD_CERTS=$(python3 << 'PYEOF'
+          # Must remove old certs or Apple will 400 "limit reached"
+          python3 << 'PYEOF'
           import json, subprocess, sys, re
           result = subprocess.run(
               ["app-store-connect", "certificates", "list", "--type", "DISTRIBUTION", "--json"],
@@ -152,69 +143,88 @@ workflows:
               raw = json.loads(output[match.start():])
               items = raw if isinstance(raw, list) else raw.get('data', [])
               for item in items:
-                  print(item.get('id', ''))
+                  cid = item.get('id', '')
+                  if cid:
+                      subprocess.run(["app-store-connect", "certificates", "delete", cid],
+                                     capture_output=True)
+                      print(f"Deleted old cert {cid}")
           except Exception:
               pass
           PYEOF
-          )
           
-          for CERT in $OLD_CERTS; do
-              echo "  Deleting old certificate: $CERT"
-              app-store-connect certificates delete "$CERT" 2>&1 || true
-          done
-
           WORK_DIR=$(mktemp -d)
           trap 'rm -rf "$WORK_DIR"' EXIT
           
           openssl genrsa -out "$WORK_DIR/key.pem" 2048 2>/dev/null
-          
-          CREATE_RESPONSE=$(app-store-connect certificates create \
-            --type DISTRIBUTION \
-            --certificate-key "@file:$WORK_DIR/key.pem" \
-            --save 2>&1) || {
-              echo "❌ Error creating certificate"
-              echo "$CREATE_RESPONSE"
-              exit 1
-          }
-          
-          echo "✅ Certificate created"
-          
-          CERT_ID=$(python3 << 'PYEOF'
-          import json, subprocess, sys, re
+
+          # Create cert and capture cert content from JSON
+          CERT_INFO=$(WORK_DIR="$WORK_DIR" python3 << 'PYEOF'
+          import json, subprocess, sys, re, os
+          work = os.environ["WORK_DIR"]
           result = subprocess.run(
-              ["app-store-connect", "certificates", "list", "--type", "DISTRIBUTION", "--json"],
+              ["app-store-connect", "certificates", "create",
+               "--type", "DISTRIBUTION",
+               "--certificate-key", f"@file:{work}/key.pem"],
               capture_output=True, text=True
           )
           output = result.stdout
           match = re.search(r'[\{\[]', output)
           if not match:
+              print("ERROR: no JSON", file=sys.stderr)
+              print(output[:500], file=sys.stderr)
               sys.exit(1)
           try:
-              raw = json.loads(output[match.start():])
-              items = raw if isinstance(raw, list) else raw.get('data', [])
-              print(items[0].get('id', '') if items else '')
-          except Exception:
+              data = json.loads(output[match.start():])
+              items = data if isinstance(data, list) else data.get('data', [data])
+              cert = items[0]
+              cid = cert.get('id', '')
+              attr = cert.get('attributes', {})
+              content = attr.get('certificateContent', '')
+              name = attr.get('name', 'distribution')
+              print(f"{cid}|{name}|{content}")
+          except Exception as e:
+              print(f"ERROR: {e}", file=sys.stderr)
               sys.exit(1)
           PYEOF
-          )
-          
-          if [ -z "$CERT_ID" ]; then
-              echo "❌ Could not retrieve new certificate ID"
+          ) || {
+              echo "❌ Certificate creation failed"
               exit 1
-          fi
+          }
           
-          echo "✅ Certificate ID: $CERT_ID"
+          CERT_ID="${CERT_INFO%%|*}"
+          REST="${CERT_INFO#*|}"
+          CERT_NAME="${REST%%|*}"
+          CERT_B64="${REST#*|}"
+          
+          echo "✅ Certificate: $CERT_ID ($CERT_NAME)"
+          
+          # Decode .cer and build .p12
+          echo "$CERT_B64" > "$WORK_DIR/cert.cer.base64"
+          python3 -c "
+          import base64, sys
+          with open('$WORK_DIR/cert.cer.base64') as f:
+              data = base64.b64decode(f.read().strip())
+          with open('$WORK_DIR/cert.cer', 'wb') as f:
+              f.write(data)
+          "
+          
+          openssl pkcs12 -export \
+            -inkey "$WORK_DIR/key.pem" \
+            -in "$WORK_DIR/cert.cer" \
+            -out "$WORK_DIR/cert.p12" \
+            -passout pass: 2>/dev/null
+          
+          security import "$WORK_DIR/cert.p12" -k ~/Library/Keychains/login.keychain-db -P "" 2>&1 || true
           
           echo ""
           echo "=========================================="
-          echo "Step 4: Managing Provisioning Profile"
+          echo "Step 3: Managing Provisioning Profile"
           echo "=========================================="
           
           PROFILE_NAME="iOS App Store ${APP_ID}"
           
           EXISTING_PROFILES=$(APP_ID="$APP_ID" python3 << 'PYEOF'
           import json, os, subprocess, sys, re
-
           result = subprocess.run(
               ["app-store-connect", "profiles", "list", "--type", "IOS_APP_STORE", "--json"],
               capture_output=True, text=True
@@ -222,9 +232,7 @@ workflows:
           output = result.stdout
           match = re.search(r'[\{\[]', output)
           if not match:
-              print("")
               sys.exit(0)
-
           try:
               raw = json.loads(output[match.start():])
               items = raw if isinstance(raw, list) else raw.get('data', [])
@@ -233,10 +241,8 @@ workflows:
                          if app_id in p.get('attributes', {}).get('name', '')]
               if matching:
                   print(" ".join(p.get('id', '') for p in matching))
-              else:
-                  print("")
           except Exception:
-              print("")
+              pass
           PYEOF
           )
 
@@ -264,7 +270,7 @@ workflows:
           
           echo ""
           echo "=========================================="
-          echo "Step 5: Applying Xcode Settings"
+          echo "Step 4: Applying Xcode Settings"
           echo "=========================================="
           
           xcode-project use-profiles
