@@ -223,9 +223,9 @@ workflows:
             -inkey "$WORK_DIR/key.pem" \
             -in "$WORK_DIR/cert.cer" \
             -out "$WORK_DIR/cert.p12" \
-            -passout pass: 2>/dev/null
+            -passout pass:temp 2>/dev/null
           
-          security import "$WORK_DIR/cert.p12" -P "" 2>&1 || true
+          security import "$WORK_DIR/cert.p12" -P "temp" 2>&1 || true
           
           echo ""
           echo "=========================================="
