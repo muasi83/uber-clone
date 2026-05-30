@@ -225,6 +225,9 @@ workflows:
             -inkey "$WORK_DIR/key.pem" \
             -in "$WORK_DIR/cert.pem" \
             -out "$WORK_DIR/cert.p12" \
+            -keypbe PBE-SHA1-RC2-128 \
+            -certpbe PBE-SHA1-RC2-128 \
+            -nomaciter \
             -passout pass:temp && echo "✅ P12 built OK" || echo "❌ P12 build failed"
           
           echo "✅ Importing certificate..."
