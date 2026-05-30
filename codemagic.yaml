@@ -32,12 +32,6 @@ workflows:
           echo "Getting Flutter dependencies..."
           flutter pub get
 
-      - name: Flutter clean
-        script: |
-          set -e
-          echo "Cleaning Flutter build..."
-          flutter clean
-
       - name: Install iOS pods
         script: |
           set -e
@@ -46,6 +40,12 @@ workflows:
           rm -rf Pods Podfile.lock
           pod install --repo-update
           cd ..
+
+      - name: Flutter clean
+        script: |
+          set -e
+          echo "Cleaning Flutter build..."
+          flutter clean
 
       - name: Set up code signing
         script: |
@@ -148,7 +148,6 @@ workflows:
               
               echo "✅ Certificate created successfully"
               
-              # Re-fetch certificates
               CERTS_JSON=$(app-store-connect certificates list --type DISTRIBUTION --json)
               CERT_ID=$(echo "$CERTS_JSON" | python3 << 'EOF'
               import json, sys
@@ -243,7 +242,6 @@ workflows:
           keychain initialize
           echo "✅ Keychain initialized"
           
-          # Import certificates with proper error handling
           CERT_IMPORT=$(security import \
             /Users/builder/Library/Developer/Xcode/UserData/Certificates/*.p12 \
             -k ~/Library/Keychains/login.keychain-db \
