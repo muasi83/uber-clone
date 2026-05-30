@@ -265,7 +265,7 @@ class AppTheme {
         labelStyle: const TextStyle(fontSize: 13),
       ),
 
-      bottomAppBarTheme: const BottomAppBarTheme(
+      bottomAppBarTheme: const BottomAppBarThemeData(
         color: Colors.white,
         elevation: 0,
       ),

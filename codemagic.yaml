@@ -11,6 +11,7 @@ workflows:
         APP_NAME: muasidivoapp
         XCODE_WORKSPACE: ios/Runner.xcworkspace
         XCODE_SCHEME: Runner
+        VERBOSE_SCRIPT_LOGGING: NO
       flutter: stable
     triggering:
       events:
@@ -331,10 +332,38 @@ workflows:
           echo "🔨 Building with number: $BUILD_NUMBER"
           echo ""
           
+          BUILD_LOG=$(mktemp)
+          trap 'rm -f "$BUILD_LOG"' EXIT
+          
+          set +e
           flutter build ipa \
             --release \
             --build-number=$BUILD_NUMBER \
-            --verbose
+            --verbose > "$BUILD_LOG" 2>&1
+          EXIT_CODE=$?
+          set -e
+          
+          if [ "$EXIT_CODE" -ne 0 ]; then
+              echo "❌ Build failed (exit code: $EXIT_CODE)"
+              echo ""
+              echo "=========================================="
+              echo "Last 100 lines of build output..."
+              echo "=========================================="
+              tail -100 "$BUILD_LOG"
+              echo ""
+              echo "=========================================="
+              echo "Xcode errors from build log:"
+              echo "=========================================="
+              grep -n -i "error:" "$BUILD_LOG" | head -50 || echo "No 'error:' lines found"
+              echo ""
+              echo "=========================================="
+              echo "Xcode warnings from build log:"
+              echo "=========================================="
+              grep -n -i "warning:" "$BUILD_LOG" | head -30 || echo "No 'warning:' lines found"
+              exit 1
+          fi
+          
+          echo "✅ Build succeeded"
 
     artifacts:
       - build/ios/ipa/*.ipa
