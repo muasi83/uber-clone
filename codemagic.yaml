@@ -168,13 +168,13 @@ workflows:
               capture_output=True, text=True
           )
           output = result.stdout
-          match = re.search(r'[\{\[]', output)
-          if not match:
+          json_match = re.search(r'[\{\[]', output)
+          if not json_match:
               print("ERROR: no JSON", file=sys.stderr)
               print(output[:500], file=sys.stderr)
               sys.exit(1)
           try:
-              data = json.loads(output[match.start():])
+              data = json.loads(output[json_match.start():])
               items = data if isinstance(data, list) else data.get('data', [data])
               cert = items[0]
               cid = cert.get('id', '')
