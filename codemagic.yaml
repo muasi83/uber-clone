@@ -170,11 +170,12 @@ workflows:
           output = result.stdout
           json_match = re.search(r'[\{\[]', output)
           if not json_match:
-              print("ERROR: no JSON", file=sys.stderr)
-              print(output[:500], file=sys.stderr)
+              print("ERROR: no JSON start found", file=sys.stderr)
+              print("RAW OUTPUT:", repr(output[:1000]), file=sys.stderr)
               sys.exit(1)
+          json_str = output[json_match.start():]
           try:
-              data = json.loads(output[json_match.start():])
+              data = json.loads(json_str)
               items = data if isinstance(data, list) else data.get('data', [data])
               cert = items[0]
               cid = cert.get('id', '')
@@ -184,6 +185,7 @@ workflows:
               print(f"{cid}|{name}|{content}")
           except Exception as e:
               print(f"ERROR: {e}", file=sys.stderr)
+              print("JSON_START:", repr(json_str[:500]), file=sys.stderr)
               sys.exit(1)
           PYEOF
           ) || {
