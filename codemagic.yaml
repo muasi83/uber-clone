@@ -207,7 +207,7 @@ workflows:
           
           echo "✅ Cert content fetched"
           
-          echo "✅ Certificate: $CERT_ID ($CERT_NAME)"
+          echo "✅ Certificate: $CERT_ID"
           
           # Decode .cer and build .p12
           echo "$CERT_B64" > "$WORK_DIR/cert.cer.base64"
@@ -225,7 +225,7 @@ workflows:
             -out "$WORK_DIR/cert.p12" \
             -passout pass: 2>/dev/null
           
-          security import "$WORK_DIR/cert.p12" -k ~/Library/Keychains/login.keychain-db -P "" 2>&1 || true
+          security import "$WORK_DIR/cert.p12" -P "" 2>&1 || true
           
           echo ""
           echo "=========================================="
