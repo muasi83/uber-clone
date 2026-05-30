@@ -343,13 +343,26 @@ workflows:
           EXIT_CODE=$?
           set -e
           
+          echo "=========================================="
+          echo "Build log (last 30 lines):"
+          echo "=========================================="
+          tail -30 "$BUILD_LOG"
+          
+          echo ""
+          echo "=========================================="
+          echo "IPA location:"
+          echo "=========================================="
+          find . -name "*.ipa" -type f 2>/dev/null || echo "No .ipa files found"
+          
+          echo ""
+          echo "=========================================="
+          echo "Xcode archive location:"
+          echo "=========================================="
+          find . -name "*.xcarchive" -type d 2>/dev/null || echo "No .xcarchive found"
+          
           if [ "$EXIT_CODE" -ne 0 ]; then
-              echo "❌ Build failed (exit code: $EXIT_CODE)"
               echo ""
-              echo "=========================================="
-              echo "Last 100 lines of build output..."
-              echo "=========================================="
-              tail -100 "$BUILD_LOG"
+              echo "❌ Build failed (exit code: $EXIT_CODE)"
               echo ""
               echo "=========================================="
               echo "Xcode errors from build log:"
