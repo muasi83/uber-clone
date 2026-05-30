@@ -20,12 +20,6 @@ workflows:
           include: true
       cancel_previous_builds: true
     scripts:
-      - name: Set Flutter version
-        script: |
-          flutter --version
-          flutter channel stable
-          flutter upgrade
-
       - name: Flutter clean
         script: |
           set -euo pipefail
@@ -97,7 +91,7 @@ workflows:
               ["app-store-connect", "bundle-ids", "list", "--json"],
               capture_output=True, text=True
           )
-          output = result.stdout + result.stderr
+          output = result.stdout
 
           # Skip human-readable prefix (e.g. "Found X Bundle IDs...")
           import re
