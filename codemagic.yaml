@@ -137,8 +137,9 @@ workflows:
           CERT_COUNT=$(echo "$CERTS_JSON" | python3 << 'EOF'
           import json, sys
           try:
-              data = json.load(sys.stdin)
-              print(len(data.get('data', [])))
+              raw = json.load(sys.stdin)
+              items = raw if isinstance(raw, list) else raw.get('data', [])
+              print(len(items))
           except Exception:
               print("0")
           EOF
@@ -148,9 +149,10 @@ workflows:
               CERT_ID=$(echo "$CERTS_JSON" | python3 << 'EOF'
               import json, sys
               try:
-                  data = json.load(sys.stdin)
-                  if data.get('data'):
-                      print(data['data'][0].get('id', ''))
+                  raw = json.load(sys.stdin)
+                  items = raw if isinstance(raw, list) else raw.get('data', [])
+                  if items:
+                      print(items[0].get('id', ''))
               except Exception:
                   print("")
               EOF
@@ -187,9 +189,10 @@ workflows:
               CERT_ID=$(echo "$CERTS_JSON" | python3 << 'EOF'
               import json, sys
               try:
-                  data = json.load(sys.stdin)
-                  if data.get('data'):
-                      print(data['data'][0].get('id', ''))
+                  raw = json.load(sys.stdin)
+                  items = raw if isinstance(raw, list) else raw.get('data', [])
+                  if items:
+                      print(items[0].get('id', ''))
               except Exception:
                   print("")
               EOF
@@ -220,9 +223,10 @@ workflows:
           EXISTING_PROFILE=$(echo "$PROFILES_JSON" | APP_ID="$APP_ID" python3 << 'EOF'
           import json, sys, os
           try:
-              data = json.load(sys.stdin)
+              raw = json.load(sys.stdin)
+              items = raw if isinstance(raw, list) else raw.get('data', [])
               app_id = os.environ.get("APP_ID", "")
-              matching = [p for p in data.get('data', []) 
+              matching = [p for p in items
                          if app_id in p.get('attributes', {}).get('name', '')]
               if matching:
                   print(matching[0].get('id', ''))
