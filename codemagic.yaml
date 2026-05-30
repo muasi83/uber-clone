@@ -11,7 +11,7 @@ workflows:
         APP_NAME: muasidivoapp
         XCODE_WORKSPACE: ios/Runner.xcworkspace
         XCODE_SCHEME: Runner
-      flutter: latest
+      flutter: stable
     triggering:
       events:
         - push
@@ -31,7 +31,6 @@ workflows:
           set -e
           echo "Getting Flutter dependencies..."
           flutter pub get
-          flutter pub upgrade --nullsafety
 
       - name: Flutter clean
         script: |
