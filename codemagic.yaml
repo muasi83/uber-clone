@@ -89,38 +89,37 @@ workflows:
           echo "Step 1: Getting Bundle ID"
           echo "=========================================="
           
-          BUNDLE_ID_RAW=$(app-store-connect bundle-ids list --json 2>&1) || {
-              echo "❌ Error fetching bundle IDs"
-              echo "Raw output:"
-              echo "$BUNDLE_ID_RAW" | head -c 500
-              exit 1
-          }
-          # Strip human-readable prefix (e.g. "Found X Bundle IDs...") before JSON
-          BUNDLE_ID_JSON=$(echo "$BUNDLE_ID_RAW" | sed -n '/^[\[{]/,$ p')
-          
-          if [ -z "$BUNDLE_ID_JSON" ] || [ "$(echo "$BUNDLE_ID_JSON" | tr -d '[:space:]')" = "" ]; then
-              echo "❌ Bundle IDs response is empty"
-              echo "Raw output:"
-              echo "$BUNDLE_ID_RAW" | head -c 500
-              exit 1
-          fi
-          
-          BUNDLE_ID=$(echo "$BUNDLE_ID_JSON" | APP_ID="$APP_ID" python3 << 'EOF'
-          import json, sys, os
-          try:
-              data = json.load(sys.stdin)
-              app_id = os.environ.get("APP_ID")
-              matching = [b['id'] for b in data if b.get('attributes', {}).get('identifier') == app_id]
-              if matching:
-                  print(matching[0])
-              else:
-                  print("ERROR: No matching bundle ID found for", app_id, file=sys.stderr)
-                  sys.exit(1)
-          except Exception as e:
-              print(f"ERROR: {e}", file=sys.stderr)
-              sys.exit(1)
-          EOF
-          )
+          BUNDLE_ID=$(APP_ID="$APP_ID" python3 << 'PYEOF'
+import json, os, subprocess, sys
+
+app_id = os.environ.get("APP_ID", "")
+result = subprocess.run(
+    ["app-store-connect", "bundle-ids", "list", "--json"],
+    capture_output=True, text=True
+)
+output = result.stdout + result.stderr
+
+# Skip human-readable prefix (e.g. "Found X Bundle IDs...")
+import re
+match = re.search(r'[\{\[]', output)
+if not match:
+    print("ERROR: No JSON found in output", file=sys.stderr)
+    print(output[:500], file=sys.stderr)
+    sys.exit(1)
+
+try:
+    data = json.loads(output[match.start():])
+    matching = [b['id'] for b in data if b.get('attributes', {}).get('identifier') == app_id]
+    if matching:
+        print(matching[0])
+    else:
+        print("ERROR: No matching bundle ID found for " + app_id, file=sys.stderr)
+        sys.exit(1)
+except Exception as e:
+    print(f"ERROR: {e}", file=sys.stderr)
+    sys.exit(1)
+PYEOF
+)
           
           if [[ "$BUNDLE_ID" == "ERROR:"* ]] || [ -z "$BUNDLE_ID" ]; then
               echo "❌ Failed to resolve Bundle ID for $APP_ID"
