@@ -89,17 +89,19 @@ workflows:
           echo "Step 1: Getting Bundle ID"
           echo "=========================================="
           
-          BUNDLE_ID_JSON=$(app-store-connect bundle-ids list --json 2>&1) || {
+          BUNDLE_ID_RAW=$(app-store-connect bundle-ids list --json 2>&1) || {
               echo "❌ Error fetching bundle IDs"
               echo "Raw output:"
-              echo "$BUNDLE_ID_JSON" | head -c 500
+              echo "$BUNDLE_ID_RAW" | head -c 500
               exit 1
           }
+          # Strip human-readable prefix (e.g. "Found X Bundle IDs...") before JSON
+          BUNDLE_ID_JSON=$(echo "$BUNDLE_ID_RAW" | sed -n '/^[\[{]/,$ p')
           
           if [ -z "$BUNDLE_ID_JSON" ] || [ "$(echo "$BUNDLE_ID_JSON" | tr -d '[:space:]')" = "" ]; then
               echo "❌ Bundle IDs response is empty"
-              echo "Your App Store Connect API key may lack permission to list bundle IDs."
-              echo "Check at: https://developer.apple.com/account/resources/identifiers/list"
+              echo "Raw output:"
+              echo "$BUNDLE_ID_RAW" | head -c 500
               exit 1
           fi
           
@@ -132,11 +134,12 @@ workflows:
           echo "Step 2: Managing Distribution Certificates"
           echo "=========================================="
           
-          CERTS_JSON=$(app-store-connect certificates list --type DISTRIBUTION --json 2>&1) || {
+          CERTS_RAW=$(app-store-connect certificates list --type DISTRIBUTION --json 2>&1) || {
               echo "❌ Error fetching certificates"
-              echo "$CERTS_JSON"
+              echo "$CERTS_RAW"
               exit 1
           }
+          CERTS_JSON=$(echo "$CERTS_RAW" | sed -n '/^[\[{]/,$ p')
           
           CERT_COUNT=$(echo "$CERTS_JSON" | python3 << 'EOF'
           import json, sys
@@ -186,7 +189,8 @@ workflows:
               
               echo "✅ Certificate created successfully"
               
-              CERTS_JSON=$(app-store-connect certificates list --type DISTRIBUTION --json)
+              CERTS_RAW=$(app-store-connect certificates list --type DISTRIBUTION --json)
+              CERTS_JSON=$(echo "$CERTS_RAW" | sed -n '/^[\[{]/,$ p')
               CERT_ID=$(echo "$CERTS_JSON" | python3 << 'EOF'
               import json, sys
               try:
@@ -213,11 +217,12 @@ workflows:
           
           PROFILE_NAME="iOS App Store ${APP_ID}"
           
-          PROFILES_JSON=$(app-store-connect profiles list --type IOS_APP_STORE --json 2>&1) || {
+          PROFILES_RAW=$(app-store-connect profiles list --type IOS_APP_STORE --json 2>&1) || {
               echo "❌ Error fetching profiles"
-              echo "$PROFILES_JSON"
+              echo "$PROFILES_RAW"
               exit 1
           }
+          PROFILES_JSON=$(echo "$PROFILES_RAW" | sed -n '/^[\[{]/,$ p')
           
           EXISTING_PROFILE=$(echo "$PROFILES_JSON" | APP_ID="$APP_ID" python3 << 'EOF'
           import json, sys, os
