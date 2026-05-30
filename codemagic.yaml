@@ -94,7 +94,6 @@ workflows:
           )
           output = result.stdout
 
-          # Skip human-readable prefix (e.g. "Found X Bundle IDs...")
           import re
           match = re.search(r'[\{\[]', output)
           if not match:
@@ -125,12 +124,22 @@ workflows:
           
           echo ""
           echo "=========================================="
-          echo "Step 2: Managing Distribution Certificates"
+          echo "Step 2: Setting up Keychain (before cert creation)"
           echo "=========================================="
           
-          CERT_RESULT=$(python3 << 'PYEOF'
-          import json, subprocess, sys, re
+          keychain initialize
+          echo "✅ Keychain initialized"
 
+          # Temp keychain is now the default — cert --save will go here
+          
+          echo ""
+          echo "=========================================="
+          echo "Step 3: Managing Distribution Certificates"
+          echo "=========================================="
+
+          # Delete old certs to stay under Apple's limit
+          OLD_CERTS=$(python3 << 'PYEOF'
+          import json, subprocess, sys, re
           result = subprocess.run(
               ["app-store-connect", "certificates", "list", "--type", "DISTRIBUTION", "--json"],
               capture_output=True, text=True
@@ -138,76 +147,67 @@ workflows:
           output = result.stdout
           match = re.search(r'[\{\[]', output)
           if not match:
-              print("0|")
               sys.exit(0)
-
           try:
               raw = json.loads(output[match.start():])
               items = raw if isinstance(raw, list) else raw.get('data', [])
-              cert_id = items[0].get('id', '') if items else ''
-              print(f"{len(items)}|{cert_id}")
+              for item in items:
+                  print(item.get('id', ''))
           except Exception:
-              print("0|")
+              pass
           PYEOF
           )
           
-          CERT_COUNT="${CERT_RESULT%%|*}"
-          CERT_ID="${CERT_RESULT#*|}"
+          for CERT in $OLD_CERTS; do
+              echo "  Deleting old certificate: $CERT"
+              app-store-connect certificates delete "$CERT" 2>&1 || true
+          done
+
+          WORK_DIR=$(mktemp -d)
+          trap 'rm -rf "$WORK_DIR"' EXIT
           
-          if [ "$CERT_COUNT" -gt 0 ]; then
-              echo "✅ Found $CERT_COUNT existing certificate(s)"
-              echo "✅ Using Certificate ID: $CERT_ID"
-          else
-              echo "⚠️  No existing certificates found. Creating new one..."
-              
-              CERT_DIR=$(mktemp -d)
-              trap 'rm -rf "$CERT_DIR"' EXIT
-              
-              openssl genrsa -out "$CERT_DIR/key.pem" 2048 2>/dev/null
-              
-              CREATE_RESPONSE=$(app-store-connect certificates create \
-                --type DISTRIBUTION \
-                --certificate-key "@file:$CERT_DIR/key.pem" \
-                --save 2>&1) || {
-                  echo "❌ Error creating certificate"
-                  echo "$CREATE_RESPONSE"
-                  exit 1
-              }
-              
-              echo "✅ Certificate created successfully"
-              
-              CERT_RESULT=$(python3 << 'PYEOF'
-              import json, subprocess, sys, re
-              result = subprocess.run(
-                  ["app-store-connect", "certificates", "list", "--type", "DISTRIBUTION", "--json"],
-                  capture_output=True, text=True
-              )
-              output = result.stdout
-              match = re.search(r'[\{\[]', output)
-              if not match:
-                  print("")
-                  sys.exit(0)
-              try:
-                  raw = json.loads(output[match.start():])
-                  items = raw if isinstance(raw, list) else raw.get('data', [])
-                  print(items[0].get('id', '') if items else '')
-              except Exception:
-                  print("")
-              PYEOF
-              )
-              CERT_ID="$CERT_RESULT"
-              
-              if [ -z "$CERT_ID" ]; then
-                  echo "❌ Could not retrieve new certificate ID"
-                  exit 1
-              fi
-              
-              echo "✅ New Certificate ID: $CERT_ID"
+          openssl genrsa -out "$WORK_DIR/key.pem" 2048 2>/dev/null
+          
+          CREATE_RESPONSE=$(app-store-connect certificates create \
+            --type DISTRIBUTION \
+            --certificate-key "@file:$WORK_DIR/key.pem" \
+            --save 2>&1) || {
+              echo "❌ Error creating certificate"
+              echo "$CREATE_RESPONSE"
+              exit 1
+          }
+          
+          echo "✅ Certificate created"
+          
+          CERT_ID=$(python3 << 'PYEOF'
+          import json, subprocess, sys, re
+          result = subprocess.run(
+              ["app-store-connect", "certificates", "list", "--type", "DISTRIBUTION", "--json"],
+              capture_output=True, text=True
+          )
+          output = result.stdout
+          match = re.search(r'[\{\[]', output)
+          if not match:
+              sys.exit(1)
+          try:
+              raw = json.loads(output[match.start():])
+              items = raw if isinstance(raw, list) else raw.get('data', [])
+              print(items[0].get('id', '') if items else '')
+          except Exception:
+              sys.exit(1)
+          PYEOF
+          )
+          
+          if [ -z "$CERT_ID" ]; then
+              echo "❌ Could not retrieve new certificate ID"
+              exit 1
           fi
+          
+          echo "✅ Certificate ID: $CERT_ID"
           
           echo ""
           echo "=========================================="
-          echo "Step 3: Managing Provisioning Profile"
+          echo "Step 4: Managing Provisioning Profile"
           echo "=========================================="
           
           PROFILE_NAME="iOS App Store ${APP_ID}"
@@ -240,10 +240,8 @@ workflows:
           PYEOF
           )
 
-          # Delete any existing profiles with this name to avoid duplicates
           if [ -n "$EXISTING_PROFILES" ]; then
-              echo "⚠️  Found existing profile(s): $EXISTING_PROFILES"
-              echo "⚠️  Deleting old profiles before creating a fresh one..."
+              echo "⚠️  Deleting old profiles: $EXISTING_PROFILES"
               for PROFILE_ID in $EXISTING_PROFILES; do
                   echo "  Deleting profile: $PROFILE_ID"
                   app-store-connect profiles delete "$PROFILE_ID" 2>&1 || true
@@ -266,40 +264,17 @@ workflows:
           
           echo ""
           echo "=========================================="
-          echo "Step 4: Setting up Keychain"
-          echo "=========================================="
-          
-          keychain initialize
-          echo "✅ Keychain initialized"
-          
-          P12_DIR="/Users/builder/Library/Developer/Xcode/UserData/Certificates"
-          shopt -s nullglob
-          P12_FILES=("$P12_DIR"/*.p12)
-          shopt -u nullglob
-          
-          if [ ${#P12_FILES[@]} -eq 0 ]; then
-              echo "⚠️  No .p12 files found in $P12_DIR"
-          else
-              if CERT_IMPORT=$(security import \
-                "$P12_DIR"/*.p12 \
-                -k ~/Library/Keychains/login.keychain-db \
-                -P "" \
-                2>&1); then
-                  echo "✅ Certificates imported/verified"
-              elif [[ "$CERT_IMPORT" == *"already exists"* ]]; then
-                  echo "✅ Certificates already imported"
-              else
-                  echo "⚠️  Certificate import status: $CERT_IMPORT"
-              fi
-          fi
-          
-          echo ""
-          echo "=========================================="
           echo "Step 5: Applying Xcode Settings"
           echo "=========================================="
           
           xcode-project use-profiles
           echo "✅ Xcode profiles applied"
+          
+          echo ""
+          echo "=========================================="
+          echo "Verifying code signing identity..."
+          echo "=========================================="
+          security find-identity -v -p codesigning 2>&1 || true
           
           echo ""
           echo "=========================================="
