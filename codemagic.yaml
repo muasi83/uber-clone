@@ -31,8 +31,143 @@ workflows:
           pod install --repo-update
           cd ..
 
-      - name: Apply code signing
+      - name: Set up code signing
         script: |
+          set -euo pipefail
+
+          BUNDLE_ID=$(python3 << 'PYEOF'
+          import json, os, subprocess, sys, re
+          result = subprocess.run(['app-store-connect', 'bundle-ids', 'list', '--json'], capture_output=True, text=True)
+          output = result.stdout
+          match = re.search(r'[\{\[]', output)
+          if not match:
+              print('ERROR: No JSON found', file=sys.stderr); sys.exit(1)
+          try:
+              data = json.loads(output[match.start():])
+              matching = [b['id'] for b in data if b.get('attributes', {}).get('identifier') == os.environ.get('APP_ID', '')]
+              if matching:
+                  print(matching[0])
+              else:
+                  print('ERROR: No matching bundle ID for ' + os.environ.get('APP_ID', ''), file=sys.stderr); sys.exit(1)
+          except Exception as e:
+              print('ERROR: ' + str(e), file=sys.stderr); sys.exit(1)
+          PYEOF
+          )
+          echo "Bundle ID: $BUNDLE_ID"
+
+          keychain initialize
+
+          echo "Deleting old distribution certificates..."
+          python3 << 'PYEOF'
+          import json, subprocess, sys, re
+          result = subprocess.run(['app-store-connect', 'certificates', 'list', '--type', 'DISTRIBUTION', '--json'], capture_output=True, text=True)
+          output = result.stdout
+          match = re.search(r'[\{\[]', output)
+          if not match:
+              sys.exit(0)
+          try:
+              raw = json.loads(output[match.start():])
+              for item in (raw if isinstance(raw, list) else raw.get('data', [])):
+                  cid = item.get('id', '')
+                  if cid:
+                      subprocess.run(['app-store-connect', 'certificates', 'delete', cid], capture_output=True)
+                      print(f'Deleted old cert {cid}')
+          except Exception:
+              pass
+          PYEOF
+
+          WORK_DIR=$(mktemp -d)
+          trap 'rm -rf "$WORK_DIR"' EXIT
+
+          openssl genrsa -out "$WORK_DIR/key.pem" 2048 2>/dev/null
+
+          CERT_ID=$(WORK_DIR="$WORK_DIR" python3 << 'PYEOF'
+          import subprocess, sys, re, os
+          work_dir = os.environ.get('WORK_DIR', '')
+          result = subprocess.run(
+              ['app-store-connect', 'certificates', 'create',
+               '--type', 'DISTRIBUTION',
+               '--certificate-key', f'@file:{work_dir}/key.pem'],
+              capture_output=True, text=True
+          )
+          clean = re.sub(r'\x1b\[[0-9;]*m', '', result.stdout)
+          for line in clean.splitlines():
+              line = line.strip()
+              if line.startswith('Id:'):
+                  print(line.split(':', 1)[1].strip()); sys.exit(0)
+          print('ERROR: Could not parse cert ID', file=sys.stderr); sys.exit(1)
+          PYEOF
+          )
+          echo "Certificate created: $CERT_ID"
+
+          CERT_B64=$(python3 << 'PYEOF'
+          import json, subprocess, sys, re
+          result = subprocess.run(['app-store-connect', 'certificates', 'list', '--type', 'DISTRIBUTION', '--json'], capture_output=True, text=True)
+          output = result.stdout
+          match = re.search(r'[\{\[]', output)
+          if not match:
+              sys.exit(1)
+          try:
+              data = json.loads(output[match.start():])
+              items = data if isinstance(data, list) else data.get('data', [])
+              if items:
+                  content = items[0].get('attributes', {}).get('certificateContent', '')
+                  if content:
+                      print(content); sys.exit(0)
+          except Exception:
+              pass
+          sys.exit(1)
+          PYEOF
+          )
+
+          echo "$CERT_B64" > "$WORK_DIR/cert.cer.base64"
+          python3 -c "import base64; data = base64.b64decode(open('$WORK_DIR/cert.cer.base64').read().strip()); open('$WORK_DIR/cert.cer', 'wb').write(data)"
+          openssl x509 -inform DER -in "$WORK_DIR/cert.cer" -out "$WORK_DIR/cert.pem" -outform PEM
+
+          openssl pkcs12 -export \
+            -inkey "$WORK_DIR/key.pem" \
+            -in "$WORK_DIR/cert.pem" \
+            -out "$WORK_DIR/cert.p12" \
+            -keypbe AES-256-CBC \
+            -certpbe AES-256-CBC \
+            -passout pass:temp
+
+          security import "$WORK_DIR/cert.p12" -P "temp" -A
+
+          PROFILE_NAME="iOS App Store ${APP_ID}"
+          EXISTING_PROFILES=$(APP_ID="$APP_ID" python3 << 'PYEOF'
+          import json, os, subprocess, sys, re
+          result = subprocess.run(['app-store-connect', 'profiles', 'list', '--type', 'IOS_APP_STORE', '--json'], capture_output=True, text=True)
+          output = result.stdout
+          match = re.search(r'[\{\[]', output)
+          if not match:
+              sys.exit(0)
+          try:
+              raw = json.loads(output[match.start():])
+              items = raw if isinstance(raw, list) else raw.get('data', [])
+              app_id = os.environ.get('APP_ID', '')
+              matching = [p['id'] for p in items if app_id in p.get('attributes', {}).get('name', '')]
+              if matching:
+                  print(' '.join(matching))
+          except Exception:
+              pass
+          PYEOF
+          )
+
+          if [ -n "$EXISTING_PROFILES" ]; then
+              echo "Deleting old profiles: $EXISTING_PROFILES"
+              for PROFILE_ID in $EXISTING_PROFILES; do
+                  app-store-connect profiles delete "$PROFILE_ID" 2>/dev/null || true
+              done
+          fi
+
+          echo "Creating provisioning profile..."
+          app-store-connect profiles create \
+            "$BUNDLE_ID" \
+            --certificate-ids "$CERT_ID" \
+            --type IOS_APP_STORE \
+            --name "$PROFILE_NAME"
+
           xcode-project use-profiles
 
       - name: Determine build number
