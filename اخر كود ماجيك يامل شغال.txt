@@ -1,0 +1,403 @@
+workflows:
+  ios-release:
+    name: iOS Release to TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      groups:
+        - a
+      vars:
+        APP_ID: com.muasi.driversapp
+        APP_NAME: muasidivoapp
+        XCODE_WORKSPACE: ios/Runner.xcworkspace
+        XCODE_SCHEME: Runner
+        VERBOSE_SCRIPT_LOGGING: NO
+      flutter: stable
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Flutter clean
+        script: |
+          set -euo pipefail
+          echo "Cleaning Flutter build..."
+          flutter clean
+
+      - name: Flutter pub get
+        script: |
+          set -euo pipefail
+          echo "Getting Flutter dependencies..."
+          flutter pub get
+
+      - name: Install iOS pods
+        script: |
+          set -euo pipefail
+          echo "Installing iOS pods..."
+          cd ios
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+          cd ..
+
+      - name: Check App Store Connect credentials
+        script: |
+          set -euo pipefail
+          echo "=========================================="
+          echo "Checking App Store Connect credentials..."
+          echo "=========================================="
+          echo "Key ID: ${APP_STORE_CONNECT_KEY_IDENTIFIER:-NOT SET}"
+          echo "Issuer ID: ${APP_STORE_CONNECT_ISSUER_ID:-NOT SET}"
+          echo "Private key: ${APP_STORE_CONNECT_PRIVATE_KEY:+SET}${APP_STORE_CONNECT_PRIVATE_KEY:-NOT SET}"
+
+          if [ -n "${APP_STORE_CONNECT_PRIVATE_KEY:-}" ] && [ -f "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
+            echo "Private key is a file at: $APP_STORE_CONNECT_PRIVATE_KEY"
+            echo "File exists: yes"
+            echo "File size: $(wc -c < "$APP_STORE_CONNECT_PRIVATE_KEY") bytes"
+          fi
+
+          echo ""
+          echo "Testing connection to App Store Connect..."
+          RESPONSE=$(app-store-connect bundle-ids list --json 2>&1) || {
+            echo "❌ Command failed"
+            echo "$RESPONSE"
+            exit 1
+          }
+          echo "✅ Command exited with code 0"
+          echo "Response length: $(echo "$RESPONSE" | wc -c) chars"
+          echo "Response preview (first 200 chars):"
+          echo "$RESPONSE" | head -c 200
+          echo ""
+
+      - name: Set up code signing
+        script: |
+          set -euo pipefail
+          
+          if [ -z "${APP_ID:-}" ]; then
+              echo "❌ APP_ID environment variable is not set"
+              exit 1
+          fi
+          
+          echo "=========================================="
+          echo "Step 1: Getting Bundle ID"
+          echo "=========================================="
+          
+          BUNDLE_ID=$(APP_ID="$APP_ID" python3 << 'PYEOF'
+          import json, os, subprocess, sys
+
+          app_id = os.environ.get("APP_ID", "")
+          result = subprocess.run(
+              ["app-store-connect", "bundle-ids", "list", "--json"],
+              capture_output=True, text=True
+          )
+          output = result.stdout
+          import re
+          match = re.search(r'[\{\[]', output)
+          if not match:
+              print("ERROR: No JSON found in output", file=sys.stderr)
+              print(output[:500], file=sys.stderr)
+              sys.exit(1)
+          try:
+              data = json.loads(output[match.start():])
+              matching = [b['id'] for b in data if b.get('attributes', {}).get('identifier') == app_id]
+              if matching:
+                  print(matching[0])
+              else:
+                  print("ERROR: No matching bundle ID found for " + app_id, file=sys.stderr)
+                  sys.exit(1)
+          except Exception as e:
+              print(f"ERROR: {e}", file=sys.stderr)
+              sys.exit(1)
+          PYEOF
+          )
+          
+          if [[ "$BUNDLE_ID" == "ERROR:"* ]] || [ -z "$BUNDLE_ID" ]; then
+              echo "❌ Failed to resolve Bundle ID for $APP_ID"
+              exit 1
+          fi
+          
+          echo "✅ Bundle ID: $BUNDLE_ID"
+          
+          echo ""
+          echo "=========================================="
+          echo "Step 2: Setup keychain & cert"
+          echo "=========================================="
+          
+          keychain initialize
+          echo "✅ Keychain initialized"
+
+          # Must remove old certs or Apple will 400 "limit reached"
+          python3 << 'PYEOF'
+          import json, subprocess, sys, re
+          result = subprocess.run(
+              ["app-store-connect", "certificates", "list", "--type", "DISTRIBUTION", "--json"],
+              capture_output=True, text=True
+          )
+          output = result.stdout
+          match = re.search(r'[\{\[]', output)
+          if not match:
+              sys.exit(0)
+          try:
+              raw = json.loads(output[match.start():])
+              items = raw if isinstance(raw, list) else raw.get('data', [])
+              for item in items:
+                  cid = item.get('id', '')
+                  if cid:
+                      subprocess.run(["app-store-connect", "certificates", "delete", cid],
+                                     capture_output=True)
+                      print(f"Deleted old cert {cid}")
+          except Exception:
+              pass
+          PYEOF
+          
+          WORK_DIR=$(mktemp -d)
+          trap 'rm -rf "$WORK_DIR"' EXIT
+          
+          openssl genrsa -out "$WORK_DIR/key.pem" 2048 2>/dev/null
+
+          # Create cert, parse the table output for the ID
+          CERT_ID=$(WORK_DIR="$WORK_DIR" python3 << 'PYEOF'
+          import subprocess, sys, re, os
+          result = subprocess.run(
+              ["app-store-connect", "certificates", "create",
+               "--type", "DISTRIBUTION",
+               "--certificate-key", f"@file:{os.environ['WORK_DIR']}/key.pem"],
+              capture_output=True, text=True
+          )
+          clean = re.sub(r'\x1b\[[0-9;]*m', '', result.stdout)
+          for line in clean.splitlines():
+              line = line.strip()
+              if line.startswith("Id:"):
+                  print(line.split(":", 1)[1].strip())
+                  sys.exit(0)
+          print("ERROR: Could not parse cert ID", file=sys.stderr)
+          print("OUTPUT:", repr(result.stdout[:1000]), file=sys.stderr)
+          sys.exit(1)
+          PYEOF
+          ) || { echo "❌ Certificate creation failed"; exit 1; }
+          
+          echo "✅ Cert created: $CERT_ID"
+          
+          # Fetch the full certificate content via --json
+          CERT_B64=$(python3 << 'PYEOF'
+          import json, subprocess, sys, re
+          result = subprocess.run(
+              ["app-store-connect", "certificates", "list", "--type", "DISTRIBUTION", "--json"],
+              capture_output=True, text=True
+          )
+          output = result.stdout
+          match = re.search(r'[\{\[]', output)
+          if not match:
+              sys.exit(1)
+          try:
+              data = json.loads(output[match.start():])
+              items = data if isinstance(data, list) else data.get('data', [])
+              if items:
+                  content = items[0].get('attributes', {}).get('certificateContent', '')
+                  if content:
+                      print(content)
+                      sys.exit(0)
+          except Exception:
+              pass
+          sys.exit(1)
+          PYEOF
+          ) || { echo "❌ Could not fetch cert content"; exit 1; }
+          
+          echo "✅ Cert content fetched"
+          
+          echo "✅ Certificate: $CERT_ID"
+          
+          # Decode .cer and build .p12
+          echo "$CERT_B64" > "$WORK_DIR/cert.cer.base64"
+          python3 -c "
+          import base64, sys
+          with open('$WORK_DIR/cert.cer.base64') as f:
+              data = base64.b64decode(f.read().strip())
+          with open('$WORK_DIR/cert.cer', 'wb') as f:
+              f.write(data)
+          "
+          
+          openssl x509 -inform DER -in "$WORK_DIR/cert.cer" -out "$WORK_DIR/cert.pem" -outform PEM && echo "✅ PEM conversion OK" || echo "❌ PEM conversion failed"
+          
+          openssl pkcs12 -export \
+            -inkey "$WORK_DIR/key.pem" \
+            -in "$WORK_DIR/cert.pem" \
+            -out "$WORK_DIR/cert.p12" \
+            -keypbe PBE-SHA1-RC2-128 \
+            -certpbe PBE-SHA1-RC2-128 \
+            -nomaciter \
+            -passout pass:temp && echo "✅ P12 built OK" || echo "❌ P12 build failed"
+          
+          echo "✅ Importing certificate..."
+          security import "$WORK_DIR/cert.p12" -P "temp" 2>&1 || echo "❌ Import failed (but continuing)"
+          
+          echo "✅ Certificates in keychain:"
+          security find-identity -v -p codesigning 2>&1 || true
+          
+          echo ""
+          echo "=========================================="
+          echo "Step 3: Managing Provisioning Profile"
+          echo "=========================================="
+          
+          PROFILE_NAME="iOS App Store ${APP_ID}"
+          
+          EXISTING_PROFILES=$(APP_ID="$APP_ID" python3 << 'PYEOF'
+          import json, os, subprocess, sys, re
+          result = subprocess.run(
+              ["app-store-connect", "profiles", "list", "--type", "IOS_APP_STORE", "--json"],
+              capture_output=True, text=True
+          )
+          output = result.stdout
+          match = re.search(r'[\{\[]', output)
+          if not match:
+              sys.exit(0)
+          try:
+              raw = json.loads(output[match.start():])
+              items = raw if isinstance(raw, list) else raw.get('data', [])
+              app_id = os.environ.get("APP_ID", "")
+              matching = [p for p in items
+                         if app_id in p.get('attributes', {}).get('name', '')]
+              if matching:
+                  print(" ".join(p.get('id', '') for p in matching))
+          except Exception:
+              pass
+          PYEOF
+          )
+
+          if [ -n "$EXISTING_PROFILES" ]; then
+              echo "⚠️  Deleting old profiles: $EXISTING_PROFILES"
+              for PROFILE_ID in $EXISTING_PROFILES; do
+                  echo "  Deleting profile: $PROFILE_ID"
+                  app-store-connect profiles delete "$PROFILE_ID" 2>&1 || true
+              done
+          fi
+
+          echo "Creating new profile..."
+          CREATE_PROFILE=$(app-store-connect profiles create \
+            "$BUNDLE_ID" \
+            --certificate-ids "$CERT_ID" \
+            --type IOS_APP_STORE \
+            --name "$PROFILE_NAME" \
+            --save 2>&1) || {
+              echo "❌ Error creating profile"
+              echo "$CREATE_PROFILE"
+              exit 1
+          }
+
+          echo "✅ Profile created successfully"
+          
+          echo ""
+          echo "=========================================="
+          echo "Step 4: Applying Xcode Settings"
+          echo "=========================================="
+          
+          xcode-project use-profiles
+          echo "✅ Xcode profiles applied"
+          
+          echo ""
+          echo "=========================================="
+          echo "Verifying code signing identity..."
+          echo "=========================================="
+          security find-identity -v -p codesigning 2>&1 || true
+          
+          echo ""
+          echo "=========================================="
+          echo "✅ Code signing setup complete!"
+          echo "=========================================="
+
+      - name: Build iOS Release IPA
+        script: |
+          set -euo pipefail
+          
+          echo "=========================================="
+          echo "Determining build number..."
+          echo "=========================================="
+          
+          if ! BUILD_NUMBER_RESPONSE=$(app-store-connect get-latest-testflight-build-number \
+            --app-id "${APP_ID}" 2>&1); then
+              BUILD_NUMBER=1
+              echo "⚠️  Could not fetch latest build number, starting with 1"
+          else
+              LATEST_BUILD=$(echo "$BUILD_NUMBER_RESPONSE" | tail -1 | tr -d '[:space:]')
+              if [[ "$LATEST_BUILD" =~ ^[0-9]+$ ]]; then
+                  BUILD_NUMBER=$((LATEST_BUILD + 1))
+                  echo "✅ Latest TestFlight build: $LATEST_BUILD"
+              else
+                  BUILD_NUMBER=1
+                  echo "⚠️  Could not parse build number, starting with 1"
+              fi
+          fi
+          
+          echo "🔨 Building with number: $BUILD_NUMBER"
+          echo ""
+          
+          BUILD_LOG=$(mktemp)
+          trap 'rm -f "$BUILD_LOG"' EXIT
+          
+          set +e
+          flutter build ipa \
+            --release \
+            --build-number=$BUILD_NUMBER > "$BUILD_LOG" 2>&1
+          EXIT_CODE=$?
+          set -e
+          
+          echo "=========================================="
+          echo "Build log (last 30 lines):"
+          echo "=========================================="
+          tail -30 "$BUILD_LOG"
+          
+          echo ""
+          echo "=========================================="
+          echo "IPA location:"
+          echo "=========================================="
+          find . -name "*.ipa" -type f 2>/dev/null || echo "No .ipa files found"
+          
+          echo ""
+          echo "=========================================="
+          echo "Xcode archive location:"
+          echo "=========================================="
+          find . -name "*.xcarchive" -type d 2>/dev/null || echo "No .xcarchive found"
+          
+          if [ "$EXIT_CODE" -ne 0 ]; then
+              echo ""
+              echo "❌ Build failed (exit code: $EXIT_CODE)"
+              echo ""
+              echo "=========================================="
+              echo "Xcode errors from build log:"
+              echo "=========================================="
+              grep -E "(error:|BUILD FAILED|The following build commands failed|Command .+ failed)" "$BUILD_LOG" | head -50 || echo "No Xcode errors found"
+              echo ""
+              echo "=========================================="
+              echo "Xcode warnings from build log:"
+              echo "=========================================="
+              grep -E "warning:" "$BUILD_LOG" | head -30 || echo "No Xcode warnings found"
+              exit 1
+          fi
+          
+          echo "✅ Build succeeded"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/Runner.xcarchive/**/*.dSYM.zip
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        submit_to_app_store: false
+      email:
+        recipients:
+          - developer@example.com
+        notify:
+          success: true
+          failure: true
+      slack:
+        channel: '#builds'
+        notify_on_build_start: true
+        notify:
+          success: true
+          failure: true
