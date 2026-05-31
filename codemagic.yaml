@@ -1,63 +1,56 @@
 workflows:
-ios-release:
-name: iOS Release to TestFlight
-instance_type: mac_mini_m2
-max_build_duration: 120
+  ios-release:
+    name: iOS Release to TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 120
 
-environment:
-  flutter: stable
+    environment:
+      flutter: stable
 
-  groups:
-    - a
+      groups:
+        - a
 
-  ios_signing:
-    certificates:
-      - ios_distribution_cert
-    provisioning_profiles:
-      - appstore_profile
+      vars:
+        APP_ID: com.muasi.driversapp
 
-  vars:
-    APP_ID: com.muasi.driversapp
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
 
-triggering:
-  events:
-    - push
+    scripts:
+      - name: Flutter pub get
+        script: |
+          flutter pub get
 
-  branch_patterns:
-    - pattern: main
-      include: true
+      - name: Install Pods
+        script: |
+          cd ios
+          pod install --repo-update
+          cd ..
 
-scripts:
-  - name: Flutter pub get
-    script: |
-      flutter pub get
+      - name: Apply code signing
+        script: |
+          xcode-project use-profiles
 
-  - name: Install Pods
-    script: |
-      cd ios
-      pod install --repo-update
-      cd ..
+      - name: Determine build number
+        script: |
+          export BUILD_NUMBER=$(date +%s)
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
 
-  - name: Apply code signing
-    script: |
-      xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          flutter build ipa \
+            --release \
+            --build-number=$BUILD_NUMBER
 
-  - name: Determine build number
-    script: |
-      BUILD_NUMBER=$(date +%s)
-      echo "BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/Runner.xcarchive/**/*.dSYM.zip
 
-  - name: Build IPA
-    script: |
-      flutter build ipa \
-        --release \
-        --build-number=$BUILD_NUMBER
-
-artifacts:
-  - build/ios/ipa/*.ipa
-  - build/ios/archive/Runner.xcarchive/**/*.dSYM.zip
-
-publishing:
-  app_store_connect:
-    submit_to_testflight: true
-    submit_to_app_store: false
+    publishing:
+      app_store_connect:
+        submit_to_testflight: true
+        submit_to_app_store: false
