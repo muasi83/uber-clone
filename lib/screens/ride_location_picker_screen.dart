@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'dart:math' as Math;
 import '../screens/debug_screen.dart';
-import '../services/location_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
@@ -44,16 +44,23 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
 
   Future<void> _initializeMap() async {
     try {
-      final location = await LocationService.getCurrentLocation();
-      if (location == null) {
-        addDebugMessage('❌ Could not get current location');
-        return;
-      }
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
+      );
       
-      _currentLocation = LatLng(location.latitude, location.longitude);
+      _currentLocation = LatLng(position.latitude, position.longitude);
       _pickupLocation = _currentLocation;
-      _pickupAddress = location.address;
-      _pickupSearchController.text = location.address;
+      
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        _pickupAddress = '${place.street}, ${place.locality}';
+        _pickupSearchController.text = _pickupAddress;
+      }
       
       if (mounted) {
         setState(() {

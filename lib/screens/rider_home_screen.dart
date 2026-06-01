@@ -221,8 +221,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever ||
-          permission == LocationPermission.unableToDetermine) {
+          permission == LocationPermission.deniedForever) {
         setState(() {
           _isInitializing = false;
           _initError = 'Location permission required';

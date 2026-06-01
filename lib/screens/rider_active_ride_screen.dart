@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../services/directions_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
-import '../services/location_service.dart';
 import '../screens/debug_screen.dart';
 import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
@@ -58,10 +58,12 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
 
   Future<void> _getRiderLocation() async {
     try {
-      final location = await LocationService.getCurrentLocation();
-      if (location != null && mounted) {
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      if (mounted) {
         setState(() {
-          _riderLocation = LatLng(location.latitude, location.longitude);
+          _riderLocation = LatLng(pos.latitude, pos.longitude);
           _updateMarkers();
         });
       }
