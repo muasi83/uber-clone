@@ -137,7 +137,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
     try {
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       _driverCurrentLocation = LatLng(position.latitude, position.longitude);
@@ -808,7 +808,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     if (_driverCurrentLocation == null) {
       try {
         final pos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
+          locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
         );
         _driverCurrentLocation = LatLng(pos.latitude, pos.longitude);
       } catch (_) {}
@@ -962,7 +962,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             duration: const Duration(milliseconds: 350),
             switchInCurve: Curves.easeOut,
             switchOutCurve: Curves.easeIn,
-            child: _buildBody(),
+            child: Stack(
+              key: ValueKey('overlay_$_selectedIndex'),
+              fit: StackFit.expand,
+              children: [
+                _buildBody(),
+              ],
+            ),
           ),
         ],
       ),

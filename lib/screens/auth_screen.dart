@@ -237,60 +237,58 @@ class _AuthScreenState extends State<AuthScreen>
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Container(
-              height: screenHeight * 0.30,
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: AppColors.primaryGradient,
-              ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.directions_car_rounded,
-                        size: 36,
-                        color: Colors.white,
-                      ),
+            GestureDetector(
+              onLongPress: () {
+                addDebugMessage('🔓 Debug screen accessed from auth');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DebugScreen()),
+                );
+              },
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                    AppSpacing.gapLg,
-                    const Text(
-                      'RideNow',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
-                      ),
+                    child: const Icon(
+                      Icons.directions_car_rounded,
+                      size: 36,
+                      color: Colors.white,
                     ),
-                    AppSpacing.gapXs,
-                    Text(
-                      'Sign in to continue',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
+                  ),
+                  AppSpacing.gapLg,
+                  const Text(
+                    'RideNow',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  AppSpacing.gapXs,
+                  Text(
+                    'Sign in to continue',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
                     ),
                   ],
                 ),
               ),
-            ),
-            Transform.translate(
-              offset: const Offset(0, -24),
+              Transform.translate(
+                offset: const Offset(0, -24),
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(

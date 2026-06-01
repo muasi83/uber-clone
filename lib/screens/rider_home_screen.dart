@@ -229,8 +229,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         return;
       }
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      ).timeout(const Duration(seconds: 15));
+        locationSettings: LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 15),
+        ),
+      );
       _currentLocation = LatLng(position.latitude, position.longitude);
       _markers.add(
         Marker(

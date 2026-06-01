@@ -45,7 +45,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
   Future<void> _initializeMap() async {
     try {
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
       );
       
       _currentLocation = LatLng(position.latitude, position.longitude);

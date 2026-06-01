@@ -65,7 +65,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   Future<void> _initializeRide() async {
     try {
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       _driverLocation = LatLng(position.latitude, position.longitude);

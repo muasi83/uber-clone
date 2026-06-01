@@ -68,7 +68,7 @@ class _DriverNavigationToRiderScreenState
   Future<void> _initializeNavigation() async {
     try {
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       _driverLocation = LatLng(position.latitude, position.longitude);

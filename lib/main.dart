@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'services/storage_service.dart';
+import 'services/crash_reporter.dart';
 
 import 'screens/auth_screen.dart';
 import 'screens/debug_screen.dart';
@@ -26,21 +28,32 @@ import 'services/notification_service.dart';
 import 'services/websocket_service.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    await StorageService.init();
-  } catch (_) {}
+      CrashReporter.init();
 
-  try {
-    Intl.defaultLocale = 'en_US';
-  } catch (_) {}
+      try {
+        await StorageService.init();
+      } catch (e) {
+        CrashReporter.addLog('StorageService.init failed: $e');
+      }
 
-  await NotificationService.init();
+      try {
+        Intl.defaultLocale = 'en_US';
+      } catch (e) {
+        CrashReporter.addLog('Intl locale failed: $e');
+      }
 
-  _setupNotificationListeners();
+      await NotificationService.init();
 
-  runApp(const MyApp());
+      _setupNotificationListeners();
+
+      runApp(const MyApp());
+    },
+    (error, stack) => CrashReporter.addLog('ZONE ERROR: $error\n$stack'),
+  );
 }
 
 void _setupNotificationListeners() {

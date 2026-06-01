@@ -56,7 +56,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       addDebugMessage('📍 GETTING CURRENT LOCATION');
       
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
       );
       
       currentLocation = LatLng(position.latitude, position.longitude);

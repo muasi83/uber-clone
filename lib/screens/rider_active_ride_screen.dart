@@ -59,7 +59,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   Future<void> _getRiderLocation() async {
     try {
       final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
       );
       if (mounted) {
         setState(() {
