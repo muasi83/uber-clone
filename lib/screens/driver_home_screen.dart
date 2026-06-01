@@ -21,6 +21,7 @@ import '../services/directions_service.dart';
 import '../services/storage_service.dart';
 import '../screens/settings_screen.dart';
 import '../screens/debug_screen.dart';
+import '../services/location_service.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   final int userId;
@@ -119,11 +120,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        addDebugMessage('❌ Location permission denied');
-        if (mounted) _showError('Location permission is required for drivers');
-        return;
-      }
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.unableToDetermine) {
+      addDebugMessage('❌ Location permission denied/unable: $permission');
+      if (mounted) _showError('Location permission is required for drivers');
+      return;
     }
 
     if (permission == LocationPermission.deniedForever) {
@@ -806,12 +808,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
     // Ensure we have driver location before accepting
     if (_driverCurrentLocation == null) {
-      try {
-        final pos = await Geolocator.getCurrentPosition(
-          locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
-        );
-        _driverCurrentLocation = LatLng(pos.latitude, pos.longitude);
-      } catch (_) {}
+      final loc = await LocationService.getCurrentLocation();
+      if (loc != null) {
+        _driverCurrentLocation = LatLng(loc.latitude, loc.longitude);
+      }
     }
 
     try {

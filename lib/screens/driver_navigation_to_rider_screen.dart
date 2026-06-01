@@ -7,6 +7,7 @@ import '../services/directions_service.dart';
 import '../services/storage_service.dart';
 import '../screens/debug_screen.dart';
 import '../screens/chat_screen.dart';
+import '../services/location_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
@@ -67,12 +68,14 @@ class _DriverNavigationToRiderScreenState
 
   Future<void> _initializeNavigation() async {
     try {
-      Position position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
-      );
+      final location = await LocationService.getCurrentLocation();
+      if (location == null) {
+        addDebugMessage('❌ Could not get driver location');
+        return;
+      }
 
-      _driverLocation = LatLng(position.latitude, position.longitude);
-      addDebugMessage('✅ Driver location: ${position.latitude}, ${position.longitude}');
+      _driverLocation = LatLng(location.latitude, location.longitude);
+      addDebugMessage('✅ Driver location: ${location.latitude}, ${location.longitude}');
 
       _updateMarkers();
       _updateRoute();

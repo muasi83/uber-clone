@@ -11,6 +11,7 @@ import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../services/location_service.dart';
 
 class DriverActiveRideScreen extends StatefulWidget {
   final int rideId;
@@ -64,12 +65,14 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
 
   Future<void> _initializeRide() async {
     try {
-      Position position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
-      );
+      final location = await LocationService.getCurrentLocation();
+      if (location == null) {
+        addDebugMessage('❌ Could not get driver location');
+        return;
+      }
 
-      _driverLocation = LatLng(position.latitude, position.longitude);
-      addDebugMessage('✅ Driver location: ${position.latitude}, ${position.longitude}');
+      _driverLocation = LatLng(location.latitude, location.longitude);
+      addDebugMessage('✅ Driver location: ${location.latitude}, ${location.longitude}');
 
       _updateMarkers();
       _updateRoute();
