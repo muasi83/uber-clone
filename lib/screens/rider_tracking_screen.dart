@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/directions_service.dart';
@@ -33,11 +34,15 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   bool _driverArrived = false;
+  bool _rideStarting = false;
   int _remainingMinutes = 0;
+  double _driverHeading = 0;
+  BitmapDescriptor _carIcon = BitmapDescriptor.defaultMarker;
 
   Timer? _statusPollTimer;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
 
   @override
   void initState() {
@@ -52,6 +57,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     _initializeTracking();
     _setupWebSocketListeners();
     _startStatusPolling();
+    _initCarIcon();
 
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('TRACKING DRIVER');
@@ -69,6 +75,8 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         if (ride == null || !mounted) return;
 
         if (ride.status == 'STARTED') {
+          if (_rideStarting) return;
+          _rideStarting = true;
           addDebugMessage('Poll detected ride STARTED');
           _statusPollTimer?.cancel();
           Navigator.pushReplacementNamed(
@@ -88,6 +96,18 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         addDebugMessage('Status poll error: $e');
       }
     });
+  }
+
+  Future<void> _initCarIcon() async {
+    try {
+      _carIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/images/car_marker.png',
+      );
+    } catch (e) {
+      addDebugMessage('Car icon fallback: $e');
+      _carIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    }
   }
 
   void _initializeTracking() {
@@ -112,16 +132,25 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
 
   void _setupWebSocketListeners() {
     try {
-      WebSocketService.rideEvents.listen((event) {
+      _rideEventsSub = WebSocketService.rideEvents.listen((event) {
+        if (!mounted) return;
         final type = event['type'] ?? '';
 
         if (type == 'driver_location') {
-          final lat = event['latitude'] as double?;
-          final lng = event['longitude'] as double?;
+          final payload = event['payload'] ?? event;
+          final lat = (payload['latitude'] ?? payload['lat']) as double?;
+          final lng = (payload['longitude'] ?? payload['lng']) as double?;
+          final heading = payload['heading'] as double?;
 
-          if (lat != null && lng != null && mounted) {
+          if (lat != null && lng != null) {
             setState(() {
+              final prev = _driverLocation;
               _driverLocation = LatLng(lat, lng);
+              if (heading != null) {
+                _driverHeading = heading;
+              } else if (prev != null) {
+                _driverHeading = _bearingBetween(prev, _driverLocation!);
+              }
               _updateMarkers();
               _updateRoute();
               _fitBounds();
@@ -130,23 +159,24 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
             addDebugMessage('Driver location updated: $lat, $lng');
           }
         } else if (type == 'ride_started') {
+          if (_rideStarting) return;
+          _rideStarting = true;
+
           addDebugMessage('Ride started — navigating to active ride');
           final payload = event['payload'] as Map<String, dynamic>? ?? {};
-          if (mounted) {
-            Navigator.pushReplacementNamed(
-              context,
-              '/rider-active-ride',
-              arguments: {
-                'rideId': widget.rideId,
-                'pickupLat': widget.driverData['pickupLatitude'] ?? 0,
-                'pickupLng': widget.driverData['pickupLongitude'] ?? 0,
-                'dropoffLat': payload['dropoffLatitude'] ?? widget.driverData['dropoffLatitude'] ?? 0,
-                'dropoffLng': payload['dropoffLongitude'] ?? widget.driverData['dropoffLongitude'] ?? 0,
-                'dropoffAddress': payload['dropoffAddress'] ?? widget.driverData['dropoffAddress'] ?? '',
-              },
-            );
-          }
-        } else if (type == 'driver_arrived' && mounted) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/rider-active-ride',
+            arguments: {
+              'rideId': widget.rideId,
+              'pickupLat': widget.driverData['pickupLatitude'] ?? 0,
+              'pickupLng': widget.driverData['pickupLongitude'] ?? 0,
+              'dropoffLat': payload['dropoffLatitude'] ?? widget.driverData['dropoffLatitude'] ?? 0,
+              'dropoffLng': payload['dropoffLongitude'] ?? widget.driverData['dropoffLongitude'] ?? 0,
+              'dropoffAddress': payload['dropoffAddress'] ?? widget.driverData['dropoffAddress'] ?? '',
+            },
+          );
+        } else if (type == 'driver_arrived') {
           setState(() => _driverArrived = true);
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -186,9 +216,10 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         Marker(
           markerId: const MarkerId('driver'),
           position: _driverLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueBlue,
-          ),
+          icon: _carIcon,
+          rotation: _driverHeading,
+          anchor: const Offset(0.5, 0.5),
+          flat: true,
           infoWindow: InfoWindow(
             title: widget.driverData['driverName'] as String? ?? 'Driver',
           ),
@@ -265,6 +296,19 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     );
   }
 
+  double _bearingBetween(LatLng from, LatLng to) {
+    final dLon = _toRadians(to.longitude - from.longitude);
+    final fromLat = _toRadians(from.latitude);
+    final toLat = _toRadians(to.latitude);
+    final y = math.sin(dLon) * math.cos(toLat);
+    final x = math.cos(fromLat) * math.sin(toLat) -
+        math.sin(fromLat) * math.cos(toLat) * math.cos(dLon);
+    return (_toDegrees(math.atan2(y, x)) + 360) % 360;
+  }
+
+  double _toRadians(double deg) => deg * math.pi / 180;
+  double _toDegrees(double rad) => rad * 180 / math.pi;
+
   Future<void> _openChat() async {
     final token = StorageService.getToken();
     final currentUserId = StorageService.getUserId();
@@ -304,14 +348,19 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _showCancelRideDialog();
+      },
+      child: Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => _showCancelRideDialog(),
         ),
         title: const Text(
           'Trip to Destination',
@@ -498,7 +547,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.access_time_rounded,
                               size: 18,
                               color: AppColors.textSecondary,
@@ -545,12 +594,65 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
           ),
         ],
       ),
+    ),
     );
+  }
+
+  Future<void> _showCancelRideDialog() async {
+    final reasonController = TextEditingController();
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Ride?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Are you sure you want to cancel this ride?'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                hintText: 'Reason (optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, {'action': 'no'}), child: const Text('No')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, {'action': 'yes', 'reason': reasonController.text.trim()}),
+            child: const Text('Yes, Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result['action'] == 'yes' && mounted) {
+      final reason = result['reason'] ?? 'Rider cancelled ride';
+      try {
+        final token = StorageService.getToken();
+        if (token == null) return;
+        await RideService.cancelRide(widget.rideId, token, reason: reason);
+        if (mounted) {
+          WebSocketService.sendRideMessage('ride_cancelled', {
+            'rideId': widget.rideId,
+            'reason': reason,
+          });
+          Navigator.pushNamedAndRemoveUntil(context, '/rider-home', (route) => false);
+        }
+      } catch (e) {
+        addDebugMessage('❌ Error cancelling ride: $e');
+      }
+    }
   }
 
   @override
   void dispose() {
     _statusPollTimer?.cancel();
+    _rideEventsSub?.cancel();
     mapController?.dispose();
     _pulseController.dispose();
     super.dispose();

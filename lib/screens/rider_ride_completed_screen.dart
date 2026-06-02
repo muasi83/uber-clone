@@ -14,12 +14,12 @@ class RiderRideCompletedScreen extends StatefulWidget {
   final int? duration;
 
   const RiderRideCompletedScreen({
-    Key? key,
+    super.key,
     required this.rideId,
     this.totalFare,
     this.distance,
     this.duration,
-  }) : super(key: key);
+  });
 
   @override
   State<RiderRideCompletedScreen> createState() =>
@@ -97,6 +97,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
       }
     } catch (e) {
       addDebugMessage('❌ Error: $e');
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
@@ -159,7 +160,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                side: BorderSide(color: AppColors.outline),
+                side: const BorderSide(color: AppColors.outline),
               ),
               child: Padding(
                 padding: AppSpacing.cardPadding,
@@ -212,7 +213,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
               }),
             ),
             AppSpacing.gapXxl,
-            Align(
+            const Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Additional feedback (optional)',
@@ -228,7 +229,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
               maxLines: 3,
               decoration: InputDecoration(
                 hintText: 'Share your experience...',
-                hintStyle: TextStyle(color: AppColors.textTertiary),
+                hintStyle: const TextStyle(color: AppColors.textTertiary),
                 filled: true,
                 fillColor: AppColors.surfaceVariant,
                 border: OutlineInputBorder(
@@ -247,7 +248,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
             AppSpacing.gapMd,
             TextButton(
               onPressed: _skipRating,
-              child: Text(
+              child: const Text(
                 'Skip rating',
                 style: TextStyle(color: AppColors.textTertiary),
               ),
@@ -270,7 +271,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 14,
             ),

@@ -7,7 +7,7 @@ class AppTheme {
   AppTheme._();
 
   static ThemeData get lightTheme {
-    final colorScheme = ColorScheme.light(
+    const colorScheme = ColorScheme.light(
       primary: AppColors.primary,
       onPrimary: AppColors.textOnPrimary,
       primaryContainer: AppColors.errorContainer,
@@ -17,7 +17,7 @@ class AppTheme {
       onSecondaryContainer: AppColors.textPrimary,
       surface: AppColors.surface,
       onSurface: AppColors.textPrimary,
-      surfaceVariant: AppColors.surfaceVariant,
+      surfaceContainerHighest: AppColors.surfaceVariant,
       onSurfaceVariant: AppColors.textSecondary,
       outline: AppColors.outline,
       outlineVariant: AppColors.outlineVariant,
@@ -38,20 +38,20 @@ class AppTheme {
         displayColor: AppColors.textOnPrimary,
       ),
 
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.textPrimary,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: const TextStyle(
+        titleTextStyle: TextStyle(
           color: AppColors.textPrimary,
           fontSize: 18,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.3,
         ),
-        iconTheme: const IconThemeData(
+        iconTheme: IconThemeData(
           color: AppColors.textPrimary,
           size: 24,
         ),
@@ -138,7 +138,7 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.outline),
+          borderSide: const BorderSide(color: AppColors.outline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -152,11 +152,11 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.error, width: 2),
         ),
-        labelStyle: TextStyle(
+        labelStyle: const TextStyle(
           color: AppColors.textSecondary,
           fontSize: 14,
         ),
-        hintStyle: TextStyle(
+        hintStyle: const TextStyle(
           color: AppColors.textTertiary,
           fontSize: 14,
         ),
@@ -209,7 +209,7 @@ class AppTheme {
               color: AppColors.primary,
             );
           }
-          return TextStyle(
+          return const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
             color: AppColors.textTertiary,
@@ -222,7 +222,7 @@ class AppTheme {
               size: 24,
             );
           }
-          return IconThemeData(
+          return const IconThemeData(
             color: AppColors.textTertiary,
             size: 24,
           );
@@ -246,7 +246,7 @@ class AppTheme {
         ),
       ),
 
-      expansionTileTheme: ExpansionTileThemeData(
+      expansionTileTheme: const ExpansionTileThemeData(
         shape: Border(
           bottom: BorderSide(color: AppColors.outline),
         ),
@@ -289,7 +289,7 @@ class AppTheme {
       onSecondaryContainer: Colors.white,
       surface: AppColors.darkSurface,
       onSurface: Colors.white,
-      surfaceVariant: AppColors.darkSurfaceVariant,
+      surfaceContainerHighest: AppColors.darkSurfaceVariant,
       onSurfaceVariant: AppColors.textTertiary,
       outline: AppColors.darkOutline,
       error: AppColors.error,
@@ -306,20 +306,20 @@ class AppTheme {
         bodyColor: Colors.white,
         displayColor: Colors.white,
       ),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: const TextStyle(
+        titleTextStyle: TextStyle(
           color: Colors.white,
           fontSize: 18,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.3,
         ),
-        iconTheme: const IconThemeData(
+        iconTheme: IconThemeData(
           color: Colors.white,
           size: 24,
         ),
@@ -371,7 +371,7 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.darkOutline),
+          borderSide: const BorderSide(color: AppColors.darkOutline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

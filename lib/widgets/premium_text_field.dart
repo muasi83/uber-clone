@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
 
 class PremiumTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -101,7 +100,7 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
                   ),
                   onPressed: () => setState(() => _obscured = !_obscured),
                 )
-              : (widget.suffix != null ? widget.suffix : null),
+              : (widget.suffix),
         ),
       ),
     );

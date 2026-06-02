@@ -18,13 +18,13 @@ class ChatScreen extends StatefulWidget {
   final String token;
 
   const ChatScreen({
-    Key? key,
+    super.key,
     required this.currentUserId,
     required this.currentUsername,
     required this.receiverId,
     required this.receiverName,
     required this.token,
-  }) : super(key: key);
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -386,7 +386,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               ),
                             ),
                             AppSpacing.gapXl,
-                            Text(
+                            const Text(
                               'No messages yet',
                               style: TextStyle(
                                 fontSize: 16,
@@ -395,7 +395,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               ),
                             ),
                             AppSpacing.gapSm,
-                            Text(
+                            const Text(
                               'Send a message to start chatting',
                               style: TextStyle(
                                 fontSize: 13,
@@ -528,7 +528,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(
+                        const SizedBox(
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(
@@ -539,7 +539,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         AppSpacing.hGapSm,
                         Text(
                           '${widget.receiverName} is typing...',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
                             fontStyle: FontStyle.italic,

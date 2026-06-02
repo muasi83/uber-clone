@@ -17,11 +17,11 @@ class HomeScreen extends StatefulWidget {
   final String token;
 
   const HomeScreen({
-    Key? key,
+    super.key,
     required this.userId,
     required this.username,
     required this.token,
-  }) : super(key: key);
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -163,6 +163,7 @@ final response = await http.get(
     );
   }
 
+  // ignore: unused_element
   Future<void> _logout() async {
     if (!mounted) return;
 
@@ -193,12 +194,14 @@ final response = await http.get(
                     )
                     .timeout(const Duration(seconds: 10));
               } catch (e) {
+                // ignore: empty_catches
               }
 
               try {
                 WebSocketService.setOffline(widget.userId);
                 WebSocketService.disconnect();
               } catch (e) {
+                // ignore: empty_catches
               }
 
               await StorageService.clearAllData();
@@ -277,13 +280,13 @@ final response = await http.get(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.people_outline,
                         size: 80,
                         color: AppColors.textTertiary,
                       ),
                       AppSpacing.gapLg,
-                      Text(
+                      const Text(
                         'No users available',
                         style: TextStyle(
                           fontSize: 16,

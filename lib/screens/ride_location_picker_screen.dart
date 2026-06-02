@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import 'dart:math' as Math;
+import 'dart:math' as math;
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 
 class RideLocationPickerScreen extends StatefulWidget {
-  const RideLocationPickerScreen({Key? key}) : super(key: key);
+  const RideLocationPickerScreen({super.key});
 
   @override
   State<RideLocationPickerScreen> createState() => _RideLocationPickerScreenState();
@@ -24,8 +24,8 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
   String _pickupAddress = '';
   String _dropoffAddress = '';
   
-  Set<Marker> _markers = {};
-  Set<Polyline> _polylines = {};
+  final Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
   
   int _step = 0; // 0 = pickup, 1 = dropoff
   double? _estimatedDistance;
@@ -45,7 +45,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
   Future<void> _initializeMap() async {
     try {
       Position position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       
       _currentLocation = LatLng(position.latitude, position.longitude);
@@ -247,14 +247,14 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
     const int R = 6371; // Earth's radius in km
     final dLat = _toRad(lat2 - lat1);
     final dLon = _toRad(lon2 - lon1);
-    final a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(_toRad(lat1)) * Math.cos(_toRad(lat2)) * 
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    final c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRad(lat1)) * math.cos(_toRad(lat2)) * 
+        math.sin(dLon / 2) * math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return R * c;
   }
 
-  double _toRad(double degree) => degree * (Math.pi / 180);
+  double _toRad(double degree) => degree * (math.pi / 180);
 
   void _confirmPickup() {
     if (_pickupLocation == null) {
@@ -435,7 +435,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                     child: TextField(
                       controller: _pickupSearchController,
                       readOnly: true,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         hintText: 'Pickup location',
                         prefixIcon: Icon(
                           Icons.circle,
@@ -443,7 +443,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                           color: AppColors.success,
                         ),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                        contentPadding: EdgeInsets.symmetric(vertical: 14),
                         hintStyle: TextStyle(color: AppColors.textTertiary),
                       ),
                       style: const TextStyle(
@@ -475,15 +475,15 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                       child: TextField(
                         controller: _dropoffSearchController,
                         readOnly: true,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: 'Dropoff location',
-                          prefixIcon: const Icon(
+                          prefixIcon: Icon(
                             Icons.location_on,
                             size: 18,
                             color: AppColors.error,
                           ),
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                          contentPadding: EdgeInsets.symmetric(vertical: 14),
                           hintStyle: TextStyle(color: AppColors.textTertiary),
                         ),
                         style: const TextStyle(
@@ -521,7 +521,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                               ),
                             ),
                             Text(
-                              '${_estimatedFare!.toStringAsFixed(2)}',
+                              _estimatedFare!.toStringAsFixed(2),
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,

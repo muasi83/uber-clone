@@ -11,7 +11,7 @@ import '../widgets/premium_button.dart';
 class OtpScreen extends StatefulWidget {
   final String email;
 
-  const OtpScreen({Key? key, required this.email}) : super(key: key);
+  const OtpScreen({super.key, required this.email});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -133,7 +133,7 @@ class _OtpScreenState extends State<OtpScreen> {
                   ),
                 ),
                 AppSpacing.gapMd,
-                Text(
+                const Text(
                   'We sent a verification code to',
                   style: TextStyle(
                     fontSize: 14,

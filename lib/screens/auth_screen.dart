@@ -11,7 +11,7 @@ import '../widgets/premium_button.dart';
 import '../widgets/premium_text_field.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({Key? key}) : super(key: key);
+  const AuthScreen({super.key});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -21,7 +21,6 @@ class _AuthScreenState extends State<AuthScreen>
     with SingleTickerProviderStateMixin {
   bool _isLogin = true;
   bool _isLoading = false;
-  bool _obscurePassword = true;
   String _selectedRole = 'RIDER';
 
   final TextEditingController _emailController = TextEditingController();
@@ -231,8 +230,6 @@ class _AuthScreenState extends State<AuthScreen>
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -453,7 +450,7 @@ class _AuthScreenState extends State<AuthScreen>
                   _passwordController.text = 'password123';
                   setState(() => _selectedRole = 'RIDER');
                 },
-                icon: Icon(Icons.person_outline, size: 16, color: AppColors.primary),
+                icon: const Icon(Icons.person_outline, size: 16, color: AppColors.primary),
                 label: const Text('Rider 2'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
@@ -473,7 +470,7 @@ class _AuthScreenState extends State<AuthScreen>
                   _passwordController.text = 'password123';
                   setState(() => _selectedRole = 'DRIVER');
                 },
-                icon: Icon(Icons.local_taxi_outlined, size: 16, color: AppColors.primary),
+                icon: const Icon(Icons.local_taxi_outlined, size: 16, color: AppColors.primary),
                 label: const Text('Driver 2'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
@@ -530,7 +527,7 @@ class _AuthScreenState extends State<AuthScreen>
           obscureText: true,
         ),
         AppSpacing.gapXl,
-        Text(
+        const Text(
           'I want to',
           style: TextStyle(
             fontSize: 15,
@@ -660,7 +657,7 @@ class _AuthScreenState extends State<AuthScreen>
                   _passwordController.text = 'password123';
                   setState(() => _selectedRole = 'RIDER');
                 },
-                icon: Icon(Icons.person_outline, size: 16, color: AppColors.primary),
+                icon: const Icon(Icons.person_outline, size: 16, color: AppColors.primary),
                 label: const Text('Rider 2'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
@@ -682,7 +679,7 @@ class _AuthScreenState extends State<AuthScreen>
                   _passwordController.text = 'password123';
                   setState(() => _selectedRole = 'DRIVER');
                 },
-                icon: Icon(Icons.local_taxi_outlined, size: 16, color: AppColors.primary),
+                icon: const Icon(Icons.local_taxi_outlined, size: 16, color: AppColors.primary),
                 label: const Text('Driver 2'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
@@ -723,7 +720,7 @@ class _AuthScreenState extends State<AuthScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
+              const Text(
                 'Server Settings',
                 style: TextStyle(
                   fontSize: 18,
@@ -759,15 +756,14 @@ class _AuthScreenState extends State<AuthScreen>
                       label: 'Save',
                       onPressed: () async {
                         await StorageService.setServerUrl(urlController.text);
-                        if (mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Server URL updated'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        }
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Server URL updated'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
                       },
                       variant: ButtonVariant.primary,
                     ),

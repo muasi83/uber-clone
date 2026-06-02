@@ -220,11 +220,11 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.map_outlined, size: 48, color: AppColors.textTertiary),
+                          const Icon(Icons.map_outlined, size: 48, color: AppColors.textTertiary),
                           AppSpacing.gapSm,
                           Text(
                             '${widget.estimatedDistance.toStringAsFixed(2)} km · ${widget.estimatedDuration} min',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppColors.textTertiary,
                               fontSize: 13,
                             ),
@@ -245,11 +245,11 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.route, size: 14, color: AppColors.primary),
+                            const Icon(Icons.route, size: 14, color: AppColors.primary),
                             AppSpacing.hGapXs,
                             Text(
                               '${widget.estimatedDistance.toStringAsFixed(1)} km',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textPrimary,
@@ -288,7 +288,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 'Pickup',
                                 style: TextStyle(
                                   fontSize: 11,
@@ -299,7 +299,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                               AppSpacing.gapXs,
                               Text(
                                 widget.pickupAddress,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13,
                                   color: AppColors.textPrimary,
@@ -314,12 +314,12 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 18),
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Column(
                       children: List.generate(3, (i) => Container(
                         width: 2,
                         height: 4,
-                        margin: EdgeInsets.symmetric(vertical: 1),
+                        margin: const EdgeInsets.symmetric(vertical: 1),
                         decoration: BoxDecoration(
                           color: AppColors.outlineVariant,
                           borderRadius: BorderRadius.circular(1),
@@ -346,7 +346,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 'Dropoff',
                                 style: TextStyle(
                                   fontSize: 11,
@@ -357,7 +357,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                               AppSpacing.gapXs,
                               Text(
                                 widget.dropoffAddress,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13,
                                   color: AppColors.textPrimary,
@@ -377,11 +377,11 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
 
             // Ride type selection
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Select ride type',
                     style: TextStyle(
                       fontSize: 15,
@@ -412,11 +412,11 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
 
             // Payment method
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Payment method',
                     style: TextStyle(
                       fontSize: 15,
@@ -454,14 +454,14 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                           Expanded(
                             child: Text(
                               _selectedPaymentMethod,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
                                 color: AppColors.textPrimary,
                               ),
                             ),
                           ),
-                          Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 22),
+                          const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 22),
                         ],
                       ),
                     ),
@@ -473,7 +473,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
 
             // Price breakdown
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: PremiumCard(
                 padding: AppSpacing.cardPadding,
                 shadows: AppSpacing.shadowSm,
@@ -499,7 +499,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
 
             // Confirm button
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: PremiumButton(
                 label: _isSubmitting ? 'Requesting...' : 'Confirm Ride',
                 isLoading: _isSubmitting,
@@ -597,7 +597,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                     AppSpacing.gapXs,
                     Text(
                       description,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiary,
                       ),
@@ -610,7 +610,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                 children: [
                   Text(
                     rate,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.textTertiary,
                     ),

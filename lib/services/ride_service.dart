@@ -300,7 +300,7 @@ class RideService {
     }
   }
 
-  static Future<bool> cancelRide(int rideId, String token) async {
+  static Future<bool> cancelRide(int rideId, String token, {String reason = 'Cancelled by rider'}) async {
     try {
       addDebugMessage('❌ Cancelling ride...');
 
@@ -310,7 +310,7 @@ class RideService {
           .post(
             Uri.parse(url),
             headers: _headers(token: token),
-            body: jsonEncode({'reason': 'Cancelled by rider'}),
+            body: jsonEncode({'reason': reason}),
           )
           .timeout(const Duration(seconds: 30));
 

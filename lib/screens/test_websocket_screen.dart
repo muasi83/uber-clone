@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/websocket_service.dart';
 
 class TestWebSocketScreen extends StatefulWidget {
-  const TestWebSocketScreen({Key? key}) : super(key: key);
+  const TestWebSocketScreen({super.key});
 
   @override
   State<TestWebSocketScreen> createState() => _TestWebSocketScreenState();
@@ -10,7 +10,7 @@ class TestWebSocketScreen extends StatefulWidget {
 
 class _TestWebSocketScreenState extends State<TestWebSocketScreen> {
   String _connectionStatus = 'Disconnected';
-  List<String> _messages = [];
+  final List<String> _messages = [];
 
   @override
   void initState() {

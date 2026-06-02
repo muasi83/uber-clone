@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../services/location_service.dart';
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../services/driver_service.dart';
@@ -13,8 +12,6 @@ import '../screens/rider_pickup_location_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/bottom_sheet_handle.dart';
-import '../widgets/glass_card.dart';
-import '../widgets/premium_button.dart';
 
 class RiderHomeScreen extends StatefulWidget {
   const RiderHomeScreen({super.key});
@@ -36,6 +33,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   Timer? _driverPollTimer;
   BitmapDescriptor _driverMarkerIcon = BitmapDescriptor.defaultMarker;
   StreamSubscription<Map<String, dynamic>>? _driverLocationSub;
+  StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
 
   @override
   void initState() {
@@ -52,10 +50,25 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     final username = StorageService.getUsername();
     if (userId != null && username != null) {
       addDebugMessage('\u{1F50C}Rider connecting WebSocket...');
+      WebSocketService.onForceLogout = _handleForceLogout;
       WebSocketService.connect(userId, username);
     } else {
       addDebugMessage('\u{26A0}\u{FE0F}Cannot connect WebSocket: missing userId or username');
     }
+  }
+
+  void _handleForceLogout() {
+    if (!mounted) return;
+    addDebugMessage('\u{1F6AB}Force logout: signed in from another device');
+    WebSocketService.disconnect();
+    StorageService.clearAllData();
+    Navigator.of(context).pushNamedAndRemoveUntil('/splash', (route) => false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Signed out: logged in from another device'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   Future<void> _initDriverMarkerIcon() async {
@@ -134,6 +147,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           icon: _driverMarkerIcon,
           rotation: rotation,
           anchor: const Offset(0.5, 0.5),
+          flat: true,
           infoWindow: InfoWindow(
             title: driver.user.fullName,
             snippet: '${driver.vehicleModel ?? 'Car'} \u2022 ${driver.vehicleColor ?? ''}',
@@ -146,6 +160,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           icon: _driverMarkerIcon,
           rotation: 0,
           anchor: const Offset(0.5, 0.5),
+          flat: true,
           infoWindow: InfoWindow(
             title: driver.user.fullName,
             snippet: '${driver.vehicleModel ?? 'Car'} \u2022 ${driver.vehicleColor ?? ''}',
@@ -158,7 +173,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
 
   void _setupWebSocketListeners() {
     try {
-      WebSocketService.rideEvents.listen((event) {
+      _rideEventsSub = WebSocketService.rideEvents.listen((event) {
         final type = event['type'] ?? '';
         addDebugMessage('\u{1F4E1}Rider ride event: $type');
         if (type == 'ride_accepted' || type == 'ride_cancelled') {
@@ -198,6 +213,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           icon: _driverMarkerIcon,
           rotation: rotation,
           anchor: const Offset(0.5, 0.5),
+          flat: true,
           infoWindow: existing.infoWindow,
         );
       } else {
@@ -207,6 +223,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           icon: _driverMarkerIcon,
           rotation: rotation,
           anchor: const Offset(0.5, 0.5),
+          flat: true,
           infoWindow: InfoWindow(title: 'Driver #$driverId'),
         );
         _driverCount = _driverMarkers.length;
@@ -229,9 +246,9 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         return;
       }
       Position position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(
+        locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 15),
+          timeLimit: Duration(seconds: 15),
         ),
       );
       _currentLocation = LatLng(position.latitude, position.longitude);
@@ -299,6 +316,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         if (result != null) {}
       }
     } catch (e) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
@@ -321,7 +339,9 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           (route) => false,
         );
       }
-    } catch (e) {}
+    } catch (e) {
+      // ignore: empty_catches
+    }
   }
 
   void _showMenuSheet() {
@@ -463,7 +483,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.directions_car,
                                       size: 14,
                                       color: AppColors.primary,
@@ -509,7 +529,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                             ),
                           ],
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
@@ -517,8 +537,8 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                               size: 16,
                               color: AppColors.primary,
                             ),
-                            const SizedBox(width: 6),
-                            const Text(
+                            SizedBox(width: 6),
+                            Text(
                               '\$12.50',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
@@ -612,20 +632,20 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                                         ),
                                       ),
                                     ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 20),
                                       child: Row(
                                         children: [
                                           _PlaceChip(
                                             icon: Icons.home_rounded,
                                             label: 'Home',
                                           ),
-                                          const SizedBox(width: 12),
+                                          SizedBox(width: 12),
                                           _PlaceChip(
                                             icon: Icons.work_rounded,
                                             label: 'Work',
                                           ),
-                                          const SizedBox(width: 12),
+                                          SizedBox(width: 12),
                                           _PlaceChip(
                                             icon: Icons.access_time_rounded,
                                             label: 'Recent',
@@ -649,12 +669,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    _SavedPlaceItem(
+                                    const _SavedPlaceItem(
                                       icon: Icons.location_on_rounded,
                                       label: 'Central Park',
                                       address: 'New York, NY 10024',
                                     ),
-                                    _SavedPlaceItem(
+                                    const _SavedPlaceItem(
                                       icon: Icons.location_on_rounded,
                                       label: 'Times Square',
                                       address: 'Manhattan, NY 10036',
@@ -677,6 +697,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   void dispose() {
     _driverPollTimer?.cancel();
     _driverLocationSub?.cancel();
+    _rideEventsSub?.cancel();
     mapController.dispose();
     super.dispose();
   }

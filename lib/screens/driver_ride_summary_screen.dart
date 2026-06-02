@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/ride_model.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../screens/debug_screen.dart';
@@ -10,9 +11,9 @@ class DriverRideSummaryScreen extends StatefulWidget {
   final int rideId;
 
   const DriverRideSummaryScreen({
-    Key? key,
+    super.key,
     required this.rideId,
-  }) : super(key: key);
+  });
 
   @override
   State<DriverRideSummaryScreen> createState() =>
@@ -20,22 +21,38 @@ class DriverRideSummaryScreen extends StatefulWidget {
 }
 
 class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
+  Ride? _ride;
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
+    _loadRideDetails();
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('💰 EARNINGS SUMMARY');
     addDebugMessage('Ride ID: ${widget.rideId}');
     addDebugMessage('═══════════════════════════════════════');
   }
 
+  Future<void> _loadRideDetails() async {
+    try {
+      final token = StorageService.getToken();
+      if (token == null) return;
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (mounted) {
+        setState(() {
+          _ride = ride;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      addDebugMessage('❌ Error loading ride details: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // TODO: Fetch ride details from backend
-    final distance = 12.5;
-    final duration = 25;
-    final fare = 35.50;
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -57,7 +74,6 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 32),
-            // Success check icon
             Container(
               padding: const EdgeInsets.all(24),
               decoration: const BoxDecoration(
@@ -81,8 +97,14 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
               textAlign: TextAlign.center,
             ),
             AppSpacing.gapXxl,
-            // Earnings card
-            Container(
+            _isLoading
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                : Container(
               width: double.infinity,
               padding: AppSpacing.cardPadding,
               decoration: BoxDecoration(
@@ -92,9 +114,9 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
               ),
               child: Column(
                 children: [
-                  _buildDetailRow('Distance', '$distance km'),
+                  _buildDetailRow('Distance', '${_ride?.estimatedDistance?.toStringAsFixed(1) ?? '0.0'} km'),
                   const Divider(color: AppColors.outline),
-                  _buildDetailRow('Duration', '$duration minutes'),
+                  _buildDetailRow('Duration', '${_ride?.estimatedDuration ?? 0} minutes'),
                   const Divider(color: AppColors.outline),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -110,7 +132,7 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
                           ),
                         ),
                         Text(
-                          '\$${fare.toStringAsFixed(2)}',
+                          '\$${(_ride?.finalFare ?? _ride?.estimatedFare ?? 0).toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,

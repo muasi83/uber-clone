@@ -19,12 +19,12 @@ class DriverActiveRideScreen extends StatefulWidget {
   final double dropoffLng;
 
   const DriverActiveRideScreen({
-    Key? key,
+    super.key,
     required this.rideId,
     required this.dropoffAddress,
     required this.dropoffLat,
     required this.dropoffLng,
-  }) : super(key: key);
+  });
 
   @override
   State<DriverActiveRideScreen> createState() =>
@@ -35,8 +35,8 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   late GoogleMapController mapController;
   LatLng? _driverLocation;
   late final LatLng _destinationLocation;
-  Set<Marker> _markers = {};
-  Set<Polyline> _polylines = {};
+  final Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
   bool _rideStarted = false;
   bool _isCompleting = false;
   int _remainingMinutes = 0;
@@ -65,7 +65,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   Future<void> _initializeRide() async {
     try {
       Position position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       _driverLocation = LatLng(position.latitude, position.longitude);
@@ -112,8 +112,17 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
               longitude: position.longitude,
               token: token,
             );
-            addDebugMessage('✅ Rider notified of driver location');
+            addDebugMessage('✅ Rider notified of driver location via REST');
           }
+
+          WebSocketService.sendRideMessage('driver_location', {
+            'driverId': StorageService.getUserId(),
+            'rideId': widget.rideId,
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+            'heading': position.heading,
+          });
+          addDebugMessage('✅ Rider notified of driver location via WebSocket');
         } catch (e) {
           addDebugMessage('⚠️ Failed to update rider location: $e');
         }
@@ -245,6 +254,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       }
     } catch (e) {
       addDebugMessage('❌ Error: $e');
+      _rideTimer?.cancel();
       if (mounted) {
         setState(() => _rideStarted = false);
       }

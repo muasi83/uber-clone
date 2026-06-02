@@ -21,6 +21,7 @@ import '../services/directions_service.dart';
 import '../services/storage_service.dart';
 import '../screens/settings_screen.dart';
 import '../screens/debug_screen.dart';
+import '../screens/ride_preview_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   final int userId;
@@ -50,12 +51,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   // LOCATION STREAM (replaces timer)
   StreamSubscription<Position>? _positionStream;
   LatLng? _driverCurrentLocation;
+  double _lastHeading = 0;
 
   // 🔥 FIX: Ride polling fallback timer — NOT location, just ride fetching
   Timer? _ridePollTimer;
 
   // ALERT STATE
   bool _isAlertPlaying = false;
+  bool _isDialogShowing = false;
   Timer? _alertTimeoutTimer;
   final FlutterRingtonePlayer _ringtonePlayer = FlutterRingtonePlayer();
 
@@ -69,6 +72,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   bool _simulationMode = false;
   LatLng? _simulatedLocation;
   LatLng? _lastSimulatedLocation;
+
+  StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
 
   @override
   void initState() {
@@ -137,11 +142,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
     try {
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       _driverCurrentLocation = LatLng(position.latitude, position.longitude);
       addDebugMessage('✅ Initial location: ${position.latitude}, ${position.longitude}');
+
+      if (!_isOnline) {
+        addDebugMessage('ℹ️ Offline — location saved locally, not broadcasting');
+        return;
+      }
 
       final success = await DriverService.updateLocation(
         latitude: position.latitude,
@@ -155,13 +165,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         addDebugMessage('⚠️ Failed to register location on server');
       }
 
-      // Wait briefly for WebSocket to connect, then broadcast location
-      Future.delayed(const Duration(seconds: 2), () {
-        WebSocketService.sendRideMessage('driver_location', {
-          'driverId': widget.userId,
-          'latitude': position.latitude,
-          'longitude': position.longitude,
-        });
+      WebSocketService.sendRideMessage('driver_location', {
+        'driverId': widget.userId,
+        'latitude': position.latitude,
+        'longitude': position.longitude,
       });
     } catch (e) {
       addDebugMessage('❌ Error getting initial location: $e');
@@ -192,6 +199,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
         final newLocation = LatLng(position.latitude, position.longitude);
         _driverCurrentLocation = newLocation;
+        _lastHeading = position.heading;
 
         addDebugMessage(
           '📍 Driver moved 50m+ — ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
@@ -263,6 +271,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       'driverId': widget.userId,
       'latitude': _driverCurrentLocation!.latitude,
       'longitude': _driverCurrentLocation!.longitude,
+      'heading': _lastHeading,
     });
   }
 
@@ -281,12 +290,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       _positionStream?.cancel();
       _positionStream = null;
       addDebugMessage('⏸️ Real GPS paused — broadcast timer keeps running');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tap the map to move the driver'),
-          duration: Duration(seconds: 3),
-        ),
-      );
     } else {
       if (_isOnline) {
         _startLocationTracking();
@@ -381,14 +384,29 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   void _connectWebSocket() {
     addDebugMessage('🔌 Connecting WebSocket for Driver...');
+    WebSocketService.onForceLogout = _handleForceLogout;
     WebSocketService.connect(widget.userId, widget.username);
     _setupWebSocketListeners();
+  }
+
+  void _handleForceLogout() {
+    if (!mounted) return;
+    addDebugMessage('🚫 Force logout: signed in from another device');
+    WebSocketService.disconnect();
+    StorageService.clearAllData();
+    Navigator.of(context).pushNamedAndRemoveUntil('/splash', (route) => false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Signed out: logged in from another device'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   // 🔥 FIX: Handle ALL ride event types, not just ride_available
   void _setupWebSocketListeners() {
     try {
-      WebSocketService.rideEvents.listen((event) {
+      _rideEventsSub = WebSocketService.rideEvents.listen((event) {
         final type = event['type'] ?? 'unknown';
         final payload = event['payload'] ?? event;
         final rideId = payload['rideId'] ?? payload['id'];
@@ -482,11 +500,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       addDebugMessage('⚠️ Driver location unknown — allowing notification anyway');
     }
 
-    // 4. Trigger LOUD alert + popup
+    // 4. Block if dialog already showing
+    if (_isDialogShowing) {
+      addDebugMessage('🔇 Alert dialog already showing — ignoring duplicate');
+      return;
+    }
+
+    // 5. Trigger LOUD alert + popup
     _playRideAlert();
     _showRideAlertDialog(event);
 
-    // 5. Refresh list so it appears in Available tab
+    // 6. Refresh list so it appears in Available tab
     _loadAvailableRides();
   }
 
@@ -537,6 +561,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   void _showRideAlertDialog(Map<String, dynamic> event) {
+    if (_isDialogShowing) return;
+    _isDialogShowing = true;
+
     final payload = event['payload'] ?? event;
     final rideId = payload['rideId'] ?? payload['id'];
 
@@ -544,6 +571,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _alertTimeoutTimer = Timer(const Duration(seconds: 30), () {
       if (mounted && Navigator.of(context).canPop()) {
         _stopRideAlert();
+        _isDialogShowing = false;
         Navigator.of(context).pop();
       }
     });
@@ -551,120 +579,163 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => WillPopScope(
-        onWillPop: () async => false,
-        child: AlertDialog(
-          backgroundColor: Colors.white,
-          title: const Row(
-            children: [
-              Icon(Icons.notifications_active, color: Colors.red, size: 32),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'NEW RIDE AVAILABLE!',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
+        builder: (dialogContext) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            backgroundColor: Colors.white,
+            title: const Row(
+              children: [
+                Icon(Icons.notifications_active, color: Colors.red, size: 32),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'NEW RIDE AVAILABLE!',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade200),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.local_taxi, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text(
+                        'A ride matching your location just arrived',
+                        style: TextStyle(fontSize: 13, color: Colors.red),
+                      ),
+                    ],
+                  ),
                 ),
-                child: const Row(
+                const SizedBox(height: 16),
+                Text(
+                  'From:',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                Text(
+                  payload['pickupAddress'] ?? 'Unknown',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'To:',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                Text(
+                  payload['dropoffAddress'] ?? 'Unknown',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 16),
+                Row(
                   children: [
-                    Icon(Icons.local_taxi, color: Colors.red),
-                    SizedBox(width: 8),
+                    const Icon(Icons.attach_money, color: AppColors.primary),
+                    const SizedBox(width: 4),
                     Text(
-                      'A ride matching your location just arrived',
-                      style: TextStyle(fontSize: 13, color: Colors.red),
+                      '\$${payload['estimatedFare']?.toString() ?? '0.00'}',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ],
                 ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  _alertTimeoutTimer?.cancel();
+                  _stopRideAlert();
+                  _isDialogShowing = false;
+                  Navigator.pop(dialogContext);
+                  addDebugMessage('❌ Driver ignored ride $rideId');
+                },
+                child: const Text('IGNORE', style: TextStyle(color: Colors.grey)),
               ),
-              const SizedBox(height: 16),
-              Text(
-                'From:',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              TextButton.icon(
+                onPressed: () async {
+                  Navigator.pop(dialogContext);
+                  _alertTimeoutTimer?.cancel();
+                  _stopRideAlert();
+                  _isDialogShowing = false;
+                  await _openRidePreview(payload);
+                },
+                icon: const Icon(Icons.map, size: 18),
+                label: const Text('VIEW ON MAP'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                ),
               ),
-              Text(
-                payload['pickupAddress'] ?? 'Unknown',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'To:',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              Text(
-                payload['dropoffAddress'] ?? 'Unknown',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Icon(Icons.attach_money, color: AppColors.primary),
-                  const SizedBox(width: 4),
-                  Text(
-                    '\$${payload['estimatedFare']?.toString() ?? '0.00'}',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
+              ElevatedButton.icon(
+                onPressed: () {
+                  _alertTimeoutTimer?.cancel();
+                  _stopRideAlert();
+                  _isDialogShowing = false;
+                  Navigator.pop(dialogContext);
+                  if (rideId != null) {
+                    _acceptRide(int.parse(rideId.toString()));
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+                icon: const Icon(Icons.check, color: Colors.white),
+                label: const Text(
+                  'ACCEPT RIDE',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                _alertTimeoutTimer?.cancel();
-                _stopRideAlert();
-                Navigator.pop(dialogContext);
-                addDebugMessage('❌ Driver ignored ride $rideId');
-              },
-              child: const Text('IGNORE', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                _alertTimeoutTimer?.cancel();
-                _stopRideAlert();
-                Navigator.pop(dialogContext);
-                if (rideId != null) {
-                  _acceptRide(int.parse(rideId.toString()));
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              icon: const Icon(Icons.check, color: Colors.white),
-              label: const Text(
-                'ACCEPT RIDE',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
         ),
-      ),
     );
+  }
+
+  Future<void> _openRidePreview(Map<String, dynamic> payload) async {
+    final pickupLat = (payload['pickupLatitude'] ?? payload['pickupLat'] ?? 0).toDouble();
+    final pickupLng = (payload['pickupLongitude'] ?? payload['pickupLng'] ?? 0).toDouble();
+    final dropoffLat = (payload['dropoffLatitude'] ?? payload['dropoffLat'] ?? 0).toDouble();
+    final dropoffLng = (payload['dropoffLongitude'] ?? payload['dropoffLng'] ?? 0).toDouble();
+    final fare = (payload['estimatedFare'] as num?)?.toDouble();
+
+    if (mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => RidePreviewScreen(
+            pickupLat: pickupLat,
+            pickupLng: pickupLng,
+            dropoffLat: dropoffLat,
+            dropoffLng: dropoffLng,
+            pickupAddress: payload['pickupAddress'] ?? 'Unknown',
+            dropoffAddress: payload['dropoffAddress'] ?? 'Unknown',
+            estimatedFare: fare,
+          ),
+        ),
+      );
+      // After returning from preview, re-show the alert if the ride is still available
+      _isDialogShowing = false;
+    }
   }
 
   // ═════════════════════════════════════════════════════════════════
@@ -729,7 +800,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       addDebugMessage('✅ Showing ${filteredRides.length} nearby rides (${newRides.length} new)');
 
       // 🔔 Trigger alert for any NEW ride discovered via polling
-      if (newRides.isNotEmpty && !_isAlertPlaying && _currentRide == null) {
+      if (newRides.isNotEmpty && !_isAlertPlaying && !_isDialogShowing && _currentRide == null) {
         addDebugMessage('🔔 New ride from polling — triggering alert');
         _playRideAlert();
         _showRideAlertDialog({'payload': newRides.first.toJson()});
@@ -808,7 +879,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     if (_driverCurrentLocation == null) {
       try {
         final pos = await Geolocator.getCurrentPosition(
-          locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
         );
         _driverCurrentLocation = LatLng(pos.latitude, pos.longitude);
       } catch (_) {}
@@ -970,6 +1041,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               ],
             ),
           ),
+          _buildMapFabButtons(),
         ],
       ),
       bottomNavigationBar: _buildPremiumBottomNav(),
@@ -1006,11 +1078,20 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         ],
       ),
       actions: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: _isOnline ? StatusBadge.online() : StatusBadge.offline(),
+        GestureDetector(
+          onTap: _toggleOnline,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: _isOnline ? StatusBadge.online() : StatusBadge.offline(),
+          ),
         ),
         AppSpacing.hGapSm,
+        if (_isOnline)
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh rides',
+            onPressed: _loadAvailableRides,
+          ),
         IconButton(
           icon: const Icon(Icons.settings_outlined),
           tooltip: 'Settings',
@@ -1115,45 +1196,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             bottom: MediaQuery.of(context).padding.bottom + AppSpacing.bottomNavHeight + 16,
           ),
         ),
-        Positioned(
-          bottom: 120,
-          right: 16,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_simulationMode)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.amber,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'SIM MODE',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              FloatingActionButton.small(
-                heroTag: 'simulate',
-                onPressed: _toggleSimulationMode,
-                backgroundColor: _simulationMode ? Colors.amber : Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.pin_drop,
-                  color: _simulationMode ? Colors.white : AppColors.primary,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -1229,24 +1271,22 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 child: const Icon(Icons.power_settings_new, color: AppColors.textTertiary, size: 28),
               ),
               AppSpacing.gapMd,
-              Text(
+              const Text(
                 'You are offline',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                 ),
               ),
               AppSpacing.gapXs,
-              Text(
+              const Text(
                 'Go online to start receiving ride requests',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary,
                 ),
               ),
-              AppSpacing.gapXxl,
-              _buildOnlineToggleButton(),
             ],
           ),
         ),
@@ -1276,7 +1316,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         AppSpacing.gapXs,
         Text(
           value,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -1284,7 +1324,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         ),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             color: AppColors.textTertiary,
           ),
@@ -1293,50 +1333,69 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
-  Widget _buildOnlineToggleButton() {
-    return GestureDetector(
-      onTap: _toggleOnline,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        height: 56,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusXxl),
-          gradient: _isOnline
-              ? AppColors.primaryGradientH
-              : LinearGradient(
-                  colors: [AppColors.textTertiary, AppColors.outlineVariant],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
+  Widget _buildMapFabButtons() {
+    return Positioned(
+      right: 16,
+      bottom: MediaQuery.of(context).padding.bottom + AppSpacing.bottomNavHeight + 16,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_simulationMode)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: Colors.amber,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'SIM MODE',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
                 ),
-          boxShadow: [
-            BoxShadow(
-              color: (_isOnline ? AppColors.primary : AppColors.textTertiary).withValues(alpha: 0.3),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _isOnline ? Icons.power_settings_new : Icons.power_settings_new,
-              color: Colors.white,
-              size: 22,
-            ),
-            AppSpacing.hGapSm,
-            Text(
-              _isOnline ? 'Online' : 'Offline',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.3,
               ),
             ),
-          ],
-        ),
+          FloatingActionButton.small(
+            heroTag: 'simulate',
+            onPressed: () {
+              final wasOff = !_simulationMode;
+              _toggleSimulationMode();
+              if (wasOff) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Tap the map to place the driver'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            backgroundColor: _simulationMode ? Colors.amber : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.pin_drop,
+              color: _simulationMode ? Colors.white : AppColors.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.small(
+            heroTag: 'online_toggle',
+            onPressed: _toggleOnline,
+            backgroundColor: _isOnline ? AppColors.success : AppColors.textTertiary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.power_settings_new,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1370,7 +1429,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'Active Ride',
                           style: TextStyle(
                             fontSize: 12,
@@ -1403,11 +1462,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.person, size: 14, color: AppColors.primary),
+                    const Icon(Icons.person, size: 14, color: AppColors.primary),
                     const SizedBox(width: 2),
                     Text(
                       ride.rider.fullName,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primary,
@@ -1484,8 +1543,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       key: const ValueKey('online_requests'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildOnlineToggleButton(),
-        AppSpacing.gapMd,
         ...List.generate(_availableRides.length, (index) {
           final ride = _availableRides[index];
           final routeData = _routeCache[ride.id ?? 0];
@@ -1508,7 +1565,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   color: AppColors.textTertiary.withValues(alpha: 0.4),
                 ),
                 AppSpacing.gapMd,
-                Text(
+                const Text(
                   'No ride requests nearby',
                   style: TextStyle(
                     fontSize: 16,
@@ -1517,21 +1574,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   ),
                 ),
                 AppSpacing.gapXs,
-                Text(
+                const Text(
                   'Within 15 km of your location',
                   style: TextStyle(
                     fontSize: 13,
                     color: AppColors.textTertiary,
                   ),
-                ),
-                AppSpacing.gapLg,
-                PremiumButton(
-                  label: 'Refresh',
-                  icon: Icons.refresh,
-                  variant: ButtonVariant.outline,
-                  height: 44,
-                  width: 160,
-                  onPressed: _loadAvailableRides,
                 ),
               ],
             ),
@@ -1581,7 +1629,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     if (routeData != null && routeData.totalDistanceKm != null)
                       Text(
                         '${routeData.totalDistanceKm!.toStringAsFixed(1)} km',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textTertiary,
                         ),
@@ -1612,7 +1660,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         '${routeData.totalDurationMinutes} min',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textTertiary,
                         ),
@@ -1675,7 +1723,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       ),
                     ),
                     AppSpacing.gapSm,
-                    Text(
+                    const Text(
                       'Go online to see available rides near you',
                       style: TextStyle(
                         fontSize: 14,
@@ -1734,21 +1782,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                                     ),
                                   ),
                                   AppSpacing.gapSm,
-                                  Text(
+                                  const Text(
                                     'Within 15 km of your location',
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: AppColors.textSecondary,
                                     ),
-                                  ),
-                                  AppSpacing.gapLg,
-                                  PremiumButton(
-                                    label: 'Refresh',
-                                    icon: Icons.refresh,
-                                    variant: ButtonVariant.outline,
-                                    height: 44,
-                                    width: 160,
-                                    onPressed: _loadAvailableRides,
                                   ),
                                 ],
                               ),
@@ -1820,7 +1859,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       ),
                     ),
                     AppSpacing.gapSm,
-                    Text(
+                    const Text(
                       'You need to register as a driver first',
                       style: TextStyle(
                         fontSize: 14,
@@ -1856,7 +1895,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       Container(
                         width: 72,
                         height: 72,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           gradient: AppColors.primaryGradient,
                           shape: BoxShape.circle,
                         ),
@@ -1887,7 +1926,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                         _driverProfile!.vehicleModel != null
                             ? '${_driverProfile!.vehicleModel} - ${_driverProfile!.vehicleColor}'
                             : 'Vehicle not set',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.textSecondary,
                         ),
@@ -1951,7 +1990,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         ),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             color: AppColors.textTertiary,
           ),
@@ -1973,7 +2012,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textTertiary,
                   ),
@@ -1998,8 +2037,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   void dispose() {
     _alertTimeoutTimer?.cancel();
     _stopLocationTracking();
-    _stopRidePolling(); // 🔥 FIX: cancel poll timer
+    _stopRidePolling();
     _stopRideAlert();
+    _rideEventsSub?.cancel();
     WebSocketService.disconnect();
     super.dispose();
   }

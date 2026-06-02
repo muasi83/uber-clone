@@ -36,6 +36,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
   Timer? _acceptanceTimer;
   int _searchSeconds = 0;
   Timer? _pollTimer;
+  StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
 
   @override
   void initState() {
@@ -81,17 +82,6 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       if (ride.status == 'ACCEPTED' && ride.driver != null) {
         addDebugMessage('✅ Poll detected ride ACCEPTED by ${ride.driver!.fullName}');
 
-        WebSocketService.sendRideMessage('ride_accepted', {
-          'rideId': widget.rideId,
-          'driverName': ride.driver!.fullName,
-          'driverId': ride.driver!.id,
-          'pickupLatitude': ride.pickupLatitude,
-          'pickupLongitude': ride.pickupLongitude,
-          'vehicleColor': '',
-          'vehicleModel': '',
-          'licensePlate': '',
-        });
-
         _handleRideAccepted({
           'payload': {
             'rideId': widget.rideId,
@@ -125,7 +115,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
     try {
       addDebugMessage('🔌 Setting up WebSocket listeners for searching...');
 
-      WebSocketService.rideEvents.listen((event) {
+      _rideEventsSub = WebSocketService.rideEvents.listen((event) {
         final type = event['type'] ?? '';
         addDebugMessage('📡 Ride event received: $type');
 
@@ -145,7 +135,9 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
   }
 
   void _startSearchTimeout() {
+    _acceptanceTimer?.cancel();
     _acceptanceTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) { timer.cancel(); return; }
       setState(() => _searchSeconds++);
 
       if (_searchSeconds >= 60 && !_showTimeoutDialog) {
@@ -296,14 +288,51 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
     }
   }
 
-  Future<void> _cancelSearch() async {
+  Future<void> _showCancelSearchDialog() async {
+    final reasonController = TextEditingController();
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Ride?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Are you sure you want to cancel this ride?'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                hintText: 'Reason (optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, {'action': 'no'}), child: const Text('No')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, {'action': 'yes', 'reason': reasonController.text.trim()}),
+            child: const Text('Yes, Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result['action'] == 'yes' && mounted) {
+      await _cancelSearch(result['reason'] ?? 'Rider cancelled search');
+    }
+  }
+
+  Future<void> _cancelSearch([String reason = 'Rider cancelled search']) async {
     try {
       addDebugMessage('❌ Cancelling search...');
 
       final token = StorageService.getToken();
       if (token == null) return;
 
-      await RideService.cancelRide(widget.rideId, token);
+      await RideService.cancelRide(widget.rideId, token, reason: reason);
 
       _acceptanceTimer?.cancel();
       _pulseController.stop();
@@ -313,7 +342,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       if (mounted) {
         WebSocketService.sendRideMessage('ride_cancelled', {
           'rideId': widget.rideId,
-          'reason': 'Rider cancelled search',
+          'reason': reason,
         });
 
         Navigator.pushNamedAndRemoveUntil(
@@ -334,7 +363,12 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       return i <= cycle ? '.' : '  ';
     }).join(' ');
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _showCancelSearchDialog();
+      },
+      child: Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -343,6 +377,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
             ? _buildDriverFoundContent()
             : _buildSearchingContent(progressString),
       ),
+    ),
     );
   }
 
@@ -476,6 +511,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
     _pulseController.dispose();
     _acceptanceTimer?.cancel();
     _pollTimer?.cancel();
+    _rideEventsSub?.cancel();
     super.dispose();
   }
 }

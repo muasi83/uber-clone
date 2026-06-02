@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/ride_service.dart';
 import '../services/directions_service.dart';
 import '../services/storage_service.dart';
+import '../services/websocket_service.dart';
 import '../screens/debug_screen.dart';
 import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
@@ -68,7 +72,7 @@ class _DriverNavigationToRiderScreenState
   Future<void> _initializeNavigation() async {
     try {
       Position position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       _driverLocation = LatLng(position.latitude, position.longitude);
@@ -116,8 +120,17 @@ class _DriverNavigationToRiderScreenState
               longitude: position.longitude,
               token: token,
             );
-            addDebugMessage('✅ Rider notified of driver location');
+            addDebugMessage('✅ Rider notified of driver location via REST');
           }
+
+          WebSocketService.sendRideMessage('driver_location', {
+            'driverId': StorageService.getUserId(),
+            'rideId': widget.rideId,
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+            'heading': position.heading,
+          });
+          addDebugMessage('✅ Rider notified of driver location via WebSocket');
         } catch (e) {
           addDebugMessage('⚠️ Failed to update rider location: $e');
         }
@@ -261,8 +274,10 @@ class _DriverNavigationToRiderScreenState
           ),
         );
 
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
+        // Verify ride is still active before navigating
+        if (token != null) {
+          final ride = await RideService.getRideDetails(widget.rideId, token);
+          if (ride != null && ride.status != 'CANCELLED' && ride.status != 'COMPLETED' && mounted) {
             Navigator.pushReplacementNamed(
               context,
               '/driver-active-ride',
@@ -273,8 +288,28 @@ class _DriverNavigationToRiderScreenState
                 'dropoffLng': widget.dropoffLng,
               },
             );
+          } else if (mounted) {
+            addDebugMessage('⚠️ Ride was ${ride?.status} — returning to home');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Ride was cancelled'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
           }
-        });
+        } else if (mounted) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/driver-active-ride',
+            arguments: {
+              'rideId': widget.rideId,
+              'dropoffAddress': widget.dropoffAddress,
+              'dropoffLat': widget.dropoffLat,
+              'dropoffLng': widget.dropoffLng,
+            },
+          );
+        }
       }
     } catch (e) {
       addDebugMessage('❌ Error: $e');
@@ -284,6 +319,44 @@ class _DriverNavigationToRiderScreenState
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
+    }
+  }
+
+  void _openGoogleMaps() {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1'
+      '&destination=${widget.pickupLat},${widget.pickupLng}'
+      '&travelmode=driving',
+    );
+    _launchUrl(uri);
+  }
+
+  Future<void> _launchUrl(Uri uri) async {
+    try {
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+        await Clipboard.setData(ClipboardData(text: uri.toString()));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Google Maps link copied to clipboard'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        await Clipboard.setData(ClipboardData(text: uri.toString()));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Google Maps link copied to clipboard'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+      addDebugMessage('Google Maps URL: $uri');
+    } catch (e) {
+      addDebugMessage('Error: $e');
     }
   }
 
@@ -331,13 +404,13 @@ class _DriverNavigationToRiderScreenState
                 duration: const Duration(milliseconds: 500),
                 child: Container(
                   color: Colors.black54,
-                  child: Center(
+                  child: const Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.check_circle, color: Colors.white, size: 80),
-                        const SizedBox(height: AppSpacing.lg),
-                        const Text(
+                        Icon(Icons.check_circle, color: Colors.white, size: 80),
+                        SizedBox(height: AppSpacing.lg),
+                        Text(
                           'You have arrived!',
                           style: TextStyle(
                             color: Colors.white,
@@ -345,8 +418,8 @@ class _DriverNavigationToRiderScreenState
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        const Text(
+                        SizedBox(height: AppSpacing.sm),
+                        Text(
                           'Rider has been notified',
                           style: TextStyle(
                             color: Colors.white70,
@@ -445,6 +518,23 @@ class _DriverNavigationToRiderScreenState
                     icon: _isArriving ? Icons.hourglass_empty : Icons.check_circle,
                     onPressed: _isArriving ? null : _notifyArrival,
                     variant: ButtonVariant.gradient,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _openGoogleMaps,
+                      icon: const Icon(Icons.map, size: 18),
+                      label: const Text('Open Google Maps'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
                   ),
                 ],
               ),

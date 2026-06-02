@@ -58,9 +58,9 @@ class LocationService {
         position = lastKnown;
       } else {
         position = await Geolocator.getCurrentPosition(
-          locationSettings: LocationSettings(
+          locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.bestForNavigation,
-            timeLimit: const Duration(seconds: 12),
+            timeLimit: Duration(seconds: 12),
           ),
         );
       }

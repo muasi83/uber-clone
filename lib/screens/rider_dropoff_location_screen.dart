@@ -525,9 +525,9 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                     ),
                     AppSpacing.gapMd,
                     if (_isLoadingRoute)
-                      Row(
+                      const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
+                        children: [
                           SizedBox(
                             width: 16,
                             height: 16,
@@ -543,7 +543,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.route, size: 16, color: AppColors.primary),
+                              const Icon(Icons.route, size: 16, color: AppColors.primary),
                               AppSpacing.hGapXs,
                               Text('${_routeDistanceKm!.toStringAsFixed(2)} km',
                                   style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -551,7 +551,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                           ),
                           Row(
                             children: [
-                              Icon(Icons.access_time, size: 16, color: AppColors.primary),
+                              const Icon(Icons.access_time, size: 16, color: AppColors.primary),
                               AppSpacing.hGapXs,
                               Text('$_routeDurationMin min',
                                   style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -570,13 +570,13 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.trip_origin, color: Colors.green, size: 24),
+                        const Icon(Icons.trip_origin, color: Colors.green, size: 24),
                         AppSpacing.hGapMd,
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Pickup',
+                              const Text('Pickup',
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
@@ -596,13 +596,13 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.location_on, color: Colors.red, size: 24),
+                        const Icon(Icons.location_on, color: Colors.red, size: 24),
                         AppSpacing.hGapMd,
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Dropoff',
+                              const Text('Dropoff',
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
@@ -640,7 +640,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                       alignment: Alignment.centerLeft,
                       child: TextButton(
                         onPressed: _changeDropoff,
-                        child: Text('Change drop-off',
+                        child: const Text('Change drop-off',
                             style: TextStyle(color: AppColors.primary)),
                       ),
                     ),
@@ -674,7 +674,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
           Icon(icon, size: 16, color: AppColors.primary),
           AppSpacing.hGapXs,
           Text(text,
-              style: TextStyle(
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary,
                 fontSize: 13,

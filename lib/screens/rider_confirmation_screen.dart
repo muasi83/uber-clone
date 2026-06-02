@@ -13,11 +13,11 @@ class RiderConfirmationScreen extends StatefulWidget {
   final Function(String rideType) onConfirmRide;
 
   const RiderConfirmationScreen({
-    Key? key,
+    super.key,
     required this.pickupLocation,
     required this.dropoffLocation,
     required this.onConfirmRide,
-  }) : super(key: key);
+  });
 
   @override
   State<RiderConfirmationScreen> createState() =>
@@ -26,13 +26,11 @@ class RiderConfirmationScreen extends StatefulWidget {
 
 class _RiderConfirmationScreenState extends State<RiderConfirmationScreen> {
   late GoogleMapController mapController;
-  Set<Marker> _markers = {};
-  Set<Polyline> _polylines = {};
+  final Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
   String _selectedRideType = 'Economy';
   double _distance = 0.0;
   Map<String, double> _fares = {};
-  bool _mapCreated = false;
-
   @override
   void initState() {
     super.initState();
@@ -138,7 +136,6 @@ class _RiderConfirmationScreenState extends State<RiderConfirmationScreen> {
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
-    setState(() => _mapCreated = true);
     _fitBounds();
   }
 

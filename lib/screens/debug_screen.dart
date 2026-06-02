@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/crash_reporter.dart';
@@ -10,7 +11,7 @@ void addDebugMessage(String message) {
 }
 
 class DebugScreen extends StatefulWidget {
-  const DebugScreen({Key? key}) : super(key: key);
+  const DebugScreen({super.key});
 
   @override
   State<DebugScreen> createState() => _DebugScreenState();

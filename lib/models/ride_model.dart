@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'models.dart';
 
 class Ride {
@@ -207,14 +208,14 @@ class DriverProfile {
   });
 
 factory DriverProfile.fromJson(Map<String, dynamic> json) {
-  bool _toBool(dynamic value) {
+  bool toBool(dynamic value) {
     if (value == null) return false;
     if (value is bool) return value;
     if (value is int) return value == 1;
     return false;
   }
 
-  String _toString(dynamic value, String defaultValue) {
+  String toString(dynamic value, String defaultValue) {
     if (value == null) return defaultValue;
     return value.toString();
   }
@@ -240,13 +241,13 @@ factory DriverProfile.fromJson(Map<String, dynamic> json) {
     return DriverProfile(
       id: json['id'] as int?,
       user: user,
-      licenseNumber: _toString(json['licenseNumber'], 'N/A'),
-      vehicleNumber: _toString(json['vehicleNumber'], 'N/A'),
-      vehicleType: _toString(json['vehicleType'], 'CAR'),
-      vehicleModel: _toString(json['vehicleModel'], 'Unknown'),
-      vehicleColor: _toString(json['vehicleColor'], 'Unknown'),
-      isVerified: _toBool(json['isVerified']),
-      isActive: _toBool(json['isActive']),
+      licenseNumber: toString(json['licenseNumber'], 'N/A'),
+      vehicleNumber: toString(json['vehicleNumber'], 'N/A'),
+      vehicleType: toString(json['vehicleType'], 'CAR'),
+      vehicleModel: toString(json['vehicleModel'], 'Unknown'),
+      vehicleColor: toString(json['vehicleColor'], 'Unknown'),
+      isVerified: toBool(json['isVerified']),
+      isActive: toBool(json['isActive']),
       averageRating: ((json['averageRating'] as num?) ?? 5.0).toDouble(),
       totalRides: (json['totalRides'] as int?) ?? 0,
       currentLatitude: json['currentLatitude'] != null 
@@ -255,7 +256,7 @@ factory DriverProfile.fromJson(Map<String, dynamic> json) {
       currentLongitude: json['currentLongitude'] != null 
           ? (json['currentLongitude'] as num).toDouble() 
           : null,
-      isOnline: _toBool(json['isOnline']),
+      isOnline: toBool(json['isOnline']),
     );
   } catch (e) {
     print('❌ Error parsing DriverProfile: $e');

@@ -34,13 +34,7 @@ class StorageService {
   // ✅ Check if initialized
   static bool isInitialized() => _initialized;
 
-  // ✅ Safe getter - returns default if not initialized
-  static SharedPreferences get _prefs_ {
-    if (!_initialized) {
-      throw Exception('StorageService not initialized. Call StorageService.init() first.');
-    }
-    return _prefs;
-  }
+
 
   static String getServerUrl() {
     try {
@@ -224,8 +218,8 @@ class StorageService {
   static String getNotificationsUrl() => '${getServerUrl()}/api/notifications';
   static String getWebSocketUrl() {
     final baseUrl = getServerUrl();
-    return baseUrl
+    return '${baseUrl
         .replaceFirst('http://', 'ws://')
-        .replaceFirst('https://', 'wss://') + '/ws-chat';
+        .replaceFirst('https://', 'wss://')}/ws-chat';
   }
 }

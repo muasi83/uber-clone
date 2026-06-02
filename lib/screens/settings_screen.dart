@@ -9,7 +9,7 @@ import '../widgets/premium_card.dart';
 class SettingsScreen extends StatefulWidget {
   final String username;
 
-  const SettingsScreen({Key? key, required this.username}) : super(key: key);
+  const SettingsScreen({super.key, required this.username});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -41,6 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await StorageService.setServerUrl(_urlController.text);
     setState(() => _isChanged = false);
 
+    // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Server URL updated'),
@@ -61,7 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(
+            child: const Text(
               'Cancel',
               style: TextStyle(color: AppColors.textSecondary),
             ),
@@ -71,7 +72,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.pop(ctx);
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
-            child: Text(
+            child: const Text(
               'Logout',
               style: TextStyle(
                 color: AppColors.error,
@@ -115,7 +116,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       widget.username.isNotEmpty
                           ? widget.username[0].toUpperCase()
                           : '?',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primary,
@@ -129,14 +130,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Text(
                           widget.username,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary,
                           ),
                         ),
                         AppSpacing.gapXs,
-                        Text(
+                        const Text(
                           'Settings',
                           style: TextStyle(
                             fontSize: 13,
@@ -150,7 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             AppSpacing.gapXxl,
-            Text(
+            const Text(
               'Server Configuration',
               style: TextStyle(
                 fontSize: 14,
@@ -181,7 +182,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             AppSpacing.gapXxl,
-            Text(
+            const Text(
               'About',
               style: TextStyle(
                 fontSize: 14,
@@ -201,14 +202,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: AppColors.infoContainer,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.info_outline,
                       color: AppColors.info,
                       size: 20,
                     ),
                   ),
                   AppSpacing.hGapMd,
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

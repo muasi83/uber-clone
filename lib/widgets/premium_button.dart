@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -34,7 +33,6 @@ class PremiumButton extends StatefulWidget {
 class _PremiumButtonState extends State<PremiumButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
-  late Animation<double> _scaleAnim;
   bool _isPressed = false;
 
   @override
@@ -43,9 +41,6 @@ class _PremiumButtonState extends State<PremiumButton>
     _animController = AnimationController(
       duration: const Duration(milliseconds: 100),
       vsync: this,
-    );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.97).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
     );
   }
 

@@ -15,6 +15,9 @@ class WebSocketService {
   static Function(int, bool)? onTyping;
   static Function(Map<String, dynamic>)? onRideStatusUpdate;
   
+  static Timer? _heartbeatTimer;
+  static Function()? onForceLogout;
+  
   // ✅ STEP 5: Stream controllers for ride events and location
   static final _rideEventController = StreamController<Map<String, dynamic>>.broadcast();
   static final _driverLocationController = StreamController<Map<String, dynamic>>.broadcast();
@@ -67,6 +70,9 @@ class WebSocketService {
         
         // Send login message
         _sendLoginMessage(userId, username);
+        
+        // Start heartbeat
+        _startHeartbeat(userId);
         
         // Listen for messages
         _channel?.stream.listen(
@@ -198,6 +204,24 @@ class WebSocketService {
     _channel?.sink.add(jsonEncode(message));
   }
   
+  static void _startHeartbeat(int userId) {
+    _stopHeartbeat();
+    _heartbeatTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+      if (!_isConnected) return;
+      final message = {
+        'type': 'heartbeat',
+        'senderId': userId,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      };
+      _channel?.sink.add(jsonEncode(message));
+    });
+  }
+  
+  static void _stopHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+  }
+  
   // ✅ STEP 5: Send ride-related messages
   static void sendRideMessage(String type, Map<String, dynamic> payload) {
     if (!_isConnected) {
@@ -259,6 +283,11 @@ class WebSocketService {
       case 'pong':
         addDebugMessage('💓 Heartbeat response');
         break;
+        
+      case 'force_logout':
+        addDebugMessage('🚫 Force logout received - signed in from another device');
+        onForceLogout?.call();
+        break;
     }
   }
   
@@ -279,6 +308,8 @@ class WebSocketService {
       
       // ✅ SET FLAG to prevent onDone from emitting again
       _isManualDisconnect = true;
+      
+      _stopHeartbeat();
       
       // Send offline message before closing
       if (_isConnected) {

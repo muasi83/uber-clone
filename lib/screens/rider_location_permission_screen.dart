@@ -10,9 +10,9 @@ class RiderLocationPermissionScreen extends StatefulWidget {
   final Function(bool) onPermissionResult;
 
   const RiderLocationPermissionScreen({
-    Key? key,
+    super.key,
     required this.onPermissionResult,
-  }) : super(key: key);
+  });
 
   @override
   State<RiderLocationPermissionScreen> createState() =>
@@ -23,7 +23,6 @@ class _RiderLocationPermissionScreenState
     extends State<RiderLocationPermissionScreen>
     with TickerProviderStateMixin {
   bool _isLoading = false;
-  bool _serviceEnabled = false;
   late AnimationController _bounceController;
   late AnimationController _pulseController;
 
@@ -52,10 +51,6 @@ class _RiderLocationPermissionScreenState
   Future<void> _checkLocationService() async {
     try {
       final isEnabled = await LocationService.isLocationServiceEnabled();
-      setState(() {
-        _serviceEnabled = isEnabled;
-      });
-
       if (!isEnabled) {
         addDebugMessage('⚠️ Location services disabled');
       }
@@ -112,6 +107,7 @@ class _RiderLocationPermissionScreenState
     }
   }
 
+  // ignore: unused_element
   Future<void> _enableLocationServices() async {
     try {
       addDebugMessage('Opening location settings...');
@@ -122,7 +118,7 @@ class _RiderLocationPermissionScreenState
         _checkLocationService();
       });
     } catch (e) {
-      addDebugMessage('❌ Error opening settings: $e');
+      // ignore: empty_catches
     }
   }
 
@@ -180,10 +176,10 @@ class _RiderLocationPermissionScreenState
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
         widget.onPermissionResult(false);
-        return true;
       },
       child: Scaffold(
         body: SafeArea(

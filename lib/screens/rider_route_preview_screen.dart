@@ -263,7 +263,7 @@ class _RiderRoutePreviewScreenState extends State<RiderRoutePreviewScreen> {
               blur: 30,
               padding: EdgeInsets.zero,
               child: Padding(
-                padding: EdgeInsets.only(
+                padding: const EdgeInsets.only(
                   left: AppSpacing.xl,
                   right: AppSpacing.xl,
                   top: AppSpacing.xs,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -20,14 +21,14 @@ class RiderActiveRideScreen extends StatefulWidget {
   final String dropoffAddress;
 
   const RiderActiveRideScreen({
-    Key? key,
+    super.key,
     required this.rideId,
     required this.pickupLat,
     required this.pickupLng,
     required this.dropoffLat,
     required this.dropoffLng,
     required this.dropoffAddress,
-  }) : super(key: key);
+  });
 
   @override
   State<RiderActiveRideScreen> createState() => _RiderActiveRideScreenState();
@@ -37,18 +38,28 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   GoogleMapController? mapController;
   LatLng? _driverLocation;
   LatLng? _riderLocation;
-  Set<Marker> _markers = {};
-  Set<Polyline> _polylines = {};
+  LatLng? _prevDriverLocation;
+  final Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
   int _remainingMinutes = 0;
   String? _driverName;
+  bool _rideCompleting = false;
+  double _driverHeading = 0;
+  BitmapDescriptor _carIcon = BitmapDescriptor.defaultMarker;
+
+  Timer? _statusPollTimer;
+  StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
+  StreamSubscription<Map<String, dynamic>>? _driverLocationSub;
 
   @override
   void initState() {
     super.initState();
+    _initCarIcon();
     _setupWebSocketListeners();
     _getRiderLocation();
     _updateRoute();
     _fetchDriverInfo();
+    _startStatusPolling();
 
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('🚗 ACTIVE RIDE');
@@ -56,10 +67,22 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     addDebugMessage('═══════════════════════════════════════');
   }
 
+  Future<void> _initCarIcon() async {
+    try {
+      _carIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/images/car_marker.png',
+      );
+    } catch (e) {
+      addDebugMessage('Car icon fallback: $e');
+      _carIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    }
+  }
+
   Future<void> _getRiderLocation() async {
     try {
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       if (mounted) {
         setState(() {
@@ -74,21 +97,34 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
 
   void _setupWebSocketListeners() {
     try {
-      WebSocketService.driverLocationEvents.listen((event) {
-        final lat = event['latitude'] as double?;
-        final lng = event['longitude'] as double?;
+      _driverLocationSub = WebSocketService.driverLocationEvents.listen((event) {
+        if (!mounted) return;
+        final payload = event['payload'] ?? event;
+        final lat = (payload['latitude'] ?? payload['lat']) as double?;
+        final lng = (payload['longitude'] ?? payload['lng']) as double?;
+        final heading = payload['heading'] as double?;
 
-        if (lat != null && lng != null && mounted) {
+        if (lat != null && lng != null) {
           setState(() {
+            _prevDriverLocation = _driverLocation;
             _driverLocation = LatLng(lat, lng);
+            if (heading != null) {
+              _driverHeading = heading;
+            } else if (_prevDriverLocation != null) {
+              _driverHeading = _bearingBetween(_prevDriverLocation!, _driverLocation!);
+            }
             _updateMarkers();
             _updateRoute();
           });
         }
       });
 
-      WebSocketService.rideEvents.listen((event) {
-        if (event['type'] == 'ride_completed' && mounted) {
+      _rideEventsSub = WebSocketService.rideEvents.listen((event) {
+        if (!mounted) return;
+        if (event['type'] == 'ride_completed') {
+          if (_rideCompleting) return;
+          _rideCompleting = true;
+          _statusPollTimer?.cancel();
           Navigator.pushReplacementNamed(
             context,
             '/rider-completed',
@@ -104,6 +140,36 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     } catch (e) {
       addDebugMessage('❌ Error: $e');
     }
+  }
+
+  void _startStatusPolling() {
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      if (!mounted || _rideCompleting) return;
+      try {
+        final token = StorageService.getToken();
+        if (token == null) return;
+        final ride = await RideService.getRideDetails(widget.rideId, token);
+        if (ride == null || !mounted || _rideCompleting) return;
+
+        if (ride.status == 'COMPLETED') {
+          _rideCompleting = true;
+          _statusPollTimer?.cancel();
+          addDebugMessage('✅ Poll detected ride COMPLETED');
+          Navigator.pushReplacementNamed(
+            context,
+            '/rider-completed',
+            arguments: {
+              'rideId': widget.rideId,
+              'totalFare': ride.finalFare,
+              'distance': ride.estimatedDistance,
+              'duration': ride.estimatedDuration,
+            },
+          );
+        }
+      } catch (e) {
+        addDebugMessage('⚠️ Status poll error: $e');
+      }
+    });
   }
 
   Future<void> _fetchDriverInfo() async {
@@ -141,9 +207,10 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         Marker(
           markerId: const MarkerId('driver'),
           position: _driverLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueBlue,
-          ),
+          icon: _carIcon,
+          rotation: _driverHeading,
+          anchor: const Offset(0.5, 0.5),
+          flat: true,
         ),
       );
     }
@@ -197,20 +264,38 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     }
   }
 
+  double _bearingBetween(LatLng from, LatLng to) {
+    final dLon = _toRadians(to.longitude - from.longitude);
+    final fromLat = _toRadians(from.latitude);
+    final toLat = _toRadians(to.latitude);
+    final y = math.sin(dLon) * math.cos(toLat);
+    final x = math.cos(fromLat) * math.sin(toLat) -
+        math.sin(fromLat) * math.cos(toLat) * math.cos(dLon);
+    return (_toDegrees(math.atan2(y, x)) + 360) % 360;
+  }
+
+  double _toRadians(double deg) => deg * math.pi / 180;
+  double _toDegrees(double rad) => rad * 180 / math.pi;
+
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _showCancelRideDialog();
+      },
+      child: Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => _showCancelRideDialog(),
         ),
         title: const Text(
           'En Route',
@@ -348,7 +433,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'Destination',
                               style: TextStyle(
                                 color: AppColors.textTertiary,
@@ -425,7 +510,59 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
           ),
         ],
       ),
+    ),
     );
+  }
+
+  Future<void> _showCancelRideDialog() async {
+    final reasonController = TextEditingController();
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Ride?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Are you sure you want to cancel this ride?'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                hintText: 'Reason (optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, {'action': 'no'}), child: const Text('No')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, {'action': 'yes', 'reason': reasonController.text.trim()}),
+            child: const Text('Yes, Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result['action'] == 'yes' && mounted) {
+      final reason = result['reason'] ?? 'Rider cancelled ride';
+      try {
+        final token = StorageService.getToken();
+        if (token == null) return;
+        await RideService.cancelRide(widget.rideId, token, reason: reason);
+        if (mounted) {
+          WebSocketService.sendRideMessage('ride_cancelled', {
+            'rideId': widget.rideId,
+            'reason': reason,
+          });
+          Navigator.pushNamedAndRemoveUntil(context, '/rider-home', (route) => false);
+        }
+      } catch (e) {
+        addDebugMessage('❌ Error cancelling ride: $e');
+      }
+    }
   }
 
   Future<void> _openChat() async {
@@ -459,6 +596,9 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
 
   @override
   void dispose() {
+    _statusPollTimer?.cancel();
+    _rideEventsSub?.cancel();
+    _driverLocationSub?.cancel();
     mapController?.dispose();
     super.dispose();
   }

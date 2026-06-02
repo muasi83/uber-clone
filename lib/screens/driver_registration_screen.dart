@@ -13,11 +13,11 @@ class DriverRegistrationScreen extends StatefulWidget {
   final String token;
 
   const DriverRegistrationScreen({
-    Key? key,
+    super.key,
     required this.userId,
     required this.username,
     required this.token,
-  }) : super(key: key);
+  });
 
   @override
   State<DriverRegistrationScreen> createState() =>
@@ -255,7 +255,7 @@ Future<void> _checkExistingProfile() async {
                   ),
                 ),
                 child: DropdownButtonFormField<String>(
-                  value: _selectedVehicleType,
+                  initialValue: _selectedVehicleType,
                   items: const [
                     DropdownMenuItem(value: 'CAR', child: Text('Car')),
                     DropdownMenuItem(value: 'BIKE', child: Text('Bike')),
@@ -264,15 +264,15 @@ Future<void> _checkExistingProfile() async {
                   onChanged: (value) {
                     setState(() => _selectedVehicleType = value ?? 'CAR');
                   },
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Vehicle Type',
-                    prefixIcon: const Icon(
+                    prefixIcon: Icon(
                       Icons.category,
                       color: AppColors.textTertiary,
                     ),
                     floatingLabelBehavior: FloatingLabelBehavior.auto,
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
+                    contentPadding: EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 14,
                     ),

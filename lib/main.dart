@@ -8,6 +8,7 @@ import 'services/crash_reporter.dart';
 import 'screens/auth_screen.dart';
 import 'screens/debug_screen.dart';
 import 'screens/driver_home_screen.dart';
+import 'screens/driver_registration_screen.dart';
 import 'screens/driver_navigation_to_rider_screen.dart';
 import 'screens/driver_ride_summary_screen.dart';
 import 'screens/rider_active_ride_screen.dart';
@@ -230,6 +231,22 @@ class MyApp extends StatelessWidget {
         },
 
         // Driver
+        '/driver-registration': (context) {
+          final token = StorageService.getToken();
+          final username = StorageService.getUsername();
+          final userIdRaw = StorageService.getUserId();
+
+          if (token == null || username == null || userIdRaw == null) {
+            return _routeError('Missing driver registration data');
+          }
+
+          return DriverRegistrationScreen(
+            userId: userIdRaw,
+            username: username,
+            token: token,
+          );
+        },
+
         '/driver-home': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
 

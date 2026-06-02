@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import '../models/ride_model.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../screens/debug_screen.dart';
@@ -10,15 +9,15 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/glass_card.dart';
-import 'dart:math' as Math;
+import 'dart:math' as math;
 
 class RideMapScreen extends StatefulWidget {
   final bool isDriver;
 
   const RideMapScreen({
-    Key? key,
+    super.key,
     this.isDriver = false,
-  }) : super(key: key);
+  });
 
   @override
   State<RideMapScreen> createState() => _RideMapScreenState();
@@ -56,7 +55,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       addDebugMessage('📍 GETTING CURRENT LOCATION');
       
       Position position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       
       currentLocation = LatLng(position.latitude, position.longitude);
@@ -190,12 +189,12 @@ class _RideMapScreenState extends State<RideMapScreen> {
     final deltaLat = _toRad(dropoffLocation!.latitude - pickupLocation!.latitude);
     final deltaLng = _toRad(dropoffLocation!.longitude - pickupLocation!.longitude);
     
-    final a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-        Math.cos(lat1Rad) *
-            Math.cos(lat2Rad) *
-            Math.sin(deltaLng / 2) *
-            Math.sin(deltaLng / 2);
-    final c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    final a = math.sin(deltaLat / 2) * math.sin(deltaLat / 2) +
+        math.cos(lat1Rad) *
+            math.cos(lat2Rad) *
+            math.sin(deltaLng / 2) *
+            math.sin(deltaLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     final distance = R * c;
     
     double ratePerKm = rideType == 'ECONOMY' ? 0.20 : 0.35;
@@ -394,7 +393,7 @@ int _calculateDuration(double distanceKm) {
                         children: [
                           _stepDot(1, true),
                           const SizedBox(width: 6),
-                          Text(
+                          const Text(
                             'Pickup',
                             style: TextStyle(
                               fontSize: 12,
@@ -479,7 +478,7 @@ int _calculateDuration(double distanceKm) {
       child: Center(
         child: Text(
           '$number',
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 11,
             fontWeight: FontWeight.bold,

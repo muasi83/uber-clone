@@ -3,7 +3,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import '../services/directions_service.dart';
 import '../screens/rider_dropoff_location_screen.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
@@ -249,7 +248,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
             ),
           ),
 
-          Center(
+          const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -258,7 +257,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
                   color: AppColors.primary,
                   size: 48,
                 ),
-                const SizedBox(height: 60),
+                SizedBox(height: 60),
               ],
             ),
           ),
@@ -283,9 +282,9 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
                     ),
                   ),
                   if (_isLoadingAddress)
-                    Row(
+                    const Row(
                       children: [
-                        const SizedBox(
+                        SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
@@ -306,7 +305,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.location_on_outlined,
                           color: AppColors.primary,
                           size: 24,
@@ -355,7 +354,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen> {
                 }
               },
               backgroundColor: Colors.white,
-              child: Icon(Icons.my_location, color: AppColors.primary),
+              child: const Icon(Icons.my_location, color: AppColors.primary),
             ),
           ),
         ],

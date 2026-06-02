@@ -1,4 +1,4 @@
-import 'dart:math';
+// ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/storage_service.dart';
@@ -10,7 +10,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -312,7 +312,7 @@ class _SplashScreenState extends State<SplashScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Spacer(),
-          Icon(
+          const Icon(
             Icons.location_on,
             size: 80,
             color: AppColors.primary,
