@@ -162,7 +162,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         longitude: widget.driverData['pickupLongitude'] as double? ?? 0,
         radiusKm: 5.0,
       );
-      if (!mounted) return;
+      if (!mounted || ride.driver == null) return;
       final driverId = ride.driver!.id;
       for (final d in drivers) {
         if (d.user.id == driverId && d.currentLatitude != null && d.currentLongitude != null) {
@@ -747,6 +747,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
 
   @override
   void dispose() {
+    _rideStarting = false;
     _statusPollTimer?.cancel();
     _rideEventsSub?.cancel();
     _driverLocEventsSub?.cancel();

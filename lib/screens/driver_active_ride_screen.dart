@@ -35,7 +35,7 @@ class DriverActiveRideScreen extends StatefulWidget {
 }
 
 class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
-  late GoogleMapController mapController;
+  GoogleMapController? mapController;
   LatLng? _driverLocation;
   late final LatLng _destinationLocation;
   final Set<Marker> _markers = {};
@@ -554,7 +554,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   void dispose() {
     _stopLocationStream();
     _rideTimer?.cancel();
-    mapController.dispose();
+    mapController?.dispose();
     super.dispose();
   }
 }

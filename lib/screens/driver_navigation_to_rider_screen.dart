@@ -44,7 +44,7 @@ class DriverNavigationToRiderScreen extends StatefulWidget {
 
 class _DriverNavigationToRiderScreenState
     extends State<DriverNavigationToRiderScreen> {
-  late GoogleMapController mapController;
+  GoogleMapController? mapController;
   LatLng? _driverLocation;
   late final LatLng _pickupLocation;
   final Set<Marker> _markers = {};
@@ -261,13 +261,14 @@ class _DriverNavigationToRiderScreenState
       ),
     );
 
-    mapController.animateCamera(
+    mapController?.animateCamera(
       CameraUpdate.newLatLngBounds(bounds, 100),
     );
   }
 
   Future<void> _notifyArrival() async {
     try {
+      _stopLocationStream();
       setState(() => _isArriving = true);
 
       addDebugMessage('📍 Notifying driver arrival...');
@@ -626,7 +627,7 @@ class _DriverNavigationToRiderScreenState
   @override
   void dispose() {
     _stopLocationStream();
-    mapController.dispose();
+    mapController?.dispose();
     super.dispose();
   }
 }

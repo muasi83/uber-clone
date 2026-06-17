@@ -639,6 +639,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
 
   @override
   void dispose() {
+    _rideCompleting = false;
     _statusPollTimer?.cancel();
     _rideEventsSub?.cancel();
     _driverLocationSub?.cancel();

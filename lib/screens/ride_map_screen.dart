@@ -27,7 +27,7 @@ class RideMapScreen extends StatefulWidget {
 }
 
 class _RideMapScreenState extends State<RideMapScreen> {
-  late GoogleMapController mapController;
+  GoogleMapController? mapController;
   
   // Location data
   LatLng? pickupLocation;
@@ -109,7 +109,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
   }
 
   void _animateToLocation(LatLng location) {
-    mapController.animateCamera(
+    mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(location, 17),
     );
   }
@@ -780,7 +780,7 @@ int _calculateDuration(double distanceKm) {
 
   @override
   void dispose() {
-    mapController.dispose();
+    mapController?.dispose();
     super.dispose();
   }
 }

@@ -19,7 +19,7 @@ class RideLocationPickerScreen extends StatefulWidget {
 }
 
 class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
-  late GoogleMapController mapController;
+  GoogleMapController? mapController;
   
   LatLng? _currentLocation;
   LatLng? _pickupLocation;
@@ -87,7 +87,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
     if (_pickupLocation != null) {
-      mapController.animateCamera(
+      mapController!.animateCamera(
         CameraUpdate.newLatLngZoom(_pickupLocation!, 17),
       );
     }
@@ -566,7 +566,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                 icon: const Icon(Icons.my_location, color: AppColors.primary),
                 onPressed: () {
                   if (_currentLocation != null) {
-                    mapController.animateCamera(
+                    mapController?.animateCamera(
                       CameraUpdate.newLatLngZoom(_currentLocation!, 17),
                     );
                   }
@@ -687,7 +687,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
   void dispose() {
     _pickupSearchController.dispose();
     _dropoffSearchController.dispose();
-    mapController.dispose();
+    mapController?.dispose();
     super.dispose();
   }
 }

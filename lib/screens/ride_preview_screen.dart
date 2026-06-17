@@ -40,7 +40,7 @@ class RidePreviewScreen extends StatefulWidget {
 }
 
 class _RidePreviewScreenState extends State<RidePreviewScreen> {
-  late GoogleMapController _mapController;
+  GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
@@ -66,7 +66,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
   }
 
   Future<void> _loadRouteImmediately() async {
-    await _mapController.animateCamera(
+    await _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(
         LatLng(widget.pickupLat, widget.pickupLng),
         13,
@@ -134,7 +134,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
 
     // Phase 1: Zoom to pickup point (2-2.5 seconds)
     setState(() => _phase = 0);
-    _mapController.animateCamera(
+    _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(
         LatLng(widget.pickupLat, widget.pickupLng),
         16,
@@ -146,7 +146,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
 
     // Phase 2: Zoom to dropoff point (2-2.5 seconds)
     setState(() => _phase = 1);
-    _mapController.animateCamera(
+    _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(
         LatLng(widget.dropoffLat, widget.dropoffLng),
         16,
@@ -199,12 +199,12 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
         widget.pickupLng > widget.dropoffLng ? widget.pickupLng + 0.01 : widget.dropoffLng + 0.01,
       ),
     );
-    _mapController.animateCamera(CameraUpdate.newLatLngBounds(bounds, 80));
+    _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 80));
   }
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
-    _mapController.moveCamera(
+    _mapController!.moveCamera(
       CameraUpdate.newLatLngZoom(
         LatLng(widget.pickupLat, widget.pickupLng),
         13,
@@ -218,6 +218,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
   @override
   void dispose() {
     _autoDismissTimer?.cancel();
+    _mapController?.dispose();
     super.dispose();
   }
 

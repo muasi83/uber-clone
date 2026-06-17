@@ -8,6 +8,7 @@ class WebSocketService {
   static WebSocketChannel? _channel;
   static bool _isConnected = false;
   static bool _isManualDisconnect = false;
+  static bool _isReconnecting = false;
   
   static Function(Map<String, dynamic>)? onMessageReceived;
   static Function(int, String)? onUserOnline;
@@ -36,6 +37,8 @@ class WebSocketService {
   static Stream<Map<String, dynamic>> get chatMessages => _chatMessageController.stream;
 
   static Future<void> connect(int userId, String username) async {
+    if (_isReconnecting) return;
+    _isReconnecting = true;
     try {
       addDebugMessage('═══════════════════════════════════════');
       addDebugMessage('🔌 WebSocket CONNECTING');
@@ -162,6 +165,8 @@ class WebSocketService {
       addDebugMessage('❌ Error in connect(): $e');
       _isConnected = false;
       _connectionStateController.add('error');
+    } finally {
+      _isReconnecting = false;
     }
   }
 
