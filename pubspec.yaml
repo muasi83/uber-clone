@@ -18,7 +18,7 @@ dependencies:
   web_socket_channel: ^3.0.3
 
   # Local Storage
-  shared_preferences: ^2.2.2
+  shared_preferences: ^2.5.5
   sqflite: ^2.3.0
   path: ^1.8.3
   path_provider: ^2.1.0
@@ -36,7 +36,7 @@ dependencies:
   google_maps_flutter: ^2.5.0
   geolocator: ^14.0.2
   geocoding: ^3.0.0
-  audioplayers: ^6.0.0
+  audioplayers: ^6.7.0
   # ❌ REMOVED: google_maps_webservice - not needed!
 
   flutter_ringtone_player: ^4.0.0+1
@@ -52,6 +52,9 @@ dependencies:
   smooth_page_indicator: ^1.1.0
   flutter_local_notifications: ^20.1.0
 
+  # URL Launching
+  url_launcher: ^6.2.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -64,6 +67,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/map_style.json
 
 flutter_launcher_icons:
   ios: true

@@ -107,21 +107,6 @@ class _RiderLocationPermissionScreenState
     }
   }
 
-  // ignore: unused_element
-  Future<void> _enableLocationServices() async {
-    try {
-      addDebugMessage('Opening location settings...');
-      await LocationService.openLocationSettings();
-
-      // Check again after settings
-      Future.delayed(const Duration(seconds: 2), () {
-        _checkLocationService();
-      });
-    } catch (e) {
-      // ignore: empty_catches
-    }
-  }
-
   void _showSettingsDialog() {
     showDialog(
       context: context,
@@ -129,7 +114,7 @@ class _RiderLocationPermissionScreenState
       builder: (dialogContext) => AlertDialog(
         title: const Text('Location Permission Required'),
         content: const Text(
-          'Location permission was denied permanently. Please enable it in app settings to use Uber Clone.',
+          'Location permission was denied permanently. Please enable it in app settings to use RideNow.',
         ),
         actions: [
           TextButton(
@@ -158,7 +143,7 @@ class _RiderLocationPermissionScreenState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.error,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -168,7 +153,7 @@ class _RiderLocationPermissionScreenState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.success,
         duration: const Duration(seconds: 2),
       ),
     );

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
+import '../services/directions_service.dart';
 import '../screens/rider_searching_driver_screen.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../utils/marker_utils.dart';
+import '../utils/map_style_loader.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_card.dart';
 
@@ -42,16 +46,73 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
   String _selectedPaymentMethod = 'CASH';
   bool _isSubmitting = false;
 
+  final Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
+  BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
+  String? _mapStyle;
+
   @override
   void initState() {
     super.initState();
+    _loadMapStyle();
     _selectedRideType = widget.initialRideType;
     _selectedFare = _calculateFare(widget.initialRideType);
+    _initMarkers();
 
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('💳 TRIP DETAILS');
-    addDebugMessage('Distance: ${widget.estimatedDistance.toStringAsFixed(2)} km');
+    addDebugMessage(
+        'Distance: ${widget.estimatedDistance.toStringAsFixed(2)} km');
     addDebugMessage('═══════════════════════════════════════');
+  }
+
+  Future<void> _initMarkers() async {
+    _yellowPinMarker = await getYellowPinMarker();
+    _markers.add(
+      Marker(
+        markerId: const MarkerId('pickup'),
+        position: LatLng(widget.pickupLat, widget.pickupLng),
+        icon: _yellowPinMarker,
+        infoWindow: InfoWindow(title: 'Pickup: ${widget.pickupAddress}'),
+      ),
+    );
+    _markers.add(
+      Marker(
+        markerId: const MarkerId('dropoff'),
+        position: LatLng(widget.dropoffLat, widget.dropoffLng),
+        icon: _yellowPinMarker,
+        infoWindow: InfoWindow(title: 'Dropoff: ${widget.dropoffAddress}'),
+      ),
+    );
+    _loadRoute();
+  }
+
+  Future<void> _loadMapStyle() async {
+    _mapStyle = await MapStyleLoader.load();
+  }
+
+  Future<void> _loadRoute() async {
+    try {
+      final route = await DirectionsService.getDirections(
+        origin: LatLng(widget.pickupLat, widget.pickupLng),
+        destination: LatLng(widget.dropoffLat, widget.dropoffLng),
+      );
+      if (route != null && route.isSuccess && route.polylinePoints != null) {
+        setState(() {
+          _polylines.add(
+            Polyline(
+              polylineId: const PolylineId('route'),
+              points: route.polylinePoints!,
+              color: AppColors.primary,
+              width: 5,
+              geodesic: true,
+            ),
+          );
+        });
+      }
+    } catch (e) {
+      addDebugMessage('Route load error: $e');
+    }
   }
 
   double _calculateFare(String rideType) {
@@ -173,7 +234,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.error,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -195,7 +256,8 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary, size: 20),
+          icon: const Icon(Icons.arrow_back_ios,
+              color: AppColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
@@ -203,9 +265,9 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Map preview
+            // Map with route
             Container(
-              height: 200,
+              height: 250,
               margin: AppSpacing.screenPadding,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -216,21 +278,39 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                 child: Stack(
                   children: [
-                    Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.map_outlined, size: 48, color: AppColors.textTertiary),
-                          AppSpacing.gapSm,
-                          Text(
-                            '${widget.estimatedDistance.toStringAsFixed(2)} km · ${widget.estimatedDuration} min',
-                            style: const TextStyle(
-                              color: AppColors.textTertiary,
-                              fontSize: 13,
-                            ),
+                    GoogleMap(
+                      onMapCreated: (controller) {
+                        final bounds = LatLngBounds(
+                          southwest: LatLng(
+                            widget.pickupLat < widget.dropoffLat
+                                ? widget.pickupLat - 0.01
+                                : widget.dropoffLat - 0.01,
+                            widget.pickupLng < widget.dropoffLng
+                                ? widget.pickupLng - 0.01
+                                : widget.dropoffLng - 0.01,
                           ),
-                        ],
+                          northeast: LatLng(
+                            widget.pickupLat > widget.dropoffLat
+                                ? widget.pickupLat + 0.01
+                                : widget.dropoffLat + 0.01,
+                            widget.pickupLng > widget.dropoffLng
+                                ? widget.pickupLng + 0.01
+                                : widget.dropoffLng + 0.01,
+                          ),
+                        );
+                        controller.moveCamera(
+                            CameraUpdate.newLatLngBounds(bounds, 80));
+                      },
+                      initialCameraPosition: CameraPosition(
+                        target: LatLng(widget.pickupLat, widget.pickupLng),
+                        zoom: 13,
                       ),
+                      markers: _markers,
+                      polylines: _polylines,
+                      myLocationEnabled: false,
+                      zoomControlsEnabled: true,
+                      compassEnabled: true,
+                      style: _mapStyle,
                     ),
                     Positioned(
                       top: AppSpacing.md,
@@ -239,16 +319,18 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                         padding: AppSpacing.chipPadding,
                         decoration: BoxDecoration(
                           color: AppColors.surface.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusFull),
                           boxShadow: AppSpacing.shadowSm,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.route, size: 14, color: AppColors.primary),
+                            const Icon(Icons.route,
+                                size: 14, color: AppColors.primary),
                             AppSpacing.hGapXs,
                             Text(
-                              '${widget.estimatedDistance.toStringAsFixed(1)} km',
+                              '${widget.estimatedDistance.toStringAsFixed(1)} km · ${widget.estimatedDuration} min',
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -279,9 +361,11 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                           height: 36,
                           decoration: BoxDecoration(
                             color: AppColors.successContainer,
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusSm),
                           ),
-                          child: const Icon(Icons.location_on_outlined, color: AppColors.success, size: 20),
+                          child: const Icon(Icons.location_on_outlined,
+                              color: AppColors.success, size: 20),
                         ),
                         AppSpacing.hGapMd,
                         Expanded(
@@ -316,15 +400,17 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Column(
-                      children: List.generate(3, (i) => Container(
-                        width: 2,
-                        height: 4,
-                        margin: const EdgeInsets.symmetric(vertical: 1),
-                        decoration: BoxDecoration(
-                          color: AppColors.outlineVariant,
-                          borderRadius: BorderRadius.circular(1),
-                        ),
-                      )),
+                      children: List.generate(
+                          3,
+                          (i) => Container(
+                                width: 2,
+                                height: 4,
+                                margin: const EdgeInsets.symmetric(vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: AppColors.outlineVariant,
+                                  borderRadius: BorderRadius.circular(1),
+                                ),
+                              )),
                     ),
                   ),
                   PremiumCard(
@@ -337,9 +423,11 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                           height: 36,
                           decoration: BoxDecoration(
                             color: AppColors.errorContainer,
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusSm),
                           ),
-                          child: const Icon(Icons.location_on, color: AppColors.error, size: 20),
+                          child: const Icon(Icons.location_on,
+                              color: AppColors.error, size: 20),
                         ),
                         AppSpacing.hGapMd,
                         Expanded(
@@ -438,7 +526,8 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                             height: 36,
                             decoration: BoxDecoration(
                               color: AppColors.primaryContainer,
-                              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                              borderRadius:
+                                  BorderRadius.circular(AppSpacing.radiusSm),
                             ),
                             child: Icon(
                               _selectedPaymentMethod == 'WALLET'
@@ -461,7 +550,8 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                               ),
                             ),
                           ),
-                          const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 22),
+                          const Icon(Icons.chevron_right,
+                              color: AppColors.textTertiary, size: 22),
                         ],
                       ),
                     ),
@@ -577,7 +667,8 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                 ),
                 child: Icon(
                   icon,
-                  color: isSelected ? AppColors.primary : AppColors.textTertiary,
+                  color:
+                      isSelected ? AppColors.primary : AppColors.textTertiary,
                   size: 24,
                 ),
               ),
@@ -591,7 +682,9 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.textPrimary,
                       ),
                     ),
                     AppSpacing.gapXs,
@@ -621,7 +714,9 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textPrimary,
                     ),
                     child: Text('\$${_calculateFare(type).toStringAsFixed(2)}'),
                   ),

@@ -18,12 +18,17 @@ class WebSocketService {
   static Timer? _heartbeatTimer;
   static Function()? onForceLogout;
   
+  static StreamSubscription<dynamic>? _channelSubscription;
+
   // ✅ STEP 5: Stream controllers for ride events and location
   static final _rideEventController = StreamController<Map<String, dynamic>>.broadcast();
   static final _driverLocationController = StreamController<Map<String, dynamic>>.broadcast();
   static final _connectionStateController = StreamController<String>.broadcast();
   static final _chatMessageController = StreamController<Map<String, dynamic>>.broadcast();
-  
+
+  // Unread message counts: receiverId -> count
+  static final Map<int, int> unreadCounts = {};
+
   // ✅ Expose as streams
   static Stream<Map<String, dynamic>> get rideEvents => _rideEventController.stream;
   static Stream<Map<String, dynamic>> get driverLocationEvents => _driverLocationController.stream;
@@ -37,7 +42,14 @@ class WebSocketService {
       addDebugMessage('User ID: $userId');
       addDebugMessage('Username: $username');
 
-      // ✅ STEP 5 FIX: Close previous connection if exists
+      // Reset manual disconnect flag for new connection attempt
+      _isManualDisconnect = false;
+
+      // ✅ Cancel previous subscription if exists
+      _channelSubscription?.cancel();
+      _channelSubscription = null;
+
+      // ✅ Close previous connection if exists
       if (_channel != null) {
         try {
           addDebugMessage('⚠️ Closing previous connection...');
@@ -49,34 +61,44 @@ class WebSocketService {
       }
 
       final baseUrl = StorageService.getServerUrl();
+      final token = StorageService.getToken();
       addDebugMessage('Base URL: $baseUrl');
-      
+
       final wsUrl = baseUrl
           .replaceFirst('http://', 'ws://')
           .replaceFirst('https://', 'wss://');
-      
-      final fullUrl = '$wsUrl/ws-chat';
+
+      final fullUrl = token != null
+          ? '$wsUrl/ws-chat?token=$token'
+          : '$wsUrl/ws-chat';
       addDebugMessage('WebSocket URL: $fullUrl');
       
       try {
-        // ✅ STEP 5 FIX: Create new connection
+        // ✅ Create new connection (async — don't set connected until data flows)
         _channel = WebSocketChannel.connect(
           Uri.parse(fullUrl),
         );
         
-        _isConnected = true;
-        _connectionStateController.add('connected');
-        addDebugMessage('✅ WebSocket Connected!');
+        _connectionStateController.add('connecting');
         
-        // Send login message
+        // Send login message immediately (queued by browser until open)
         _sendLoginMessage(userId, username);
         
         // Start heartbeat
         _startHeartbeat(userId);
         
+        bool _didConnect = false;
+        
         // Listen for messages
-        _channel?.stream.listen(
+        _channelSubscription = _channel?.stream.listen(
           (message) {
+            // First data received = connection is truly alive
+            if (!_didConnect) {
+              _didConnect = true;
+              _isConnected = true;
+              _connectionStateController.add('connected');
+              addDebugMessage('✅ WebSocket Connected!');
+            }
             addDebugMessage('📨 Message received: $message');
             try {
               final decoded = jsonDecode(message);
@@ -87,11 +109,12 @@ class WebSocketService {
             }
           },
           onError: (error) {
-            addDebugMessage('❌ WebSocket Error: $error');
             _isConnected = false;
+            _channelSubscription = null;
+            addDebugMessage('❌ WebSocket Error: $error');
             _connectionStateController.add('error');
             
-            // ✅ STEP 5 FIX: Auto-reconnect after 5 seconds
+            // ✅ Auto-reconnect after 5 seconds
             Future.delayed(const Duration(seconds: 5), () {
               if (!_isConnected && !_isManualDisconnect) {
                 addDebugMessage('🔄 Auto-reconnecting...');
@@ -102,13 +125,32 @@ class WebSocketService {
           onDone: () {
             addDebugMessage('🔌 WebSocket closed');
             _isConnected = false;
+            _channelSubscription = null;
             
             // ✅ ONLY EMIT if this is NOT a manual disconnect
             if (!_isManualDisconnect) {
               _connectionStateController.add('disconnected');
+              // Auto-reconnect after 5 seconds if closed unexpectedly
+              Future.delayed(const Duration(seconds: 5), () {
+                if (!_isConnected && !_isManualDisconnect) {
+                  addDebugMessage('🔄 Auto-reconnecting after unexpected close...');
+                  connect(userId, username);
+                }
+              });
             }
           },
         );
+        
+        // Timeout: if no data received within 8 seconds, treat as failure
+        Future.delayed(const Duration(seconds: 8), () {
+          if (!_didConnect && !_isManualDisconnect) {
+            addDebugMessage('⏱️ WebSocket connection timeout — no data received within 8s');
+            _channel?.sink.close();
+            if (!_isConnected) {
+              _connectionStateController.add('error');
+            }
+          }
+        });
       } catch (e) {
         addDebugMessage('❌ WebSocket connection error: $e');
         _isConnected = false;
@@ -124,7 +166,7 @@ class WebSocketService {
   }
 
   static void _sendLoginMessage(int userId, String username) {
-    if (!_isConnected) return;
+    if (_channel == null) return;
     
     final message = {
       'type': 'login',
@@ -133,7 +175,8 @@ class WebSocketService {
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
     
-    _channel?.sink.add(jsonEncode(message));
+    _channel!.sink.add(jsonEncode(message));
+    addDebugMessage('📤 Sent login message');
   }
   
   static void sendMessage(int senderId, int receiverId, String content, String senderName) {
@@ -162,6 +205,29 @@ class WebSocketService {
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
     
+    _channel?.sink.add(jsonEncode(message));
+  }
+
+  static void sendMessageDelivered(int messageId, int senderId, int receiverId) {
+    if (!_isConnected) return;
+    final message = {
+      'type': 'message_delivered',
+      'messageId': messageId,
+      'senderId': senderId,
+      'receiverId': receiverId,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    };
+    _channel?.sink.add(jsonEncode(message));
+  }
+
+  static void sendMessageRead(int senderId, int receiverId) {
+    if (!_isConnected) return;
+    final message = {
+      'type': 'message_read',
+      'senderId': senderId,
+      'receiverId': receiverId,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    };
     _channel?.sink.add(jsonEncode(message));
   }
   
@@ -248,6 +314,19 @@ class WebSocketService {
       case 'message':
         onMessageReceived?.call(message);
         _chatMessageController.add(message);
+        // Track unread count for receiver
+        final msgSenderId = message['senderId'] as int?;
+        if (msgSenderId != null) {
+          unreadCounts[msgSenderId] = (unreadCounts[msgSenderId] ?? 0) + 1;
+        }
+        break;
+      case 'message_delivered':
+        onMessageReceived?.call(message);
+        _chatMessageController.add(message);
+        break;
+      case 'message_read':
+        onMessageReceived?.call(message);
+        _chatMessageController.add(message);
         break;
       case 'user_online':
         onUserOnline?.call(message['senderId'], message['senderName'] ?? '');
@@ -279,6 +358,12 @@ class WebSocketService {
         _rideEventController.add(message);
         _driverLocationController.add(message);
         break;
+
+      // ✅ DRIVER HEADING ONLY - rotation without position
+      case 'driver_heading':
+        addDebugMessage('🔄 Driver heading update');
+        _driverLocationController.add(message);
+        break;
         
       case 'pong':
         addDebugMessage('💓 Heartbeat response');
@@ -306,7 +391,7 @@ class WebSocketService {
       addDebugMessage('═══════════════════════════════════════');
       addDebugMessage('🔌 Disconnecting WebSocket...');
       
-      // ✅ SET FLAG to prevent onDone from emitting again
+      // ✅ SET FLAG to prevent onDone/auto-reconnect
       _isManualDisconnect = true;
       
       _stopHeartbeat();
@@ -342,18 +427,12 @@ class WebSocketService {
         _connectionStateController.add('disconnected');
         addDebugMessage('🔌 WebSocket Disconnected');
         addDebugMessage('═══════════════════════════════════════');
-        
-        // Reset flag after a short delay
-        Future.delayed(const Duration(milliseconds: 500), () {
-          _isManualDisconnect = false;
-        });
       });
       
     } catch (e) {
       addDebugMessage('❌ Error in disconnect(): $e');
       _isConnected = false;
       _connectionStateController.add('disconnected');
-      _isManualDisconnect = false;
     }
   }
 }

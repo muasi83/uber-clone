@@ -11,6 +11,9 @@ import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../utils/marker_utils.dart';
+import '../utils/map_style_loader.dart';
+import '../utils/marker_factory.dart';
 
 class DriverActiveRideScreen extends StatefulWidget {
   final int rideId;
@@ -37,6 +40,8 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   late final LatLng _destinationLocation;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
+  BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
+  String? _mapStyle;
   bool _rideStarted = false;
   bool _isCompleting = false;
   int _remainingMinutes = 0;
@@ -45,10 +50,12 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   Timer? _rideTimer;
 
   StreamSubscription<Position>? _positionStream;
+  int? _otherUserId;
 
   @override
   void initState() {
     super.initState();
+    _loadMapStyle();
 
     _destinationLocation = LatLng(widget.dropoffLat, widget.dropoffLng);
 
@@ -59,7 +66,13 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
     addDebugMessage('Address: ${widget.dropoffAddress}');
     addDebugMessage('═══════════════════════════════════════');
 
+    _initYellowPin();
     _initializeRide();
+    _fetchChatPartnerId();
+  }
+
+  Future<void> _initYellowPin() async {
+    _yellowPinMarker = await getYellowPinMarker();
   }
 
   Future<void> _initializeRide() async {
@@ -128,10 +141,9 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         }
 
         if (mounted) {
-          setState(() {
-            _updateMarkers();
-            _updateRoute();
-          });
+          _updateMarkers();
+          _updateRoute();
+          setState(() {});
         }
       },
       onError: (error) {
@@ -151,7 +163,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
     }
   }
 
-  void _updateMarkers() {
+  Future<void> _updateMarkers() async {
     _markers.clear();
 
     if (_driverLocation != null) {
@@ -159,7 +171,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         Marker(
           markerId: const MarkerId('driver'),
           position: _driverLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          icon: await MarkerFactory.driver,
         ),
       );
     }
@@ -168,7 +180,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       Marker(
         markerId: const MarkerId('destination'),
         position: _destinationLocation,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon: _yellowPinMarker,
         infoWindow: InfoWindow(title: widget.dropoffAddress),
       ),
     );
@@ -193,7 +205,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
             Polyline(
               polylineId: const PolylineId('route'),
               points: route.polylinePoints!,
-              color: Colors.blue,
+              color: AppColors.mapRouteLine,
               width: 5,
               geodesic: true,
             ),
@@ -248,7 +260,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Ride started!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
       }
@@ -293,7 +305,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       if (mounted) {
         setState(() => _isCompleting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -323,10 +335,16 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
           style: const TextStyle(color: Colors.white),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-            tooltip: 'Chat with Rider',
-            onPressed: _openChat,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                tooltip: 'Chat with Rider',
+                onPressed: _openChat,
+              ),
+              _buildUnreadBadge(),
+            ],
           ),
         ],
       ),
@@ -342,6 +360,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
             polylines: _polylines,
             compassEnabled: true,
             zoomControlsEnabled: false,
+            style: _mapStyle,
           ),
           Positioned(
             bottom: 0,
@@ -460,6 +479,41 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _loadMapStyle() async {
+    _mapStyle = await MapStyleLoader.load();
+  }
+
+  Future<void> _fetchChatPartnerId() async {
+    final token = StorageService.getToken();
+    if (token == null) return;
+    try {
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride != null && mounted) {
+        _otherUserId = ride.rider.id;
+      }
+    } catch (_) {}
+  }
+
+  Widget _buildUnreadBadge() {
+    if (_otherUserId == null) return const SizedBox.shrink();
+    final count = WebSocketService.unreadCounts[_otherUserId!] ?? 0;
+    if (count == 0) return const SizedBox.shrink();
+    return Positioned(
+      right: 2,
+      top: 2,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+        child: Text(
+          count > 9 ? '9+' : '$count',
+          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }

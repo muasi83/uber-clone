@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../theme/app_colors.dart';
 import '../services/crash_reporter.dart';
 
 List<String> debugMessages = [];
@@ -34,7 +35,7 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Copied to clipboard!'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.success,
           duration: Duration(seconds: 2),
         ),
       );
@@ -48,7 +49,7 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Logs copied! Paste into an email to support@yourapp.com'),
-          backgroundColor: Colors.blue,
+          backgroundColor: AppColors.secondary,
           duration: Duration(seconds: 5),
         ),
       );
@@ -99,22 +100,22 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
 
   Widget _buildDebugLogs() {
     return Container(
-      color: Colors.black,
+      color: AppColors.textPrimary,
       child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(8),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: Colors.grey, size: 16),
+                const Icon(Icons.info_outline, color: AppColors.textTertiary, size: 16),
                 const SizedBox(width: 8),
                 Text(
                   '${debugMessages.length} messages',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: const TextStyle(color: AppColors.textTertiary, fontSize: 12),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.copy, color: Colors.grey, size: 20),
+                  icon: const Icon(Icons.copy, color: AppColors.textTertiary, size: 20),
                   onPressed: () => _copyToClipboard(debugMessages.join('\n')),
                 ),
               ],
@@ -122,7 +123,7 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
           ),
           Expanded(
             child: debugMessages.isEmpty
-                ? const Center(child: Text('No debug messages', style: TextStyle(color: Colors.grey)))
+                ? const Center(child: Text('No debug messages', style: TextStyle(color: AppColors.textTertiary)))
                 : ListView.builder(
                     controller: _scrollController,
                     itemCount: debugMessages.length,
@@ -130,13 +131,13 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
                       final message = debugMessages[index];
                       Color textColor = Colors.white;
                       if (message.contains('❌') || message.contains('ERROR')) {
-                        textColor = Colors.red;
+                        textColor = AppColors.error;
                       } else if (message.contains('✅') || message.contains('SUCCESS')) {
-                        textColor = Colors.green;
+                        textColor = AppColors.success;
                       } else if (message.contains('🔍')) {
-                        textColor = Colors.yellow;
+                        textColor = AppColors.warning;
                       } else if (message.contains('🚀')) {
-                        textColor = Colors.cyan;
+                        textColor = AppColors.info;
                       }
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -156,22 +157,22 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
   Widget _buildCrashReports() {
     final crashLogs = CrashReporter.logs;
     return Container(
-      color: Colors.black,
+      color: AppColors.textPrimary,
       child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(8),
             child: Row(
               children: [
-                const Icon(Icons.bug_report, color: Colors.orange, size: 16),
+                const Icon(Icons.bug_report, color: AppColors.warning, size: 16),
                 const SizedBox(width: 8),
                 Text(
                   '${crashLogs.length} recorded errors',
-                  style: const TextStyle(color: Colors.orange, fontSize: 12),
+                  style: const TextStyle(color: AppColors.warning, fontSize: 12),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.copy, color: Colors.grey, size: 20),
+                  icon: const Icon(Icons.copy, color: AppColors.textTertiary, size: 20),
                   onPressed: () => _copyToClipboard(crashLogs.join('\n')),
                 ),
               ],
@@ -183,11 +184,11 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle, color: Colors.green, size: 48),
+                        Icon(Icons.check_circle, color: AppColors.success, size: 48),
                         SizedBox(height: 16),
-                        Text('No crashes recorded', style: TextStyle(color: Colors.grey)),
+                        Text('No crashes recorded', style: TextStyle(color: AppColors.textTertiary)),
                         SizedBox(height: 8),
-                        Text('If the app crashes, the error will appear here', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        Text('If the app crashes, the error will appear here', style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                       ],
                     ),
                   )
@@ -198,14 +199,14 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.1),
+                            color: AppColors.error.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                            border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                           ),
                           padding: const EdgeInsets.all(8),
                           child: SelectableText(
                             crashLogs[index],
-                            style: const TextStyle(color: Colors.red, fontFamily: 'Courier', fontSize: 11),
+                            style: const TextStyle(color: AppColors.error, fontFamily: 'Courier', fontSize: 11),
                           ),
                         ),
                       );

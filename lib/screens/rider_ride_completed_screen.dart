@@ -45,7 +45,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select a rating'),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
@@ -59,7 +59,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Authentication error'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
         return;
@@ -81,7 +81,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Thank you for rating!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
 
@@ -101,7 +101,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
         ),
       );
     } finally {
@@ -205,7 +205,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 6),
                     child: Icon(
                       index < _rating ? Icons.star : Icons.star_border,
-                      color: Colors.amber,
+                      color: AppColors.warning,
                       size: 42,
                     ),
                   ),

@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
 class GlassCard extends StatelessWidget {
@@ -28,9 +29,9 @@ class GlassCard extends StatelessWidget {
           padding: padding ?? AppSpacing.cardPadding,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(borderRadius),
-            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+            color: (isDark ? Colors.white : AppColors.textPrimary).withValues(alpha: 0.05),
             border: Border.all(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+              color: (isDark ? Colors.white : AppColors.textPrimary).withValues(alpha: 0.1),
             ),
           ),
           child: child,

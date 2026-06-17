@@ -6,11 +6,16 @@ import '../services/directions_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
+import '../services/driver_service.dart';
 import '../screens/debug_screen.dart';
 import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/status_badge.dart';
+import '../widgets/cancel_ride_dialog.dart';
+import '../utils/marker_utils.dart';
+import '../utils/map_style_loader.dart';
+import '../utils/marker_factory.dart';
 
 class RiderTrackingScreen extends StatefulWidget {
   final int rideId;
@@ -31,22 +36,27 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   GoogleMapController? mapController;
   LatLng? _driverLocation;
   LatLng? _pickupLocation;
-  final Set<Marker> _markers = {};
+  Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   bool _driverArrived = false;
   bool _rideStarting = false;
   int _remainingMinutes = 0;
   double _driverHeading = 0;
   BitmapDescriptor _carIcon = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
+  String? _mapStyle;
 
   Timer? _statusPollTimer;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
+  StreamSubscription<Map<String, dynamic>>? _driverLocEventsSub;
+  double _driverRating = 4.0;
 
   @override
   void initState() {
     super.initState();
+    _loadMapStyle();
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -58,6 +68,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     _setupWebSocketListeners();
     _startStatusPolling();
     _initCarIcon();
+    _initYellowPin();
 
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('TRACKING DRIVER');
@@ -98,6 +109,10 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     });
   }
 
+  Future<void> _initYellowPin() async {
+    _yellowPinMarker = await getYellowPinMarker();
+  }
+
   Future<void> _initCarIcon() async {
     try {
       _carIcon = await BitmapDescriptor.asset(
@@ -106,7 +121,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
       );
     } catch (e) {
       addDebugMessage('Car icon fallback: $e');
-      _carIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+      _carIcon = await MarkerFactory.driver;
     }
   }
 
@@ -115,6 +130,9 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     final driverLng = widget.driverData['currentLongitude'] as double?;
     if (driverLat != null && driverLng != null && driverLat != 0 && driverLng != 0) {
       _driverLocation = LatLng(driverLat, driverLng);
+    } else {
+      // Fetch driver location from ride details if not in driverData
+      _fetchDriverLocationFromRide();
     }
 
     _pickupLocation = LatLng(
@@ -128,6 +146,61 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
 
     _updateMarkers();
     _updateRoute();
+    _loadDriverRating();
+  }
+
+  Future<void> _fetchDriverLocationFromRide() async {
+    try {
+      final token = StorageService.getToken();
+      if (token == null) return;
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride == null || ride.driver == null || !mounted) return;
+      // Ride model doesn't have driver location, so we try nearby drivers as fallback
+      addDebugMessage('Fetching driver location from API...');
+      final drivers = await DriverService.getNearbyDrivers(
+        latitude: widget.driverData['pickupLatitude'] as double? ?? 0,
+        longitude: widget.driverData['pickupLongitude'] as double? ?? 0,
+        radiusKm: 5.0,
+      );
+      if (!mounted) return;
+      final driverId = ride.driver!.id;
+      for (final d in drivers) {
+        if (d.user.id == driverId && d.currentLatitude != null && d.currentLongitude != null) {
+          setState(() {
+            _driverLocation = LatLng(d.currentLatitude!, d.currentLongitude!);
+          });
+          _updateMarkers();
+          _fitBounds();
+          addDebugMessage('✅ Driver location from nearby API');
+          return;
+        }
+      }
+      addDebugMessage('⏳ Awaiting first driver_location WS event');
+    } catch (e) {
+      addDebugMessage('⚠️ Could not fetch driver location: $e');
+    }
+  }
+
+  void _loadDriverRating() {
+    final rating = widget.driverData['averageRating'];
+    if (rating != null) {
+      _driverRating = (rating as num).toDouble();
+    } else {
+      _fetchRatingFromRideDetails();
+    }
+  }
+
+  Future<void> _fetchRatingFromRideDetails() async {
+    try {
+      final token = StorageService.getToken();
+      if (token == null) return;
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride != null && ride.driverAverageRating != null && mounted) {
+        setState(() => _driverRating = ride.driverAverageRating!);
+      }
+    } catch (e) {
+      addDebugMessage('⚠️ Could not fetch driver rating: $e');
+    }
   }
 
   void _setupWebSocketListeners() {
@@ -137,27 +210,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         final type = event['type'] ?? '';
 
         if (type == 'driver_location') {
-          final payload = event['payload'] ?? event;
-          final lat = (payload['latitude'] ?? payload['lat']) as double?;
-          final lng = (payload['longitude'] ?? payload['lng']) as double?;
-          final heading = payload['heading'] as double?;
-
-          if (lat != null && lng != null) {
-            setState(() {
-              final prev = _driverLocation;
-              _driverLocation = LatLng(lat, lng);
-              if (heading != null) {
-                _driverHeading = heading;
-              } else if (prev != null) {
-                _driverHeading = _bearingBetween(prev, _driverLocation!);
-              }
-              _updateMarkers();
-              _updateRoute();
-              _fitBounds();
-            });
-
-            addDebugMessage('Driver location updated: $lat, $lng');
-          }
+          _handleDriverLocationEvent(event);
         } else if (type == 'ride_started') {
           if (_rideStarting) return;
           _rideStarting = true;
@@ -182,7 +235,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Your driver has arrived!'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.primary,
               duration: Duration(seconds: 5),
             ),
           );
@@ -190,34 +243,87 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
           addDebugMessage('Driver arrived notification');
         }
       });
+
+      _driverLocEventsSub = WebSocketService.driverLocationEvents.listen((event) {
+        if (!mounted) return;
+        final type = event['type'] ?? '';
+        if (type == 'driver_location' || type == 'driver_heading') {
+          _handleDriverLocationEvent(event);
+        }
+      });
     } catch (e) {
       addDebugMessage('Error setting up listeners: $e');
     }
   }
 
+  Widget _buildUnreadBadge() {
+    final driverId = widget.driverData['driverId'] as int?;
+    if (driverId == null) return const SizedBox.shrink();
+    final count = WebSocketService.unreadCounts[driverId] ?? 0;
+    if (count == 0) return const SizedBox.shrink();
+    return Positioned(
+      right: 2,
+      top: 2,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: const BoxDecoration(
+          color: AppColors.error,
+          shape: BoxShape.circle,
+        ),
+        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+        child: Text(
+          count > 9 ? '9+' : '$count',
+          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  void _handleDriverLocationEvent(Map<String, dynamic> event) {
+    final payload = event['payload'] ?? event;
+    final lat = (payload['latitude'] ?? payload['lat']) as double?;
+    final lng = (payload['longitude'] ?? payload['lng']) as double?;
+
+    if (lat != null && lng != null) {
+      setState(() {
+        final prev = _driverLocation;
+        _driverLocation = LatLng(lat, lng);
+        final heading = payload['heading'];
+        if (heading != null) {
+          _driverHeading = (heading as num).toDouble();
+        } else if (prev != null) {
+          _driverHeading = _bearingBetween(prev, _driverLocation!);
+        }
+        _updateMarkers();
+        _fitBounds();
+      });
+      _updateRoute();
+    }
+  }
+
   void _updateMarkers() {
-    _markers.clear();
+    final updated = <Marker>{};
 
     if (_pickupLocation != null) {
-      _markers.add(
+      updated.add(
         Marker(
           markerId: const MarkerId('pickup'),
           position: _pickupLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueGreen,
-          ),
+          icon: _yellowPinMarker,
           infoWindow: const InfoWindow(title: 'Pickup Location'),
         ),
       );
     }
 
     if (_driverLocation != null) {
-      _markers.add(
+      addDebugMessage('_updateMarkers rotation=$_driverHeading');
+      updated.add(
         Marker(
           markerId: const MarkerId('driver'),
           position: _driverLocation!,
           icon: _carIcon,
-          rotation: _driverHeading,
+          rotation: _carRotation(_driverHeading % 360),
           anchor: const Offset(0.5, 0.5),
           flat: true,
           infoWindow: InfoWindow(
@@ -227,7 +333,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
       );
     }
 
-    setState(() {});
+    _markers = updated;
   }
 
   Future<void> _updateRoute() async {
@@ -309,6 +415,9 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   double _toRadians(double deg) => deg * math.pi / 180;
   double _toDegrees(double rad) => rad * 180 / math.pi;
 
+  /// Car image front faces DOWN (south). Add 180° so rotation=0 → north.
+  double _carRotation(double heading) => (heading + 180) % 360;
+
   Future<void> _openChat() async {
     final token = StorageService.getToken();
     final currentUserId = StorageService.getUserId();
@@ -371,10 +480,16 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
-            tooltip: 'Chat with Driver',
-            onPressed: _openChat,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
+                tooltip: 'Chat with Driver',
+                onPressed: _openChat,
+              ),
+              _buildUnreadBadge(),
+            ],
           ),
         ],
       ),
@@ -394,6 +509,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
             zoomControlsEnabled: false,
             myLocationButtonEnabled: false,
             padding: const EdgeInsets.only(bottom: 220),
+            style: _mapStyle,
           ),
 
           Positioned(
@@ -402,7 +518,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
             right: 0,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(AppSpacing.radiusXxl),
                 ),
@@ -468,7 +584,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                                 return Icon(
                                   Icons.star_rounded,
                                   size: 16,
-                                  color: i < 4
+                                  color: i < _driverRating.round()
                                       ? AppColors.warning
                                       : AppColors.outlineVariant,
                                 );
@@ -477,16 +593,22 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                           ],
                         ),
                       ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.chat_rounded,
-                              color: AppColors.primary, size: 20),
-                          onPressed: _openChat,
-                        ),
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.chat_rounded,
+                                  color: AppColors.primary, size: 20),
+                              onPressed: _openChat,
+                            ),
+                          ),
+                          _buildUnreadBadge(),
+                        ],
                       ),
                     ],
                   ),
@@ -598,40 +720,14 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     );
   }
 
-  Future<void> _showCancelRideDialog() async {
-    final reasonController = TextEditingController();
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Ride?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Are you sure you want to cancel this ride?'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: 'Reason (optional)',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, {'action': 'no'}), child: const Text('No')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, {'action': 'yes', 'reason': reasonController.text.trim()}),
-            child: const Text('Yes, Cancel', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+  Future<void> _loadMapStyle() async {
+    _mapStyle = await MapStyleLoader.load();
+  }
 
-    if (result != null && result['action'] == 'yes' && mounted) {
-      final reason = result['reason'] ?? 'Rider cancelled ride';
+  Future<void> _showCancelRideDialog() async {
+    final result = await showCancelRideDialog(context);
+    if (result != null && result.confirmed && mounted) {
+      final reason = result.reason;
       try {
         final token = StorageService.getToken();
         if (token == null) return;
@@ -653,6 +749,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   void dispose() {
     _statusPollTimer?.cancel();
     _rideEventsSub?.cancel();
+    _driverLocEventsSub?.cancel();
     mapController?.dispose();
     _pulseController.dispose();
     super.dispose();

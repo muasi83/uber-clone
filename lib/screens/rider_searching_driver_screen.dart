@@ -7,6 +7,7 @@ import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../widgets/cancel_ride_dialog.dart';
 
 class RiderSearchingDriverScreen extends StatefulWidget {
   final int rideId;
@@ -92,6 +93,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
             'vehicleColor': '',
             'vehicleModel': '',
             'licensePlate': '',
+            'averageRating': ride.driverAverageRating ?? 4.0,
           },
         });
       }
@@ -139,11 +141,6 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
     _acceptanceTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) { timer.cancel(); return; }
       setState(() => _searchSeconds++);
-
-      if (_searchSeconds >= 60 && !_showTimeoutDialog) {
-        addDebugMessage('⏰ 60 seconds passed - showing timeout dialog');
-        _showSearchTimeoutDialog();
-      }
     });
   }
 
@@ -162,7 +159,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('🎉 Driver Found!'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.success,
           duration: Duration(seconds: 2),
         ),
       );
@@ -193,7 +190,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          icon: const Icon(Icons.cancel_outlined, color: Colors.red, size: 48),
+          icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 48),
           title: const Text('Ride Cancelled'),
           content: Text(event['reason'] ?? 'Your ride was cancelled'),
           actions: [
@@ -224,7 +221,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          icon: const Icon(Icons.access_time, color: Colors.orange, size: 48),
+          icon: const Icon(Icons.access_time, color: AppColors.warning, size: 48),
           title: const Text('No Drivers Available'),
           content: const Text(
             'We couldn\'t find a driver nearby. Would you like to continue searching?',
@@ -237,7 +234,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
               },
               child: const Text(
                 'Cancel',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: AppColors.error),
               ),
             ),
             ElevatedButton(
@@ -246,7 +243,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
                 _continueSearch();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: AppColors.primary,
               ),
               child: const Text('Continue'),
             ),
@@ -278,7 +275,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Continuing search with expanded radius...'),
-            backgroundColor: Colors.blue,
+            backgroundColor: AppColors.info,
             duration: Duration(seconds: 2),
           ),
         );
@@ -289,39 +286,9 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
   }
 
   Future<void> _showCancelSearchDialog() async {
-    final reasonController = TextEditingController();
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Ride?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Are you sure you want to cancel this ride?'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: 'Reason (optional)',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, {'action': 'no'}), child: const Text('No')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, {'action': 'yes', 'reason': reasonController.text.trim()}),
-            child: const Text('Yes, Cancel', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null && result['action'] == 'yes' && mounted) {
-      await _cancelSearch(result['reason'] ?? 'Rider cancelled search');
+    final result = await showCancelRideDialog(context);
+    if (result != null && result.confirmed && mounted) {
+      await _cancelSearch(result.reason);
     }
   }
 
@@ -453,10 +420,10 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
             const Spacer(),
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.colossal),
-              child: PremiumButton(
+              child:               PremiumButton(
                 label: 'Cancel Search',
                 onPressed: _cancelSearch,
-                variant: ButtonVariant.outline,
+                variant: ButtonVariant.danger,
                 icon: Icons.close,
               ),
             ),
@@ -475,13 +442,13 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.2),
+              color: AppColors.success.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(50),
             ),
             child: const Icon(
               Icons.check_circle_rounded,
               size: 56,
-              color: Colors.green,
+              color: AppColors.success,
             ),
           ),
           AppSpacing.gapXl,

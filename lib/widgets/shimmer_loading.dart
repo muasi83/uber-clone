@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
 class ShimmerLoading extends StatefulWidget {
@@ -61,9 +62,9 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
             borderRadius: BorderRadius.circular(widget.borderRadius),
             gradient: LinearGradient(
               colors: [
-                widget.baseColor ?? Colors.grey.shade200,
-                widget.highlightColor ?? Colors.grey.shade100,
-                widget.baseColor ?? Colors.grey.shade200,
+                widget.baseColor ?? AppColors.surfaceVariant,
+                widget.highlightColor ?? AppColors.surface,
+                widget.baseColor ?? AppColors.surfaceVariant,
               ],
               stops: const [0.0, 0.5, 1.0],
               begin: Alignment(-1 + _controller.value * 2, 0),

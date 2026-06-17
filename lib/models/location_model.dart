@@ -22,28 +22,15 @@ class LocationData {
   };
 
   factory LocationData.fromJson(Map<String, dynamic> json) => LocationData(
-    latitude: json['latitude'] as double,
-    longitude: json['longitude'] as double,
-    address: json['address'] as String,
+    latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
+    longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
+    address: json['address'] as String? ?? '',
     placeId: json['placeId'] as String?,
     timestamp: json['timestamp'] != null 
         ? DateTime.parse(json['timestamp'] as String)
         : null,
   );
 
-  LocationData copyWith({
-    double? latitude,
-    double? longitude,
-    String? address,
-    String? placeId,
-    DateTime? timestamp,
-  }) => LocationData(
-    latitude: latitude ?? this.latitude,
-    longitude: longitude ?? this.longitude,
-    address: address ?? this.address,
-    placeId: placeId ?? this.placeId,
-    timestamp: timestamp ?? this.timestamp,
-  );
 }
 
 class RideType {
@@ -62,27 +49,27 @@ class RideType {
   });
 }
 
-// Predefined ride types
+// Predefined ride types (rates must match backend RideService.calculateFare)
 final List<RideType> rideTypes = [
   RideType(
     name: 'Economy',
     icon: '🚗',
-    baseFare: 2.5,
-    perKmRate: 0.5,
+    baseFare: 2.0,
+    perKmRate: 0.20,
     description: 'Affordable rides',
   ),
   RideType(
     name: 'Comfort',
     icon: '🚙',
     baseFare: 4.0,
-    perKmRate: 0.75,
+    perKmRate: 0.35,
     description: 'More spacious',
   ),
   RideType(
     name: 'Luxury',
     icon: '🚘',
     baseFare: 6.0,
-    perKmRate: 1.0,
+    perKmRate: 0.50,
     description: 'Premium experience',
   ),
 ];

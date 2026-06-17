@@ -4,6 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/directions_service.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
+import '../utils/marker_utils.dart';
+import '../utils/map_style_loader.dart';
 
 class RidePreviewScreen extends StatefulWidget {
   final double pickupLat;
@@ -14,6 +16,11 @@ class RidePreviewScreen extends StatefulWidget {
   final String dropoffAddress;
   final double? estimatedFare;
 
+  // Driver mode
+  final bool driverMode;
+  final VoidCallback? onAccept;
+  final VoidCallback? onIgnore;
+
   const RidePreviewScreen({
     super.key,
     required this.pickupLat,
@@ -23,6 +30,9 @@ class RidePreviewScreen extends StatefulWidget {
     required this.pickupAddress,
     required this.dropoffAddress,
     this.estimatedFare,
+    this.driverMode = false,
+    this.onAccept,
+    this.onIgnore,
   });
 
   @override
@@ -33,18 +43,46 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
   late GoogleMapController _mapController;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
+  BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
+  String? _mapStyle;
   Timer? _autoDismissTimer;
   int _phase = 0; // 0=pickup zoom, 1=dropoff zoom, 2=full route
 
   @override
   void initState() {
     super.initState();
+    _loadMapStyle();
     addDebugMessage('RidePreviewScreen opened');
+    _initYellowPin().then((_) => _updateMarkerIcons());
     _addMarkers();
-    _startPreviewSequence();
-    _autoDismissTimer = Timer(const Duration(seconds: 6), () {
-      if (mounted) Navigator.of(context).pop();
-    });
+    if (widget.driverMode) {
+      // _loadRouteImmediately called from _onMapCreated after map is ready
+    } else {
+      _startPreviewSequence();
+      _autoDismissTimer = Timer(const Duration(seconds: 6), () {
+        if (mounted) Navigator.of(context).pop();
+      });
+    }
+  }
+
+  Future<void> _loadRouteImmediately() async {
+    await _mapController.animateCamera(
+      CameraUpdate.newLatLngZoom(
+        LatLng(widget.pickupLat, widget.pickupLng),
+        13,
+      ),
+    );
+    await Future.delayed(const Duration(milliseconds: 300));
+    await _loadRoute();
+    _fitBothPoints();
+  }
+
+  Future<void> _initYellowPin() async {
+    _yellowPinMarker = await getYellowPinMarker();
+  }
+
+  Future<void> _loadMapStyle() async {
+    _mapStyle = await MapStyleLoader.load();
   }
 
   void _addMarkers() {
@@ -52,7 +90,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
       Marker(
         markerId: const MarkerId('pickup'),
         position: LatLng(widget.pickupLat, widget.pickupLng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        icon: _yellowPinMarker,
         infoWindow: InfoWindow(title: 'Pickup: ${widget.pickupAddress}'),
       ),
     );
@@ -60,10 +98,35 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
       Marker(
         markerId: const MarkerId('dropoff'),
         position: LatLng(widget.dropoffLat, widget.dropoffLng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon: _yellowPinMarker,
         infoWindow: InfoWindow(title: 'Dropoff: ${widget.dropoffAddress}'),
       ),
     );
+  }
+
+  void _updateMarkerIcons() {
+    if (!mounted) return;
+    setState(() {
+      _markers.removeWhere(
+        (m) => m.markerId == const MarkerId('pickup') || m.markerId == const MarkerId('dropoff'),
+      );
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('pickup'),
+          position: LatLng(widget.pickupLat, widget.pickupLng),
+          icon: _yellowPinMarker,
+          infoWindow: InfoWindow(title: 'Pickup: ${widget.pickupAddress}'),
+        ),
+      );
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('dropoff'),
+          position: LatLng(widget.dropoffLat, widget.dropoffLng),
+          icon: _yellowPinMarker,
+          infoWindow: InfoWindow(title: 'Dropoff: ${widget.dropoffAddress}'),
+        ),
+      );
+    });
   }
 
   Future<void> _startPreviewSequence() async {
@@ -147,6 +210,9 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
         13,
       ),
     );
+    if (widget.driverMode) {
+      _loadRouteImmediately();
+    }
   }
 
   @override
@@ -158,9 +224,9 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.textPrimary,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.textPrimary,
         foregroundColor: Colors.white,
         title: const Text('Trip Preview'),
         actions: [
@@ -193,19 +259,20 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
             myLocationEnabled: false,
             zoomControlsEnabled: false,
             mapToolbarEnabled: false,
+            style: _mapStyle,
           ),
           Positioned(
             left: 16,
             right: 16,
-            bottom: 24,
+            bottom: MediaQuery.of(context).padding.bottom + 16,
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
+                    color: AppColors.textPrimary.withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 4),
                   ),
@@ -219,7 +286,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                     children: [
                       Container(
                         width: 8, height: 8,
-                        decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                        decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -237,7 +304,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                     children: [
                       Container(
                         width: 8, height: 8,
-                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                        decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -267,47 +334,90 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                     ),
                   ],
                   const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  if (widget.driverMode)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () {
+                              widget.onIgnore?.call();
+                              Navigator.of(context).pop();
+                            },
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.textTertiary,
+                              backgroundColor: AppColors.surfaceVariant,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text('IGNORE', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              widget.onAccept?.call();
+                              Navigator.of(context).pop();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.textPrimary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text('ACCEPT RIDE', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('Return to Offer', style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
-                      child: const Text('Return to Offer', style: TextStyle(fontWeight: FontWeight.w600)),
                     ),
-                  ),
                 ],
               ),
             ),
           ),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 60,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black87,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _phase == 0 ? 'Showing pickup point...' :
-                    _phase == 1 ? 'Showing dropoff point...' :
-                    'Showing complete route',
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+          if (!widget.driverMode)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 60,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.textPrimary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _phase == 0 ? 'Showing pickup point...' :
+                      _phase == 1 ? 'Showing dropoff point...' :
+                      'Showing complete route',
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );

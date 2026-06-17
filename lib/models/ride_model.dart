@@ -5,6 +5,7 @@ class Ride {
   final int? id;
   final User rider;
   final User? driver;
+  final double? driverAverageRating;
   final double pickupLatitude;
   final double pickupLongitude;
   final String pickupAddress;
@@ -21,11 +22,17 @@ class Ride {
   final DateTime? acceptedAt;
   final DateTime? startedAt;
   final DateTime? completedAt;
+  final DateTime? driverArrivedAt;
+  final DateTime? cancelledAt;
+  final String? cancellationReason;
+  final double? searchRadiusKm;
+  final String? selectedRideType;
 
   Ride({
     this.id,
     required this.rider,
     this.driver,
+    this.driverAverageRating,
     required this.pickupLatitude,
     required this.pickupLongitude,
     required this.pickupAddress,
@@ -42,6 +49,11 @@ class Ride {
     this.acceptedAt,
     this.startedAt,
     this.completedAt,
+    this.driverArrivedAt,
+    this.cancelledAt,
+    this.cancellationReason,
+    this.searchRadiusKm,
+    this.selectedRideType,
   });
 
   factory Ride.fromJson(Map<String, dynamic> json) {
@@ -75,6 +87,9 @@ class Ride {
         driver: json['driver'] != null 
             ? User.fromJson(json['driver'] as Map<String, dynamic>) 
             : null,
+        driverAverageRating: json['driver'] is Map<String, dynamic>
+            ? (json['driver']['averageRating'] as num?)?.toDouble()
+            : null,
         pickupLatitude: toDouble(json['pickupLatitude']) ?? 0.0,
         pickupLongitude: toDouble(json['pickupLongitude']) ?? 0.0,
         pickupAddress: json['pickupAddress'] as String? ?? 'Unknown',
@@ -99,6 +114,17 @@ class Ride {
         completedAt: json['completedAt'] != null
             ? DateTime.parse(json['completedAt'] as String)
             : null,
+        driverArrivedAt: json['driverArrivedAt'] != null
+            ? DateTime.parse(json['driverArrivedAt'] as String)
+            : null,
+        cancelledAt: json['cancelledAt'] != null
+            ? DateTime.parse(json['cancelledAt'] as String)
+            : null,
+        cancellationReason: json['cancellationReason'] as String?,
+        searchRadiusKm: json['searchRadiusKm'] != null
+            ? (json['searchRadiusKm'] as num).toDouble()
+            : null,
+        selectedRideType: json['selectedRideType'] as String?,
       );
     } catch (e) {
       print('❌ Error parsing Ride: $e');
@@ -111,6 +137,7 @@ class Ride {
     'id': id,
     'rider': rider.toJson(),
     'driver': driver?.toJson(),
+    'driverAverageRating': driverAverageRating,
     'pickupLatitude': pickupLatitude,
     'pickupLongitude': pickupLongitude,
     'pickupAddress': pickupAddress,
@@ -127,51 +154,13 @@ class Ride {
     'acceptedAt': acceptedAt?.toIso8601String(),
     'startedAt': startedAt?.toIso8601String(),
     'completedAt': completedAt?.toIso8601String(),
+    'driverArrivedAt': driverArrivedAt?.toIso8601String(),
+    'cancelledAt': cancelledAt?.toIso8601String(),
+    'cancellationReason': cancellationReason,
+    'searchRadiusKm': searchRadiusKm,
+    'selectedRideType': selectedRideType,
   };
 
-  Ride copyWith({
-    int? id,
-    User? rider,
-    User? driver,
-    double? pickupLatitude,
-    double? pickupLongitude,
-    String? pickupAddress,
-    double? dropoffLatitude,
-    double? dropoffLongitude,
-    String? dropoffAddress,
-    String? status,
-    String? rideType,
-    double? estimatedFare,
-    double? finalFare,
-    double? estimatedDistance,
-    int? estimatedDuration,
-    DateTime? requestedAt,
-    DateTime? acceptedAt,
-    DateTime? startedAt,
-    DateTime? completedAt,
-  }) {
-    return Ride(
-      id: id ?? this.id,
-      rider: rider ?? this.rider,
-      driver: driver ?? this.driver,
-      pickupLatitude: pickupLatitude ?? this.pickupLatitude,
-      pickupLongitude: pickupLongitude ?? this.pickupLongitude,
-      pickupAddress: pickupAddress ?? this.pickupAddress,
-      dropoffLatitude: dropoffLatitude ?? this.dropoffLatitude,
-      dropoffLongitude: dropoffLongitude ?? this.dropoffLongitude,
-      dropoffAddress: dropoffAddress ?? this.dropoffAddress,
-      status: status ?? this.status,
-      rideType: rideType ?? this.rideType,
-      estimatedFare: estimatedFare ?? this.estimatedFare,
-      finalFare: finalFare ?? this.finalFare,
-      estimatedDistance: estimatedDistance ?? this.estimatedDistance,
-      estimatedDuration: estimatedDuration ?? this.estimatedDuration,
-      requestedAt: requestedAt ?? this.requestedAt,
-      acceptedAt: acceptedAt ?? this.acceptedAt,
-      startedAt: startedAt ?? this.startedAt,
-      completedAt: completedAt ?? this.completedAt,
-    );
-  }
 }
 
 class DriverProfile {
@@ -281,15 +270,4 @@ factory DriverProfile.fromJson(Map<String, dynamic> json) {
     'currentLongitude': currentLongitude,
     'isOnline': isOnline,
   };
-}
-
-
-// Add this enum to your existing file
-enum RideStep { 
-  initial,           // Show map with pickup/dropoff buttons
-  pickupConfirmed,   // Pickup button gray, dropoff active
-  dropoffConfirmed,  // Both buttons gray, confirm ride button shows
-  routeReady,        // Show route, waiting to request
-  searching,         // Searching for drivers
-  driverFound,       // Driver details showing
 }

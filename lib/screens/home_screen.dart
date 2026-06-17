@@ -159,7 +159,7 @@ final response = await http.get(
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: AppColors.error),
     );
   }
 
@@ -215,7 +215,7 @@ final response = await http.get(
             },
             child: const Text(
               'Logout',
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: AppColors.error),
             ),
           ),
         ],
@@ -240,11 +240,6 @@ final response = await http.get(
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search_rounded),
-            color: Colors.white,
-            onPressed: () {},
-          ),
-          IconButton(
             icon: const Icon(Icons.bug_report_outlined),
             color: Colors.white,
             tooltip: 'Debug Console',
@@ -262,7 +257,11 @@ final response = await http.get(
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => SettingsScreen(username: widget.username),
+                  builder: (context) => SettingsScreen(
+                    username: widget.username,
+                    userId: widget.userId,
+                    token: widget.token,
+                  ),
                 ),
               );
             },
@@ -321,12 +320,12 @@ final response = await http.get(
                       final avatarColors = [
                         AppColors.primary,
                         AppColors.secondary,
-                        const Color(0xFF8B5CF6),
-                        const Color(0xFFF59E0B),
-                        const Color(0xFF10B981),
-                        const Color(0xFFEC4899),
-                        const Color(0xFF3B82F6),
-                        const Color(0xFFEF4444),
+                        AppColors.secondary,
+                        AppColors.warning,
+                        AppColors.primary,
+                        AppColors.secondary,
+                        AppColors.secondary,
+                        AppColors.error,
                       ];
                       final avatarColor = avatarColors[user.id != null ? user.id! % avatarColors.length : index % avatarColors.length];
 

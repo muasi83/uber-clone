@@ -24,9 +24,9 @@ class User {
 factory User.fromJson(Map<String, dynamic> json) => User(
   id: json['id'] as int?,
   username: json['username'] as String?,
-  email: json['email'] as String? ?? 'unknown@test.com', // Default email
-  password: json['password'] as String? ?? '', // Default password
-  fullName: json['fullName'] as String? ?? 'Unknown', // Default name
+  email: json['email'] as String? ?? 'unknown@test.com',
+  password: json['password'] as String? ?? '',
+  fullName: json['fullName'] as String? ?? 'Unknown',
   deviceToken: json['deviceToken'] as String?,
   isOnline: json['isOnline'] is bool 
       ? json['isOnline'] as bool 
@@ -43,37 +43,12 @@ factory User.fromJson(Map<String, dynamic> json) => User(
         'id': id,
         'username': username,
         'email': email,
-        'password': password,
         'fullName': fullName,
         'deviceToken': deviceToken,
         'isOnline': isOnline ? 1 : 0,
         'isVerified': isVerified ? 1 : 0,
         'createdAt': createdAt.toIso8601String(),
       };
-
-  User copyWith({
-    int? id,
-    String? username,
-    String? email,
-    String? password,
-    String? fullName,
-    String? deviceToken,
-    bool? isOnline,
-    bool? isVerified,
-    DateTime? createdAt,
-  }) {
-    return User(
-      id: id ?? this.id,
-      username: username ?? this.username,
-      email: email ?? this.email,
-      password: password ?? this.password,
-      fullName: fullName ?? this.fullName,
-      deviceToken: deviceToken ?? this.deviceToken,
-      isOnline: isOnline ?? this.isOnline,
-      isVerified: isVerified ?? this.isVerified,
-      createdAt: createdAt ?? this.createdAt,
-    );
-  }
 }
 
 class Message {
@@ -82,8 +57,9 @@ class Message {
   final int receiverId;
   final String content;
   final DateTime sentAt;
-  final String status; // sent, delivered, seen
+  final String status;
   final bool isRead;
+  final bool isDelivered;
 
   Message({
     this.id,
@@ -93,6 +69,7 @@ class Message {
     DateTime? sentAt,
     this.status = 'sent',
     this.isRead = false,
+    this.isDelivered = false,
   }) : sentAt = sentAt ?? DateTime.now();
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
@@ -105,17 +82,8 @@ class Message {
             : DateTime.now(),
         status: json['status'] as String? ?? 'sent',
         isRead: (json['isRead'] as int?) == 1,
+        isDelivered: (json['isDelivered'] as int?) == 1,
       );
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'senderId': senderId,
-        'receiverId': receiverId,
-        'content': content,
-        'sentAt': sentAt.toIso8601String(),
-        'status': status,
-        'isRead': isRead ? 1 : 0,
-      };
 
   Message copyWith({
     int? id,
@@ -125,6 +93,7 @@ class Message {
     DateTime? sentAt,
     String? status,
     bool? isRead,
+    bool? isDelivered,
   }) {
     return Message(
       id: id ?? this.id,
@@ -134,8 +103,20 @@ class Message {
       sentAt: sentAt ?? this.sentAt,
       status: status ?? this.status,
       isRead: isRead ?? this.isRead,
+      isDelivered: isDelivered ?? this.isDelivered,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'senderId': senderId,
+        'receiverId': receiverId,
+        'content': content,
+        'sentAt': sentAt.toIso8601String(),
+        'status': status,
+        'isRead': isRead ? 1 : 0,
+        'isDelivered': isDelivered ? 1 : 0,
+      };
 }
 
 class AppNotification {
@@ -172,27 +153,6 @@ class AppNotification {
             : DateTime.now(),
         relatedUserId: json['relatedUserId'] as String?,
       );
-AppNotification copyWith({
-    int? id,
-    int? userId,
-    String? title,
-    String? body,
-    String? type,
-    bool? isRead,
-    DateTime? createdAt,
-    String? relatedUserId,
-  }) {
-    return AppNotification(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      title: title ?? this.title,
-      body: body ?? this.body,
-      type: type ?? this.type,
-      isRead: isRead ?? this.isRead,
-      createdAt: createdAt ?? this.createdAt,
-      relatedUserId: relatedUserId ?? this.relatedUserId,
-    );
-  }
 
   Map<String, dynamic> toJson() => {
         'id': id,

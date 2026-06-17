@@ -1,10 +1,9 @@
 import 'dart:async';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/ride_service.dart';
 import '../services/directions_service.dart';
 import '../services/storage_service.dart';
@@ -14,6 +13,9 @@ import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../utils/marker_utils.dart';
+import '../utils/map_style_loader.dart';
+import '../utils/marker_factory.dart';
 
 class DriverNavigationToRiderScreen extends StatefulWidget {
   final int rideId;
@@ -47,15 +49,19 @@ class _DriverNavigationToRiderScreenState
   late final LatLng _pickupLocation;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
+  BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
+  String? _mapStyle;
   bool _isArriving = false;
   int _remainingMinutes = 15;
   double? _distanceKm;
 
   StreamSubscription<Position>? _positionStream;
+  int? _otherUserId;
 
   @override
   void initState() {
     super.initState();
+    _loadMapStyle();
 
     _pickupLocation = LatLng(widget.pickupLat, widget.pickupLng);
 
@@ -66,7 +72,13 @@ class _DriverNavigationToRiderScreenState
     addDebugMessage('Address: ${widget.pickupAddress}');
     addDebugMessage('═══════════════════════════════════════');
 
+    _initYellowPin();
     _initializeNavigation();
+    _fetchChatPartnerId();
+  }
+
+  Future<void> _initYellowPin() async {
+    _yellowPinMarker = await getYellowPinMarker();
   }
 
   Future<void> _initializeNavigation() async {
@@ -136,10 +148,9 @@ class _DriverNavigationToRiderScreenState
         }
 
         if (mounted) {
-          setState(() {
-            _updateMarkers();
-            _updateRoute();
-          });
+          _updateMarkers();
+          _updateRoute();
+          setState(() {});
         }
       },
       onError: (error) {
@@ -159,7 +170,7 @@ class _DriverNavigationToRiderScreenState
     }
   }
 
-  void _updateMarkers() {
+  Future<void> _updateMarkers() async {
     _markers.clear();
 
     if (_driverLocation != null) {
@@ -167,7 +178,7 @@ class _DriverNavigationToRiderScreenState
         Marker(
           markerId: const MarkerId('driver'),
           position: _driverLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          icon: await MarkerFactory.driver,
           infoWindow: const InfoWindow(title: 'Your Location'),
         ),
       );
@@ -177,7 +188,7 @@ class _DriverNavigationToRiderScreenState
       Marker(
         markerId: const MarkerId('pickup'),
         position: _pickupLocation,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        icon: _yellowPinMarker,
         infoWindow: InfoWindow(title: 'Pickup: ${widget.pickupAddress}'),
       ),
     );
@@ -202,7 +213,7 @@ class _DriverNavigationToRiderScreenState
             Polyline(
               polylineId: const PolylineId('route'),
               points: route.polylinePoints!,
-              color: Colors.blue,
+              color: AppColors.mapRouteLine,
               width: 5,
               geodesic: true,
             ),
@@ -270,7 +281,7 @@ class _DriverNavigationToRiderScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Rider notified!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
 
@@ -293,7 +304,7 @@ class _DriverNavigationToRiderScreenState
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Ride was cancelled'),
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.error,
               ),
             );
             Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
@@ -316,7 +327,7 @@ class _DriverNavigationToRiderScreenState
       if (mounted) {
         setState(() => _isArriving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -333,30 +344,23 @@ class _DriverNavigationToRiderScreenState
 
   Future<void> _launchUrl(Uri uri) async {
     try {
-      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-        await Clipboard.setData(ClipboardData(text: uri.toString()));
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Google Maps link copied to clipboard'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        addDebugMessage('Google Maps opened: $uri');
       } else {
         await Clipboard.setData(ClipboardData(text: uri.toString()));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Google Maps link copied to clipboard'),
+              content: Text('Could not open Maps — link copied to clipboard'),
               duration: Duration(seconds: 3),
             ),
           );
         }
+        addDebugMessage('Could not launch, copied URL instead: $uri');
       }
-      addDebugMessage('Google Maps URL: $uri');
     } catch (e) {
-      addDebugMessage('Error: $e');
+      addDebugMessage('Error launching URL: $e');
     }
   }
 
@@ -376,10 +380,16 @@ class _DriverNavigationToRiderScreenState
           style: TextStyle(color: Colors.white),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-            tooltip: 'Chat with Rider',
-            onPressed: _openChat,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                tooltip: 'Chat with Rider',
+                onPressed: _openChat,
+              ),
+              _buildUnreadBadge(),
+            ],
           ),
         ],
       ),
@@ -396,6 +406,7 @@ class _DriverNavigationToRiderScreenState
             compassEnabled: true,
             zoomControlsEnabled: false,
             myLocationButtonEnabled: true,
+            style: _mapStyle,
           ),
           if (_isArriving)
             Positioned.fill(
@@ -403,7 +414,7 @@ class _DriverNavigationToRiderScreenState
                 opacity: _isArriving ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 500),
                 child: Container(
-                  color: Colors.black54,
+                  color: AppColors.mapOverlay,
                   child: const Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -541,6 +552,41 @@ class _DriverNavigationToRiderScreenState
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _loadMapStyle() async {
+    _mapStyle = await MapStyleLoader.load();
+  }
+
+  Future<void> _fetchChatPartnerId() async {
+    final token = StorageService.getToken();
+    if (token == null) return;
+    try {
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride != null && mounted) {
+        _otherUserId = ride.rider.id;
+      }
+    } catch (_) {}
+  }
+
+  Widget _buildUnreadBadge() {
+    if (_otherUserId == null) return const SizedBox.shrink();
+    final count = WebSocketService.unreadCounts[_otherUserId!] ?? 0;
+    if (count == 0) return const SizedBox.shrink();
+    return Positioned(
+      right: 2,
+      top: 2,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+        child: Text(
+          count > 9 ? '9+' : '$count',
+          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }

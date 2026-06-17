@@ -35,7 +35,6 @@ class _AuthScreenState extends State<AuthScreen>
   @override
   void initState() {
     super.initState();
-    addDebugMessage(' Auth Screen Initialized');
     _animController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -61,14 +60,12 @@ class _AuthScreenState extends State<AuthScreen>
         return;
       }
 
-      setState(() => _isLoading = true);
+      if (_passwordController.text.length < 6) {
+        _showError('Password must be at least 6 characters');
+        return;
+      }
 
-      addDebugMessage('═══════════════════════════════════════');
-      addDebugMessage(' REGISTERING NEW USER');
-      addDebugMessage('Email: ${_emailController.text}');
-      addDebugMessage('Username: ${_usernameController.text}');
-      addDebugMessage('Role: $_selectedRole');
-      addDebugMessage('═══════════════════════════════════════');
+      setState(() => _isLoading = true);
 
       final url = '${StorageService.getServerUrl()}/api/auth/register';
 
@@ -89,20 +86,13 @@ class _AuthScreenState extends State<AuthScreen>
           )
           .timeout(const Duration(seconds: 15));
 
-      addDebugMessage('Response Status: ${response.statusCode}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-
-        addDebugMessage(' Registration successful');
-        addDebugMessage('User ID: ${data['userId']}');
 
         await StorageService.saveToken(data['token'] ?? '');
         await StorageService.saveUserId(data['userId'] ?? 0);
         await StorageService.saveUsername(data['username'] ?? '');
         await StorageService.saveRole(data['role'] ?? 'RIDER');
-
-        addDebugMessage('═══════════════════════════════════════');
 
         if (mounted) {
           final role = data['role'] ?? 'RIDER';
@@ -121,18 +111,14 @@ class _AuthScreenState extends State<AuthScreen>
         }
       } else {
         final error = jsonDecode(response.body);
-        addDebugMessage(' Registration failed: ${error['message']}');
         _showError(error['message'] ?? 'Registration failed');
       }
-    } on TimeoutException catch (e) {
-      addDebugMessage(' Timeout: $e');
+    } on TimeoutException {
       _showError('Request timed out. Please try again.');
-    } on SocketException catch (e) {
-      addDebugMessage(' Socket Error: $e');
+    } on SocketException {
       _showError('Connection error. Check your internet.');
     } catch (e) {
-      addDebugMessage(' Exception: $e');
-      _showError('Error: $e');
+      _showError('An unexpected error occurred');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -146,11 +132,6 @@ class _AuthScreenState extends State<AuthScreen>
       }
 
       setState(() => _isLoading = true);
-
-      addDebugMessage('═══════════════════════════════════════');
-      addDebugMessage(' LOGGING IN');
-      addDebugMessage('Email: ${_emailController.text}');
-      addDebugMessage('═══════════════════════════════════════');
 
       final url = '${StorageService.getServerUrl()}/api/auth/login';
 
@@ -168,21 +149,13 @@ class _AuthScreenState extends State<AuthScreen>
           )
           .timeout(const Duration(seconds: 15));
 
-      addDebugMessage('Response Status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
-        addDebugMessage(' Login successful');
-        addDebugMessage('User: ${data['username']}');
-        addDebugMessage('Role: ${data['role']}');
 
         await StorageService.saveToken(data['token'] ?? '');
         await StorageService.saveUserId(data['userId'] ?? 0);
         await StorageService.saveUsername(data['username'] ?? '');
         await StorageService.saveRole(data['role'] ?? 'RIDER');
-
-        addDebugMessage('═══════════════════════════════════════');
 
         if (mounted) {
           final role = data['role'] ?? 'RIDER';
@@ -201,29 +174,30 @@ class _AuthScreenState extends State<AuthScreen>
         }
       } else {
         final error = jsonDecode(response.body);
-        addDebugMessage(' Login failed: ${error['message']}');
         _showError(error['message'] ?? 'Login failed');
       }
-    } on TimeoutException catch (e) {
-      addDebugMessage(' Timeout: $e');
+    } on TimeoutException {
       _showError('Request timed out. Please try again.');
-    } on SocketException catch (e) {
-      addDebugMessage(' Socket Error: $e');
+    } on SocketException {
       _showError('Connection error. Check your internet.');
     } catch (e) {
-      addDebugMessage(' Exception: $e');
-      _showError('Error: $e');
+      _showError('An unexpected error occurred');
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -236,60 +210,66 @@ class _AuthScreenState extends State<AuthScreen>
           children: [
             GestureDetector(
               onLongPress: () {
-                addDebugMessage('🔓 Debug screen accessed from auth');
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const DebugScreen()),
                 );
               },
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.only(top: 60, bottom: 40),
+                decoration: const BoxDecoration(
+                  gradient: AppColors.darkGradient,
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.textPrimary.withValues(alpha: 0.2),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.directions_car_rounded,
+                        size: 36,
+                        color: Colors.white,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.directions_car_rounded,
-                      size: 36,
-                      color: Colors.white,
+                    AppSpacing.gapLg,
+                    const Text(
+                      'RideNow',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                  AppSpacing.gapLg,
-                  const Text(
-                    'RideNow',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  AppSpacing.gapXs,
-                  Text(
-                    'Sign in to continue',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
+                    AppSpacing.gapXs,
+                    Text(
+                      'Sign in to continue',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
                     ),
                   ],
                 ),
               ),
-              Transform.translate(
-                offset: const Offset(0, -24),
+            ),
+            Transform.translate(
+              offset: const Offset(0, -24),
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(24),
                     topRight: Radius.circular(24),
@@ -361,12 +341,12 @@ class _AuthScreenState extends State<AuthScreen>
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _isLogin ? Colors.white : Colors.transparent,
+                  color: _isLogin ? AppColors.surface : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: _isLogin
                       ? [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
+                            color: AppColors.textPrimary.withValues(alpha: 0.06),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -392,12 +372,12 @@ class _AuthScreenState extends State<AuthScreen>
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: !_isLogin ? Colors.white : Colors.transparent,
+                  color: !_isLogin ? AppColors.surface : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: !_isLogin
                       ? [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
+                            color: AppColors.textPrimary.withValues(alpha: 0.06),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -408,7 +388,9 @@ class _AuthScreenState extends State<AuthScreen>
                   'Register',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: !_isLogin ? AppColors.primary : AppColors.textTertiary,
+                    color: !_isLogin
+                        ? AppColors.primary
+                        : AppColors.textTertiary,
                     fontWeight: FontWeight.w600,
                     fontSize: 15,
                   ),
@@ -439,6 +421,13 @@ class _AuthScreenState extends State<AuthScreen>
           prefixIcon: Icons.lock_outlined,
           isPassword: true,
           obscureText: true,
+        ),
+        AppSpacing.gapXl,
+        PremiumButton(
+          label: 'Sign In',
+          onPressed: _isLoading ? null : _login,
+          isLoading: _isLoading,
+          variant: ButtonVariant.gradient,
         ),
         AppSpacing.gapLg,
         Row(
@@ -483,13 +472,6 @@ class _AuthScreenState extends State<AuthScreen>
               ),
             ),
           ],
-        ),
-        AppSpacing.gapXl,
-        PremiumButton(
-          label: 'Sign In',
-          onPressed: _isLoading ? null : _login,
-          isLoading: _isLoading,
-          variant: ButtonVariant.gradient,
         ),
       ],
     );
@@ -539,108 +521,20 @@ class _AuthScreenState extends State<AuthScreen>
         Row(
           children: [
             Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedRole = 'RIDER'),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: _selectedRole == 'RIDER'
-                        ? AppColors.primaryContainer
-                        : AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: _selectedRole == 'RIDER'
-                          ? AppColors.primary
-                          : AppColors.outline,
-                      width: _selectedRole == 'RIDER' ? 2 : 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.person,
-                        color: _selectedRole == 'RIDER'
-                            ? AppColors.primary
-                            : AppColors.textTertiary,
-                        size: 28,
-                      ),
-                      AppSpacing.gapSm,
-                      Text(
-                        'Ride',
-                        style: TextStyle(
-                          color: _selectedRole == 'RIDER'
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        'Request a trip',
-                        style: TextStyle(
-                          color: _selectedRole == 'RIDER'
-                              ? AppColors.primary.withValues(alpha: 0.7)
-                              : AppColors.textTertiary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              child: _buildRoleCard(
+                role: 'RIDER',
+                icon: Icons.person,
+                title: 'Ride',
+                subtitle: 'Request a trip',
               ),
             ),
             AppSpacing.hGapMd,
             Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedRole = 'DRIVER'),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: _selectedRole == 'DRIVER'
-                        ? AppColors.primaryContainer
-                        : AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: _selectedRole == 'DRIVER'
-                          ? AppColors.primary
-                          : AppColors.outline,
-                      width: _selectedRole == 'DRIVER' ? 2 : 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.directions_car,
-                        color: _selectedRole == 'DRIVER'
-                            ? AppColors.primary
-                            : AppColors.textTertiary,
-                        size: 28,
-                      ),
-                      AppSpacing.gapSm,
-                      Text(
-                        'Drive',
-                        style: TextStyle(
-                          color: _selectedRole == 'DRIVER'
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        'Earn money',
-                        style: TextStyle(
-                          color: _selectedRole == 'DRIVER'
-                              ? AppColors.primary.withValues(alpha: 0.7)
-                              : AppColors.textTertiary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              child: _buildRoleCard(
+                role: 'DRIVER',
+                icon: Icons.directions_car,
+                title: 'Drive',
+                subtitle: 'Earn money',
               ),
             ),
           ],
@@ -704,6 +598,59 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
+  Widget _buildRoleCard({
+    required String role,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    final isSelected = _selectedRole == role;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedRole = role),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primaryContainer
+              : AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.outline,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? AppColors.primary : AppColors.textTertiary,
+              size: 28,
+            ),
+            AppSpacing.gapSm,
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: isSelected
+                    ? AppColors.primary.withValues(alpha: 0.7)
+                    : AppColors.textTertiary,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showServerUrlDialog() {
     final urlController =
         TextEditingController(text: StorageService.getServerUrl());
@@ -761,7 +708,8 @@ class _AuthScreenState extends State<AuthScreen>
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Server URL updated'),
-                            backgroundColor: Colors.green,
+                            backgroundColor: AppColors.success,
+                            behavior: SnackBarBehavior.floating,
                           ),
                         );
                       },

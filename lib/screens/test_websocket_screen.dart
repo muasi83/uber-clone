@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/websocket_service.dart';
+import '../theme/app_colors.dart';
 
 class TestWebSocketScreen extends StatefulWidget {
   const TestWebSocketScreen({super.key});
@@ -58,10 +59,10 @@ class _TestWebSocketScreenState extends State<TestWebSocketScreen> {
   @override
   Widget build(BuildContext context) {
     Color statusColor = _connectionStatus == 'connected'
-        ? Colors.green
+        ? AppColors.success
         : _connectionStatus == 'error'
-            ? Colors.red
-            : Colors.grey;
+            ? AppColors.error
+            : AppColors.textTertiary;
 
     return Scaffold(
       appBar: AppBar(

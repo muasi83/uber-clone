@@ -11,6 +11,11 @@ import '../screens/debug_screen.dart';
 import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../widgets/cancel_ride_dialog.dart';
+import '../utils/marker_utils.dart';
+import '../widgets/premium_button.dart';
+import '../utils/map_style_loader.dart';
+import '../utils/marker_factory.dart';
 
 class RiderActiveRideScreen extends StatefulWidget {
   final int rideId;
@@ -38,14 +43,17 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   GoogleMapController? mapController;
   LatLng? _driverLocation;
   LatLng? _riderLocation;
-  LatLng? _prevDriverLocation;
-  final Set<Marker> _markers = {};
+  Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   int _remainingMinutes = 0;
   String? _driverName;
+  int? _otherUserId;
   bool _rideCompleting = false;
   double _driverHeading = 0;
   BitmapDescriptor _carIcon = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor _userLocationMarker = BitmapDescriptor.defaultMarker;
+  String? _mapStyle;
 
   Timer? _statusPollTimer;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
@@ -54,7 +62,10 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   @override
   void initState() {
     super.initState();
+    _loadMapStyle();
     _initCarIcon();
+    _initYellowPin();
+    _initUserLocationMarker();
     _setupWebSocketListeners();
     _getRiderLocation();
     _updateRoute();
@@ -67,6 +78,14 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     addDebugMessage('═══════════════════════════════════════');
   }
 
+  Future<void> _initYellowPin() async {
+    _yellowPinMarker = await getYellowPinMarker();
+  }
+
+  Future<void> _initUserLocationMarker() async {
+    _userLocationMarker = await MarkerFactory.userLocation;
+  }
+
   Future<void> _initCarIcon() async {
     try {
       _carIcon = await BitmapDescriptor.asset(
@@ -75,7 +94,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
       );
     } catch (e) {
       addDebugMessage('Car icon fallback: $e');
-      _carIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+      _carIcon = await MarkerFactory.driver;
     }
   }
 
@@ -102,20 +121,26 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         final payload = event['payload'] ?? event;
         final lat = (payload['latitude'] ?? payload['lat']) as double?;
         final lng = (payload['longitude'] ?? payload['lng']) as double?;
-        final heading = payload['heading'] as double?;
 
-        if (lat != null && lng != null) {
-          setState(() {
-            _prevDriverLocation = _driverLocation;
-            _driverLocation = LatLng(lat, lng);
-            if (heading != null) {
-              _driverHeading = heading;
-            } else if (_prevDriverLocation != null) {
-              _driverHeading = _bearingBetween(_prevDriverLocation!, _driverLocation!);
-            }
-            _updateMarkers();
-            _updateRoute();
-          });
+          if (lat != null && lng != null) {
+            setState(() {
+              final prev = _driverLocation;
+              _driverLocation = LatLng(lat, lng);
+              final heading = payload['heading'];
+              if (heading != null) {
+                _driverHeading = (heading as num).toDouble();
+              } else if (prev != null) {
+                _driverHeading = _bearingBetween(prev, _driverLocation!);
+              }
+              addDebugMessage(
+                'driver_location heading=$_driverHeading '
+                'from(${prev?.latitude.toStringAsFixed(5) ?? '?'},${prev?.longitude.toStringAsFixed(5) ?? '?'}) '
+                'to(${_driverLocation!.latitude.toStringAsFixed(5)},${_driverLocation!.longitude.toStringAsFixed(5)})'
+              );
+              _updateMarkers();
+            });
+
+          _updateRoute();
         }
       });
 
@@ -180,6 +205,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
       if (ride != null && ride.driver != null && mounted) {
         setState(() {
           _driverName = ride.driver!.fullName;
+          _otherUserId = ride.driver!.id;
         });
       }
     } catch (e) {
@@ -187,45 +213,65 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     }
   }
 
+  Widget _buildUnreadBadge() {
+    if (_otherUserId == null) return const SizedBox.shrink();
+    final count = WebSocketService.unreadCounts[_otherUserId!] ?? 0;
+    if (count == 0) return const SizedBox.shrink();
+    return Positioned(
+      right: 2,
+      top: 2,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: const BoxDecoration(
+          color: AppColors.error,
+          shape: BoxShape.circle,
+        ),
+        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+        child: Text(
+          count > 9 ? '9+' : '$count',
+          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
   void _updateMarkers() {
-    _markers.clear();
+    final updated = <Marker>{};
 
     if (_riderLocation != null) {
-      _markers.add(
+      updated.add(
         Marker(
           markerId: const MarkerId('current'),
           position: _riderLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueYellow,
-          ),
+          icon: _userLocationMarker,
         ),
       );
     }
 
     if (_driverLocation != null) {
-      _markers.add(
+      addDebugMessage('_updateMarkers rotation=$_driverHeading');
+      updated.add(
         Marker(
           markerId: const MarkerId('driver'),
           position: _driverLocation!,
           icon: _carIcon,
-          rotation: _driverHeading,
+          rotation: _carRotation(_driverHeading % 360),
           anchor: const Offset(0.5, 0.5),
           flat: true,
         ),
       );
     }
 
-    _markers.add(
+    updated.add(
       Marker(
         markerId: const MarkerId('destination'),
         position: LatLng(widget.dropoffLat, widget.dropoffLng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueRed,
-        ),
+        icon: _yellowPinMarker,
       ),
     );
 
-    setState(() {});
+    _markers = updated;
   }
 
   Future<void> _updateRoute() async {
@@ -277,6 +323,13 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   double _toRadians(double deg) => deg * math.pi / 180;
   double _toDegrees(double rad) => rad * 180 / math.pi;
 
+  /// Car image front faces DOWN (south). Add 180° so rotation=0 → north.
+  double _carRotation(double heading) => (heading + 180) % 360;
+
+  Future<void> _loadMapStyle() async {
+    _mapStyle = await MapStyleLoader.load();
+  }
+
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
   }
@@ -306,10 +359,16 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
-            tooltip: 'Chat with Driver',
-            onPressed: _openChat,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
+                tooltip: 'Chat with Driver',
+                onPressed: _openChat,
+              ),
+              _buildUnreadBadge(),
+            ],
           ),
         ],
       ),
@@ -317,6 +376,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         children: [
           GoogleMap(
             onMapCreated: _onMapCreated,
+            style: _mapStyle,
             initialCameraPosition: CameraPosition(
               target: LatLng(widget.pickupLat, widget.pickupLng),
               zoom: 15,
@@ -332,7 +392,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
             right: 0,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(AppSpacing.radiusXxl),
                 ),
@@ -490,20 +550,33 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
                             ),
                           ),
                         ),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.chat_rounded,
-                                color: AppColors.primary, size: 20),
-                            onPressed: _openChat,
-                          ),
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.chat_rounded,
+                                    color: AppColors.primary, size: 20),
+                                onPressed: _openChat,
+                              ),
+                            ),
+                            _buildUnreadBadge(),
+                          ],
                         ),
                       ],
                     ),
                   ],
+                  const SizedBox(height: 16),
+                  PremiumButton(
+                    label: 'Cancel Ride',
+                    onPressed: _showCancelRideDialog,
+                    variant: ButtonVariant.danger,
+                    icon: Icons.close,
+                  ),
                 ],
               ),
             ),
@@ -515,39 +588,9 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   }
 
   Future<void> _showCancelRideDialog() async {
-    final reasonController = TextEditingController();
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Ride?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Are you sure you want to cancel this ride?'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: 'Reason (optional)',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, {'action': 'no'}), child: const Text('No')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, {'action': 'yes', 'reason': reasonController.text.trim()}),
-            child: const Text('Yes, Cancel', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null && result['action'] == 'yes' && mounted) {
-      final reason = result['reason'] ?? 'Rider cancelled ride';
+    final result = await showCancelRideDialog(context);
+    if (result != null && result.confirmed && mounted) {
+      final reason = result.reason;
       try {
         final token = StorageService.getToken();
         if (token == null) return;

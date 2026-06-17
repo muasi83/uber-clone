@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import 'services/storage_service.dart';
 import 'services/crash_reporter.dart';
+import 'utils/map_style_loader.dart';
 
 import 'screens/auth_screen.dart';
 import 'screens/debug_screen.dart';
@@ -14,12 +15,10 @@ import 'screens/driver_ride_summary_screen.dart';
 import 'screens/rider_active_ride_screen.dart';
 import 'screens/rider_home_screen.dart';
 import 'screens/rider_ride_completed_screen.dart';
-import 'screens/rider_route_preview_screen.dart';
 import 'screens/rider_searching_driver_screen.dart';
 import 'screens/rider_tracking_screen.dart';
 import 'screens/rider_trip_details_screen.dart';
 import 'screens/splash_screen.dart';
-import 'screens/test_websocket_screen.dart';
 
 import 'screens/driver_active_ride_screen.dart' as driver_active;
 
@@ -27,6 +26,8 @@ import 'theme/app_theme.dart';
 import 'theme/app_colors.dart';
 import 'services/notification_service.dart';
 import 'services/websocket_service.dart';
+
+final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   runZonedGuarded(
@@ -48,13 +49,22 @@ void main() async {
       }
 
       await NotificationService.init();
+      NotificationService.navigatorKey = _navigatorKey;
 
       _setupNotificationListeners();
 
-      runApp(const MyApp());
+      await MapStyleLoader.load();
+
+      runApp(MyApp());
     },
     (error, stack) => CrashReporter.addLog('ZONE ERROR: $error\n$stack'),
   );
+}
+
+void _clearNotifications() {
+  final token = StorageService.getToken();
+  if (token == null) return;
+  NotificationService.markAllAsRead(token);
 }
 
 void _setupNotificationListeners() {
@@ -98,10 +108,12 @@ void _setupNotificationListeners() {
       case 'ride_completed':
         title = 'Ride Completed';
         body = 'You have reached your destination';
+        _clearNotifications();
         break;
       case 'ride_cancelled':
         title = 'Ride Cancelled';
         body = 'The ride has been cancelled';
+        _clearNotifications();
         break;
       case 'search_timeout':
         title = 'No Drivers Found';
@@ -120,11 +132,12 @@ void _setupNotificationListeners() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'RideNow',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
@@ -136,34 +149,14 @@ class MyApp extends StatelessWidget {
         '/splash': (_) => const SplashScreen(),
         '/auth': (_) => const AuthScreen(),
         '/debug': (_) => const DebugScreen(),
-        '/test-websocket': (_) => const TestWebSocketScreen(),
 
         // Rider
         '/rider-home': (_) => const RiderHomeScreen(),
 
-        '/rider-route-preview': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments;
-          if (args is! Map<String, dynamic>) {
-            return _routeError('Missing arguments for /rider-route-preview');
-          }
-          return RiderRoutePreviewScreen(
-            pickupLat: (args['pickupLat'] as num).toDouble(),
-            pickupLng: (args['pickupLng'] as num).toDouble(),
-            pickupAddress: args['pickupAddress'] as String,
-            dropoffLat: (args['dropoffLat'] as num).toDouble(),
-            dropoffLng: (args['dropoffLng'] as num).toDouble(),
-            dropoffAddress: args['dropoffAddress'] as String,
-            estimatedDistance: (args['estimatedDistance'] as num).toDouble(),
-            estimatedFare: (args['estimatedFare'] as num).toDouble(),
-            estimatedDuration: (args['estimatedDuration'] as num).toInt(),
-            rideType: args['rideType'] as String,
-          );
-        },
-
         '/rider-trip-details': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is! Map<String, dynamic>) {
-            return _routeError('Missing arguments for /rider-trip-details');
+            return _routeError(context, 'Missing arguments for /rider-trip-details');
           }
           return RiderTripDetailsScreen(
             pickupLat: (args['pickupLat'] as num).toDouble(),
@@ -181,7 +174,7 @@ class MyApp extends StatelessWidget {
         '/rider-searching': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is! Map<String, dynamic>) {
-            return _routeError('Missing arguments for /rider-searching');
+            return _routeError(context, 'Missing arguments for /rider-searching');
           }
           return RiderSearchingDriverScreen(
             rideId: (args['rideId'] as num).toInt(),
@@ -194,7 +187,7 @@ class MyApp extends StatelessWidget {
         '/rider-tracking': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is! Map<String, dynamic>) {
-            return _routeError('Missing arguments for /rider-tracking');
+            return _routeError(context, 'Missing arguments for /rider-tracking');
           }
           return RiderTrackingScreen(
             rideId: (args['rideId'] as num).toInt(),
@@ -205,7 +198,7 @@ class MyApp extends StatelessWidget {
         '/rider-active-ride': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is! Map<String, dynamic>) {
-            return _routeError('Missing arguments for /rider-active-ride');
+            return _routeError(context, 'Missing arguments for /rider-active-ride');
           }
           return RiderActiveRideScreen(
             rideId: (args['rideId'] as num).toInt(),
@@ -220,7 +213,7 @@ class MyApp extends StatelessWidget {
         '/rider-completed': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is! Map<String, dynamic>) {
-            return _routeError('Missing arguments for /rider-completed');
+            return _routeError(context, 'Missing arguments for /rider-completed');
           }
           return RiderRideCompletedScreen(
             rideId: (args['rideId'] as num).toInt(),
@@ -237,7 +230,7 @@ class MyApp extends StatelessWidget {
           final userIdRaw = StorageService.getUserId();
 
           if (token == null || username == null || userIdRaw == null) {
-            return _routeError('Missing driver registration data');
+            return _routeError(context, 'Missing driver registration data');
           }
 
           return DriverRegistrationScreen(
@@ -260,10 +253,7 @@ class MyApp extends StatelessWidget {
           final userId = (userIdRaw is num) ? userIdRaw.toInt() : null;
 
           if (token == null || username == null || userId == null) {
-            return _routeError(
-              'Missing driver session data.\n'
-              'token=$token\nusername=$username\nuserId=$userId',
-            );
+            return _routeError(context, 'Missing driver session data');
           }
 
           return DriverHomeScreen(
@@ -276,7 +266,7 @@ class MyApp extends StatelessWidget {
         '/driver-navigation': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is! Map<String, dynamic>) {
-            return _routeError('Missing arguments for /driver-navigation');
+            return _routeError(context, 'Missing arguments for /driver-navigation');
           }
           return DriverNavigationToRiderScreen(
             rideId: (args['rideId'] as num).toInt(),
@@ -292,7 +282,7 @@ class MyApp extends StatelessWidget {
         '/driver-active-ride': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is! Map<String, dynamic>) {
-            return _routeError('Missing arguments for /driver-active-ride');
+            return _routeError(context, 'Missing arguments for /driver-active-ride');
           }
           return driver_active.DriverActiveRideScreen(
             rideId: (args['rideId'] as num).toInt(),
@@ -305,7 +295,7 @@ class MyApp extends StatelessWidget {
         '/driver-summary': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is! Map<String, dynamic>) {
-            return _routeError('Missing arguments for /driver-summary');
+            return _routeError(context, 'Missing arguments for /driver-summary');
           }
           return DriverRideSummaryScreen(
             rideId: (args['rideId'] as num).toInt(),
@@ -316,10 +306,12 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Widget _routeError(String message) {
+Widget _routeError(BuildContext context, String message) {
   return Scaffold(
     appBar: AppBar(
       title: const Text('Navigation Error'),
+      backgroundColor: AppColors.error,
+      foregroundColor: Colors.white,
     ),
     body: Center(
       child: Padding(
@@ -327,12 +319,34 @@ Widget _routeError(String message) {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 56, color: AppColors.error),
+            const Icon(
+              Icons.error_outline,
+              size: 56,
+              color: AppColors.error,
+            ),
             const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.textPrimary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               child: const Text('OK'),
             ),
           ],

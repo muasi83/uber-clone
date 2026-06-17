@@ -142,7 +142,7 @@ Future<void> _checkExistingProfile() async {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.error,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -152,7 +152,7 @@ Future<void> _checkExistingProfile() async {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.success,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -186,8 +186,8 @@ Future<void> _checkExistingProfile() async {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFFFF5F5),
-              Colors.white,
+              AppColors.accentContainer,
+              AppColors.surface,
             ],
           ),
         ),

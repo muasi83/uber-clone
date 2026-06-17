@@ -7,21 +7,34 @@ import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../services/directions_service.dart';
+import '../services/websocket_service.dart';
+import '../services/driver_service.dart';
+import '../services/ride_service.dart';
+import '../services/storage_service.dart';
+import '../models/ride_model.dart';
+import '../screens/debug_screen.dart';
+import '../screens/rider_searching_driver_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../widgets/premium_card.dart';
 import '../widgets/glass_card.dart';
+import '../utils/marker_utils.dart';
+import '../utils/map_style_loader.dart';
+import '../utils/marker_factory.dart';
 
 class RiderDropoffLocationScreen extends StatefulWidget {
   final double pickupLat;
   final double pickupLng;
   final String pickupAddress;
+  final Ride? initialTrip;
 
   const RiderDropoffLocationScreen({
     super.key,
     required this.pickupLat,
     required this.pickupLng,
     required this.pickupAddress,
+    this.initialTrip,
   });
 
   @override
@@ -29,7 +42,9 @@ class RiderDropoffLocationScreen extends StatefulWidget {
       _RiderDropoffLocationScreenState();
 }
 
-class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen> {
+class _RiderDropoffLocationScreenState
+    extends State<RiderDropoffLocationScreen>
+    with SingleTickerProviderStateMixin {
   GoogleMapController? mapController;
 
   LatLng? _dropoffLocation;
@@ -51,31 +66,109 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
 
   bool _loggedGeocodingErrorOnce = false;
 
+  // Driver markers on map
+  final Map<String, Marker> _driverMarkers = {};
+  final Map<String, LatLng> _lastPollPositions = {};
+  BitmapDescriptor _driverMarkerIcon = BitmapDescriptor.defaultMarker;
+  StreamSubscription<Map<String, dynamic>>? _driverLocationSub;
+  Timer? _driverPollTimer;
+
+  BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor _stickPickupIcon = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor _stickDropoffIcon = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor _dotMarker = BitmapDescriptor.defaultMarker;
+  String? _mapStyle;
+
   double? _routeDistanceKm;
   int? _routeDurationMin;
+
+  // Trip details panel state
+  bool _showTripDetails = false;
+  bool _isAutoReviewing = false;
+  String _selectedRideType = 'ECONOMY';
+  String _selectedPaymentMethod = 'CASH';
+  double _selectedFare = 0.0;
+  bool _isSubmitting = false;
+
+  // Pulse animation
+  Timer? _dotTimer;
+  double _dotProgress = 0.0;
+
+  late AnimationController _bounceController;
+  late Animation<double> _bounceAnim;
+  late DraggableScrollableController _sheetController;
+  bool _isSheetExpanded = false;
 
   @override
   void initState() {
     super.initState();
+    _bounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _bounceAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _bounceController, curve: Curves.decelerate),
+    );
+    _bounceController.addListener(() => setState(() {}));
 
-    _dropoffLocation = LatLng(widget.pickupLat, widget.pickupLng);
+    _sheetController = DraggableScrollableController();
+    _sheetController.addListener(() {
+      if (_sheetController.size > 0.4) {
+        if (!_isSheetExpanded) setState(() => _isSheetExpanded = true);
+      } else {
+        if (_isSheetExpanded) setState(() => _isSheetExpanded = false);
+      }
+    });
+
+    _loadMapStyle();
+
+    if (widget.initialTrip != null) {
+      final trip = widget.initialTrip!;
+      _dropoffLocation = LatLng(trip.dropoffLatitude, trip.dropoffLongitude);
+      _dropoffAddress = trip.dropoffAddress;
+      _isAutoReviewing = true;
+      _calculateRoute(
+        LatLng(widget.pickupLat, widget.pickupLng),
+        _dropoffLocation!,
+      );
+    } else {
+      _dropoffLocation = LatLng(widget.pickupLat, widget.pickupLng);
+    }
     _updateMarkers();
 
-    _lookupAddress(_dropoffLocation!);
+    if (!_isAutoReviewing) {
+      _lookupAddress(_dropoffLocation!);
+    }
+    _initDriverMarkerIcon();
+    _initYellowPin();
+    _initStickPickupIcon();
+    _initStickDropoffIcon();
+    _initDotMarker();
+    _startDriverPolling();
+    _setupDriverLocationListener();
   }
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
     controller.animateCamera(
-      CameraUpdate.newLatLngZoom(LatLng(widget.pickupLat, widget.pickupLng), 15),
+      CameraUpdate.newLatLngZoom(
+          LatLng(widget.pickupLat, widget.pickupLng), 17),
     );
+  }
+
+  void _onCameraMove(CameraPosition position) {
+    if (_isDropoffConfirmed || _isSheetExpanded || _isAutoReviewing) return;
+
+    _dropoffLocation = position.target;
+    _bounceController.reset();
+    _updateMarkers();
   }
 
   Future<void> _onCameraIdle() async {
     try {
       if (mapController == null) return;
 
-      if (_isDropoffConfirmed) return;
+      if (_isDropoffConfirmed || _isSheetExpanded || _isAutoReviewing) return;
 
       final region = await mapController!.getVisibleRegion();
       final center = LatLng(
@@ -85,6 +178,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
 
       _dropoffLocation = center;
       _updateMarkers();
+      _bounceController.forward(from: 0.0);
       _lookupAddress(center);
     } catch (e) {
       if (kDebugMode) debugPrint('⚠️ Dropoff onCameraIdle error: $e');
@@ -94,22 +188,14 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
   void _updateMarkers() {
     _markers.clear();
 
-    _markers.add(
-      Marker(
-        markerId: const MarkerId('pickup'),
-        position: LatLng(widget.pickupLat, widget.pickupLng),
-        infoWindow: const InfoWindow(title: 'A - Pickup'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-      ),
-    );
-
-    if (_dropoffLocation != null) {
+    if (_stickPickupIcon != BitmapDescriptor.defaultMarker) {
       _markers.add(
         Marker(
-          markerId: const MarkerId('dropoff'),
-          position: _dropoffLocation!,
-          infoWindow: const InfoWindow(title: 'B - Dropoff'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          markerId: const MarkerId('pickup'),
+          position: LatLng(widget.pickupLat, widget.pickupLng),
+          icon: _stickPickupIcon,
+          anchor: const Offset(0.5, 0.85),
+          infoWindow: const InfoWindow(title: 'Pickup'),
         ),
       );
     }
@@ -208,7 +294,8 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
     }
 
     final now = DateTime.now();
-    if (_lastRouteAt != null && now.difference(_lastRouteAt!).inMilliseconds < 900) {
+    if (_lastRouteAt != null &&
+        now.difference(_lastRouteAt!).inMilliseconds < 900) {
       return;
     }
 
@@ -252,7 +339,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
             polylineId: const PolylineId('route'),
             points: points,
             color: AppColors.primary,
-            width: 5,
+            width: 3,
             geodesic: true,
           ),
         );
@@ -263,10 +350,188 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
         _routeDurationMin = result.durationMinutes;
         _isLoadingRoute = false;
       });
+      if (_isAutoReviewing) _autoShowReview();
     } catch (e) {
       if (mounted) setState(() => _isLoadingRoute = false);
       if (kDebugMode) debugPrint('❌ Route calculation error: $e');
     }
+  }
+
+  // ═════════════════════════════════════════════════════════════════
+  // DRIVER MARKERS
+  // ═════════════════════════════════════════════════════════════════
+
+  Future<void> _initYellowPin() async {
+    _yellowPinMarker = await getYellowPinMarker();
+  }
+
+  Future<void> _initStickPickupIcon() async {
+    _stickPickupIcon = await MarkerFactory.stickPickup;
+    if (mounted) _updateMarkers();
+  }
+
+  Future<void> _initStickDropoffIcon() async {
+    _stickDropoffIcon = await MarkerFactory.stickDropoff;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _initDotMarker() async {
+    _dotMarker = await MarkerFactory.userLocation;
+  }
+
+  Future<void> _initDriverMarkerIcon() async {
+    try {
+      _driverMarkerIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(64, 64)),
+        'assets/images/car_marker.png',
+      );
+    } catch (e) {
+      addDebugMessage('⚠️ Car icon fallback: $e');
+      _driverMarkerIcon = await MarkerFactory.driver;
+    }
+  }
+
+  void _startDriverPolling() {
+    _fetchNearbyDrivers();
+    _driverPollTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _fetchNearbyDrivers();
+    });
+  }
+
+  Future<void> _fetchNearbyDrivers() async {
+    if (_dropoffLocation == null) return;
+    try {
+      final drivers = await DriverService.getNearbyDrivers(
+        latitude: _dropoffLocation!.latitude,
+        longitude: _dropoffLocation!.longitude,
+        radiusKm: 5.0,
+      );
+      if (!mounted) return;
+      _updateDriverMarkers(drivers);
+      addDebugMessage('📍 Nearby drivers found: ${_driverMarkers.length}');
+    } catch (e) {
+      addDebugMessage('❌ Error fetching nearby drivers: $e');
+    }
+  }
+
+  void _updateDriverMarkers(List<DriverProfile> drivers) {
+    final currentIds = <String>{};
+    for (final driver in drivers) {
+      if (driver.currentLatitude == null || driver.currentLongitude == null)
+        continue;
+      if (!driver.isOnline) continue;
+      final driverId = driver.user.id;
+      if (driverId == null) continue;
+      final id = 'driver_$driverId';
+      currentIds.add(id);
+      final position =
+          LatLng(driver.currentLatitude!, driver.currentLongitude!);
+      final existing = _driverMarkers[id];
+      final lastPollPos = _lastPollPositions[id];
+      double rotation;
+      if (existing == null) {
+        rotation = 0;
+      } else if (lastPollPos != null && lastPollPos != position) {
+        rotation = _bearingBetween(lastPollPos, position);
+      } else {
+        rotation = existing.rotation;
+      }
+      _lastPollPositions[id] = position;
+      _driverMarkers[id] = Marker(
+        markerId: MarkerId(id),
+        position: position,
+        icon: _driverMarkerIcon,
+        rotation: _carRotation(rotation),
+        anchor: const Offset(0.5, 0.5),
+        flat: true,
+        infoWindow: InfoWindow(title: driver.user.fullName),
+      );
+    }
+    _driverMarkers.removeWhere((key, _) => !currentIds.contains(key));
+    _lastPollPositions.removeWhere((key, _) => !currentIds.contains(key));
+    if (mounted) setState(() {});
+  }
+
+  void _loadMapStyle() {
+    _mapStyle = MapStyleLoader.cachedStyle;
+  }
+
+  void _setupDriverLocationListener() {
+    _driverLocationSub?.cancel();
+    _driverLocationSub = WebSocketService.driverLocationEvents.listen((event) {
+      _handleDriverLocationEvent(event);
+    });
+  }
+
+  double _bearingBetween(LatLng from, LatLng to) {
+    final dLon = _toRadians(to.longitude - from.longitude);
+    final fromLat = _toRadians(from.latitude);
+    final toLat = _toRadians(to.latitude);
+    final y = math.sin(dLon) * math.cos(toLat);
+    final x = math.cos(fromLat) * math.sin(toLat) -
+        math.sin(fromLat) * math.cos(toLat) * math.cos(dLon);
+    return (_toDegrees(math.atan2(y, x)) + 360) % 360;
+  }
+
+  double _toRadians(double deg) => deg * math.pi / 180;
+  double _toDegrees(double rad) => rad * 180 / math.pi;
+
+  /// Car image front faces DOWN (south). Add 180° so rotation=0 → north.
+  double _carRotation(double heading) => (heading + 180) % 360;
+
+  void _handleDriverLocationEvent(Map<String, dynamic> event) {
+    final type = event['type'] as String? ?? '';
+    final payload = event['payload'] as Map<String, dynamic>? ?? event;
+    final driverId = payload['driverId'];
+    final lat = payload['latitude'] ?? payload['lat'];
+    final lng = payload['longitude'] ?? payload['lng'];
+    if (driverId == null || lat == null || lng == null) return;
+    final id = 'driver_$driverId';
+    final position = LatLng((lat as num).toDouble(), (lng as num).toDouble());
+
+    final existing = _driverMarkers[id];
+    if (type == 'driver_heading') {
+      if (existing == null) return;
+      final heading = payload['heading'];
+      if (heading == null) return;
+      final rotation = _carRotation((heading as num).toDouble() % 360);
+      if (existing.rotation == rotation) return;
+      _driverMarkers[id] = Marker(
+        markerId: existing.markerId,
+        position: existing.position,
+        icon: _driverMarkerIcon,
+        rotation: rotation,
+        anchor: const Offset(0.5, 0.5),
+        flat: true,
+        infoWindow: existing.infoWindow,
+      );
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (existing != null && existing.position == position) return;
+
+    final heading = payload['heading'];
+    double rotation;
+    if (heading != null) {
+      rotation = _carRotation((heading as num).toDouble() % 360);
+    } else if (existing != null) {
+      rotation = _carRotation(_bearingBetween(existing.position, position));
+    } else {
+      rotation = _carRotation(0);
+    }
+
+    _driverMarkers[id] = Marker(
+      markerId: MarkerId(id),
+      position: position,
+      icon: _driverMarkerIcon,
+      rotation: rotation,
+      anchor: const Offset(0.5, 0.5),
+      flat: true,
+      infoWindow:
+          existing?.infoWindow ?? InfoWindow(title: 'Driver #$driverId'),
+    );
+    if (mounted) setState(() {});
   }
 
   void _confirmDropoffPoint() {
@@ -276,17 +541,28 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Calculating route...'),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
     }
 
+    _fitBoundsToRouteForReview();
+    _selectedFare = _calculateFare('ECONOMY');
     setState(() {
       _isDropoffConfirmed = true;
+      _showTripDetails = true;
     });
+    _startMovingDotAnimation();
+  }
 
-    _fitBoundsToRouteForReview();
+  void _autoShowReview() {
+    _selectedFare = _calculateFare('ECONOMY');
+    setState(() {
+      _isDropoffConfirmed = true;
+      _showTripDetails = true;
+    });
+    _startMovingDotAnimation();
   }
 
   void _fitBoundsToRouteForReview() {
@@ -316,39 +592,183 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
   void _changeDropoff() {
     setState(() {
       _isDropoffConfirmed = false;
+      _isSheetExpanded = false;
     });
   }
 
-  void _requestRide() {
-    if (_dropoffLocation == null) return;
+  double _calculateFare(String rideType) {
+    const baseFare = 2.0;
+    final ratePerKm = rideType == 'ECONOMY' ? 0.20 : 0.35;
+    return baseFare + ((_routeDistanceKm ?? 0.0) * ratePerKm);
+  }
 
-    if (_routeDistanceKm == null || _routeDurationMin == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Route is not ready yet'),
-          backgroundColor: Colors.orange,
+  void _updateRideType(String rideType) {
+    setState(() {
+      _selectedRideType = rideType;
+      _selectedFare = _calculateFare(rideType);
+    });
+  }
+
+  void _showPaymentMethodSelector() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Payment Method',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            _buildPaymentOption('WALLET', Icons.account_balance_wallet),
+            _buildPaymentOption('CASH', Icons.money),
+            _buildPaymentOption('CARD', Icons.credit_card),
+            const SizedBox(height: 16),
+          ],
         ),
-      );
+      ),
+    );
+  }
+
+  LatLng _interpolateAlongRoute(double progress) {
+    if (_currentPolylinePoints.isEmpty) return LatLng(widget.pickupLat, widget.pickupLng);
+    if (_currentPolylinePoints.length == 1) return _currentPolylinePoints.first;
+    if (progress >= 1.0) return _currentPolylinePoints.last;
+    if (progress <= 0.0) return _currentPolylinePoints.first;
+
+    final totalSegments = _currentPolylinePoints.length - 1;
+    final rawIndex = progress * totalSegments;
+    final segIndex = rawIndex.floor();
+    final segProgress = rawIndex - segIndex;
+
+    final from = _currentPolylinePoints[segIndex];
+    final to = _currentPolylinePoints[segIndex + 1];
+    return LatLng(
+      from.latitude + (to.latitude - from.latitude) * segProgress,
+      from.longitude + (to.longitude - from.longitude) * segProgress,
+    );
+  }
+
+  void _startMovingDotAnimation() {
+    _dotTimer?.cancel();
+    _dotProgress = 0.0;
+    _dotTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      if (!mounted) return;
+      setState(() {
+        _dotProgress += 0.008;
+        if (_dotProgress >= 1.2) {
+          _dotProgress = 0.0;
+        }
+      });
+    });
+  }
+
+  void _stopMovingDotAnimation() {
+    _dotTimer?.cancel();
+    _dotTimer = null;
+    _dotProgress = 0.0;
+  }
+
+  Widget _buildPaymentOption(String method, IconData icon) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primary),
+      title: Text(method),
+      trailing: _selectedPaymentMethod == method
+          ? const Icon(Icons.check_circle, color: AppColors.primary)
+          : null,
+      onTap: () {
+        setState(() => _selectedPaymentMethod = method);
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  void _dismissTripDetails() {
+    _stopMovingDotAnimation();
+    if (_isAutoReviewing) {
+      Navigator.pop(context);
       return;
     }
+    setState(() {
+      _showTripDetails = false;
+      _isSheetExpanded = false;
+    });
+  }
 
-    Navigator.pushNamed(
-      context,
-      '/rider-trip-details',
-      arguments: {
-        'pickupLat': widget.pickupLat,
-        'pickupLng': widget.pickupLng,
-        'pickupAddress': widget.pickupAddress,
-        'dropoffLat': _dropoffLocation!.latitude,
-        'dropoffLng': _dropoffLocation!.longitude,
-        'dropoffAddress': _dropoffAddress.isEmpty
-            ? 'Lat: ${_dropoffLocation!.latitude.toStringAsFixed(4)}, Lng: ${_dropoffLocation!.longitude.toStringAsFixed(4)}'
-            : _dropoffAddress,
-        'estimatedDistance': _routeDistanceKm!,
-        'estimatedDuration': _routeDurationMin!,
-        'rideType': 'ECONOMY',
-        'estimatedFare': 0.0,
-      },
+  Future<void> _submitRideRequest() async {
+    if (_isSubmitting) return;
+
+    try {
+      setState(() => _isSubmitting = true);
+
+      addDebugMessage('═══════════════════════════════════════');
+      addDebugMessage('📤 SUBMITTING RIDE REQUEST');
+      addDebugMessage('Type: $_selectedRideType');
+      addDebugMessage('Payment: $_selectedPaymentMethod');
+      addDebugMessage('═══════════════════════════════════════');
+
+      final token = StorageService.getToken();
+      if (token == null) {
+        _showError('Authentication error');
+        return;
+      }
+
+      final dropoffAddress = _dropoffAddress.isEmpty
+          ? 'Lat: ${_dropoffLocation!.latitude.toStringAsFixed(4)}, Lng: ${_dropoffLocation!.longitude.toStringAsFixed(4)}'
+          : _dropoffAddress;
+
+      final ride = await RideService.requestRide(
+        pickupLat: widget.pickupLat,
+        pickupLng: widget.pickupLng,
+        pickupAddress: widget.pickupAddress,
+        dropoffLat: _dropoffLocation!.latitude,
+        dropoffLng: _dropoffLocation!.longitude,
+        dropoffAddress: dropoffAddress,
+        rideType: _selectedRideType,
+        estimatedDistance: _routeDistanceKm ?? 0.0,
+        estimatedFare: _selectedFare,
+        estimatedDuration: _routeDurationMin ?? 0,
+        token: token,
+      );
+
+      if (ride != null && mounted) {
+        _stopMovingDotAnimation();
+        addDebugMessage('✅ Ride created: ${ride.id}');
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RiderSearchingDriverScreen(
+              rideId: ride.id!,
+              pickupAddress: widget.pickupAddress,
+              dropoffAddress: dropoffAddress,
+              estimatedFare: _selectedFare,
+            ),
+          ),
+        );
+      } else {
+        _showError('Failed to request ride');
+      }
+    } catch (e) {
+      addDebugMessage('❌ Error: $e');
+      _showError('Error: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 
@@ -372,23 +792,48 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
   Widget build(BuildContext context) {
     final initial = LatLng(widget.pickupLat, widget.pickupLng);
 
-    final routeReady =
-        !_isLoadingRoute && _routeDistanceKm != null && _routeDurationMin != null;
+    final routeReady = !_isLoadingRoute &&
+        _routeDistanceKm != null &&
+        _routeDurationMin != null;
 
     return Scaffold(
       body: Stack(
         children: [
           GoogleMap(
             onMapCreated: _onMapCreated,
+            onCameraMove: _onCameraMove,
             onCameraIdle: _onCameraIdle,
             initialCameraPosition: CameraPosition(target: initial, zoom: 15),
-            markers: _markers,
+            markers: {
+              ..._markers,
+              ..._driverMarkers.values.toSet(),
+              if (_isDropoffConfirmed && _dropoffLocation != null && _stickDropoffIcon != BitmapDescriptor.defaultMarker)
+                Marker(
+                  markerId: const MarkerId('dropoff'),
+                  position: _dropoffLocation!,
+                  icon: _stickDropoffIcon,
+                  anchor: const Offset(0.5, 0.85),
+                  infoWindow: const InfoWindow(title: 'Dropoff'),
+                ),
+              if (_showTripDetails && _currentPolylinePoints.length > 1 && _dotProgress <= 1.0)
+                Marker(
+                  markerId: const MarkerId('moving_dot'),
+                  position: _interpolateAlongRoute(_dotProgress),
+                  icon: _dotMarker,
+                  anchor: const Offset(0.5, 0.5),
+                  zIndexInt: 10,
+                ),
+            },
             polylines: _polylines,
             compassEnabled: true,
             zoomControlsEnabled: false,
             myLocationButtonEnabled: false,
+            scrollGesturesEnabled: !_isSheetExpanded,
+            zoomGesturesEnabled: !_isSheetExpanded,
+            rotateGesturesEnabled: !_isSheetExpanded,
+            tiltGesturesEnabled: !_isSheetExpanded,
+            style: _mapStyle,
           ),
-
           Positioned(
             top: 0,
             left: 0,
@@ -407,31 +852,13 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
               centerTitle: true,
             ),
           ),
-
           if (!_isDropoffConfirmed)
             Center(
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 60),
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.location_on,
-                    color: Colors.red,
-                    size: 48,
-                  ),
-                ),
+                child: _buildDropPin(_bounceAnim.value),
               ),
             ),
-
           Positioned(
             left: 0,
             right: 0,
@@ -465,7 +892,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                           height: 26,
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.green,
+                            color: AppColors.pickupMarker,
                           ),
                           child: const Center(
                             child: Text('A',
@@ -494,7 +921,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                           height: 26,
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.orange,
+                            color: AppColors.warning,
                           ),
                           child: const Center(
                             child: Text('B',
@@ -537,24 +964,29 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                           Text('Calculating route...'),
                         ],
                       )
-                    else if (_routeDistanceKm != null && _routeDurationMin != null)
+                    else if (_routeDistanceKm != null &&
+                        _routeDurationMin != null)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.route, size: 16, color: AppColors.primary),
+                              const Icon(Icons.route,
+                                  size: 16, color: AppColors.primary),
                               AppSpacing.hGapXs,
                               Text('${_routeDistanceKm!.toStringAsFixed(2)} km',
-                                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
                             ],
                           ),
                           Row(
                             children: [
-                              const Icon(Icons.access_time, size: 16, color: AppColors.primary),
+                              const Icon(Icons.access_time,
+                                  size: 16, color: AppColors.primary),
                               AppSpacing.hGapXs,
                               Text('$_routeDurationMin min',
-                                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ],
@@ -565,12 +997,13 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                       onPressed: routeReady ? _confirmDropoffPoint : null,
                       variant: ButtonVariant.gradient,
                     ),
-                  ] else ...[
-                    // Phase 2: Reviewing dropoff
+                  ] else if (!_showTripDetails) ...[
+                    // Dropoff confirmed, sheet not visible — show minimal card
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.trip_origin, color: Colors.green, size: 24),
+                        const Icon(Icons.trip_origin,
+                            color: AppColors.pickupMarker, size: 24),
                         AppSpacing.hGapMd,
                         Expanded(
                           child: Column(
@@ -596,7 +1029,8 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.location_on, color: Colors.red, size: 24),
+                        const Icon(Icons.location_on,
+                            color: AppColors.dropoffMarker, size: 24),
                         AppSpacing.hGapMd,
                         Expanded(
                           child: Column(
@@ -614,8 +1048,7 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13),
+                                    fontWeight: FontWeight.w600, fontSize: 13),
                               ),
                             ],
                           ),
@@ -627,12 +1060,10 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _routeInfoChip(
-                              Icons.route,
+                          _routeInfoChip(Icons.route,
                               '${_routeDistanceKm!.toStringAsFixed(1)} km'),
                           _routeInfoChip(
-                              Icons.access_time,
-                              '$_routeDurationMin min'),
+                              Icons.access_time, '$_routeDurationMin min'),
                         ],
                       ),
                     AppSpacing.gapSm,
@@ -646,8 +1077,11 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
                     ),
                     AppSpacing.gapSm,
                     PremiumButton(
-                      label: 'Request Ride',
-                      onPressed: routeReady ? _requestRide : null,
+                      label: 'Review Ride',
+                      onPressed: () {
+                        setState(() => _showTripDetails = true);
+                        _startMovingDotAnimation();
+                      },
                       variant: ButtonVariant.gradient,
                     ),
                   ],
@@ -655,8 +1089,301 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
               ),
             ),
           ),
+          if (_showTripDetails) _buildTripDetailsSheet(),
         ],
       ),
+    );
+  }
+
+  Widget _buildDropPin(double bounce) {
+    return SizedBox(
+      width: 48,
+      height: 80,
+      child: CustomPaint(
+        painter: _DropPinPainter(bounce: bounce),
+      ),
+    );
+  }
+
+  Widget _buildTripDetailsSheet() {
+    return DraggableScrollableSheet(
+      controller: _sheetController,
+      initialChildSize: 0.55,
+      minChildSize: 0.3,
+      maxChildSize: 0.85,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.textPrimary.withValues(alpha: 0.15),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(width: 48),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.outlineVariant,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20, color: AppColors.textTertiary),
+                    onPressed: _dismissTripDetails,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  ),
+                ],
+              ),
+              // Addresses
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.trip_origin, color: AppColors.pickupMarker, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(widget.pickupAddress,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Column(
+                  children: List.generate(3, (i) => Container(
+                    width: 2, height: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 1),
+                    decoration: BoxDecoration(
+                      color: AppColors.outlineVariant,
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  )),
+                ),
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.location_on, color: AppColors.dropoffMarker, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _dropoffAddress.isEmpty
+                          ? 'Lat: ${_dropoffLocation!.latitude.toStringAsFixed(4)}, Lng: ${_dropoffLocation!.longitude.toStringAsFixed(4)}'
+                          : _dropoffAddress,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _routeInfoChip(Icons.route, '${_routeDistanceKm!.toStringAsFixed(1)} km'),
+                  _routeInfoChip(Icons.access_time, '$_routeDurationMin min'),
+                ],
+              ),
+              const Divider(height: 24),
+
+              // Ride type selection
+              const Text('Select ride type',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const SizedBox(height: 12),
+              _buildRideTypeCard(
+                type: 'ECONOMY', icon: Icons.local_taxi,
+                description: 'Affordable, everyday rides', rate: '\$0.20/km',
+                isSelected: _selectedRideType == 'ECONOMY',
+              ),
+              const SizedBox(height: 12),
+              _buildRideTypeCard(
+                type: 'LUXURY', icon: Icons.directions_car,
+                description: 'Premium vehicles, top drivers', rate: '\$0.35/km',
+                isSelected: _selectedRideType == 'LUXURY',
+              ),
+              const SizedBox(height: 16),
+
+              // Payment method
+              const Text('Payment method',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: _showPaymentMethodSelector,
+                child: PremiumCard(
+                  padding: const EdgeInsets.all(12),
+                  hasRipple: true,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          _selectedPaymentMethod == 'WALLET'
+                              ? Icons.account_balance_wallet
+                              : _selectedPaymentMethod == 'CASH' ? Icons.money : Icons.credit_card,
+                          color: AppColors.primary, size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(_selectedPaymentMethod,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      ),
+                      const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 22),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Price breakdown
+              PremiumCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _priceRow('Base fare', '\$2.00'),
+                    const SizedBox(height: 12),
+                    _priceRow(
+                      'Distance (${_routeDistanceKm!.toStringAsFixed(1)} km)',
+                      '\$${(_routeDistanceKm! * (_selectedRideType == 'ECONOMY' ? 0.20 : 0.35)).toStringAsFixed(2)}',
+                    ),
+                    const Divider(height: 24),
+                    _priceRow('Total', '\$${_selectedFare.toStringAsFixed(2)}', isTotal: true),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Confirm button
+              PremiumButton(
+                label: _isSubmitting ? 'Requesting...' : 'Confirm Ride',
+                isLoading: _isSubmitting,
+                onPressed: _isSubmitting ? null : _submitRideRequest,
+                icon: _isSubmitting ? null : Icons.check_circle_outline,
+                variant: ButtonVariant.gradient,
+                height: 56,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRideTypeCard({
+    required String type,
+    required IconData icon,
+    required String description,
+    required String rate,
+    required bool isSelected,
+  }) {
+    return GestureDetector(
+      onTap: () => _updateRideType(type),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.surface : AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.outline,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected ? [BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          )] : [],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                width: 48, height: 48,
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: isSelected ? AppColors.primary : AppColors.textTertiary, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(type, style: TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 15,
+                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                    )),
+                    const SizedBox(height: 2),
+                    Text(description, style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(rate, style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                  const SizedBox(height: 2),
+                  Text('\$${_calculateFare(type).toStringAsFixed(2)}',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16,
+                          color: isSelected ? AppColors.primary : AppColors.textPrimary)),
+                ],
+              ),
+              if (isSelected) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 24, height: 24,
+                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                  child: const Icon(Icons.check, color: Colors.white, size: 16),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _priceRow(String label, String value, {bool isTotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(
+          fontSize: isTotal ? 14 : 13,
+          fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400,
+          color: isTotal ? AppColors.textPrimary : AppColors.textSecondary,
+        )),
+        Text(value, style: TextStyle(
+          fontSize: isTotal ? 16 : 13,
+          fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
+          color: isTotal ? AppColors.primary : AppColors.textPrimary,
+        )),
+      ],
     );
   }
 
@@ -687,9 +1414,97 @@ class _RiderDropoffLocationScreenState extends State<RiderDropoffLocationScreen>
   @override
   void dispose() {
     _addressLookupTimer?.cancel();
+    _driverPollTimer?.cancel();
+    _driverLocationSub?.cancel();
+    _dotTimer?.cancel();
+    _bounceController.dispose();
+    _sheetController.dispose();
     if (!kIsWeb) {
       mapController?.dispose();
     }
     super.dispose();
   }
+}
+
+class _DropPinPainter extends CustomPainter {
+  final double bounce;
+
+  _DropPinPainter({this.bounce = 0.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centerX = size.width / 2;
+    final bottomY = size.height - 8;
+    final topY = 22.0;
+
+    // ── Shadow (splashes on droplet impact) ──
+    double shadowScale;
+    if (bounce < 0.55) {
+      shadowScale = 1.0;
+    } else if (bounce < 0.75) {
+      final splash = (bounce - 0.55) / 0.2;
+      shadowScale = 1.0 + splash * 1.2;
+    } else {
+      final settle = (bounce - 0.75) / 0.25;
+      shadowScale = 2.2 - settle * 1.2;
+    }
+    final shadowPaint = Paint()
+      ..color = AppColors.textPrimary.withValues(alpha: 0.2)
+      ..style = PaintingStyle.fill;
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(centerX, bottomY + 3),
+        width: 10 * shadowScale,
+        height: 4 * shadowScale,
+      ),
+      shadowPaint,
+    );
+
+    // ── Stick ──
+    final stickPaint = Paint()
+      ..color = AppColors.textPrimary
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      Offset(centerX, bottomY - 4),
+      Offset(centerX, topY + 2),
+      stickPaint,
+    );
+
+    // ── Bulb ──
+    final tipPaint = Paint()
+      ..color = AppColors.dropoffMarker
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(centerX, topY), 5, tipPaint);
+
+    final centerPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(centerX, topY), 2, centerPaint);
+
+    // ── Falling droplet ──
+    if (bounce > 0.05 && bounce < 0.7) {
+      final dropStart = topY + 6;
+      final dropEnd = bottomY - 4;
+      final t = ((bounce - 0.05) / 0.65).clamp(0.0, 1.0);
+      final dropY = dropStart + (dropEnd - dropStart) * (t * t);
+      final dropRadius = 3.0 * (1.0 - t * 0.4);
+      canvas.drawCircle(Offset(centerX, dropY), dropRadius, tipPaint);
+    }
+
+    // ── Splash ring on impact ──
+    if (bounce > 0.55 && bounce < 0.8) {
+      final t = (bounce - 0.55) / 0.25;
+      final ringRadius = 4 + t * 14;
+      final ringPaint = Paint()
+        ..color = AppColors.dropoffMarker.withValues(alpha: (1.0 - t) * 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawCircle(Offset(centerX, bottomY + 3), ringRadius, ringPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DropPinPainter oldDelegate) =>
+      oldDelegate.bounce != bounce;
 }

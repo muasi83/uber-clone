@@ -1,8 +1,6 @@
-// ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/storage_service.dart';
-import '../screens/debug_screen.dart';
 import '../screens/auth_screen.dart';
 import '../screens/rider_home_screen.dart';
 import '../screens/driver_home_screen.dart';
@@ -36,42 +34,21 @@ class _SplashScreenState extends State<SplashScreen>
     _initializeApp();
   }
 
-  /// Initialize app and check for existing session
   Future<void> _initializeApp() async {
     try {
-      addDebugMessage('═══════════════════════════════════════');
-      addDebugMessage('🚀 SPLASH SCREEN INIT');
-      addDebugMessage('═══════════════════════════════════════');
-
-      print('DEBUG: Starting initialization');
-
-      // Wait 2 seconds for splash animation
-      addDebugMessage('⏳ Waiting 2 seconds...');
       await Future.delayed(const Duration(seconds: 2));
 
-      print('DEBUG: 2 second delay complete');
-
-      // Request location permission before anything else
-      addDebugMessage('🔐 Requesting location permission...');
       if (mounted) setState(() => _locationRequired = true);
 
       final granted = await _requestLocation();
       if (!granted || !mounted) return;
 
-      print('DEBUG: Session check complete');
-
-      // Check for existing session
       await _checkSession();
-
-      print('DEBUG: Session check complete');
     } catch (e) {
-      print('DEBUG: Error in splash: $e');
-      addDebugMessage('❌ Error in splash: $e');
       _navigateToAuth();
     }
   }
 
-  /// Request location permission, returns true if granted
   Future<bool> _requestLocation() async {
     try {
       var permission = await Geolocator.checkPermission();
@@ -82,21 +59,16 @@ class _SplashScreenState extends State<SplashScreen>
 
       if (permission == LocationPermission.always ||
           permission == LocationPermission.whileInUse) {
-        addDebugMessage('✅ Location permission granted: $permission');
         return true;
       }
 
       if (permission == LocationPermission.deniedForever) {
-        addDebugMessage('❌ Location denied forever');
         if (mounted) setState(() => _locationDeniedForever = true);
         return false;
       }
 
-      // denied or unableToDetermine
-      addDebugMessage('❌ Location permission: $permission');
       return false;
     } catch (e) {
-      addDebugMessage('❌ Error requesting location: $e');
       return false;
     }
   }
@@ -114,7 +86,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _openAppSettings() async {
     await Geolocator.openAppSettings();
-    // Check again after returning from settings
     final granted = await _requestLocation();
     if (granted && mounted) {
       await _checkSession();
@@ -123,43 +94,22 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-  /// Check if user has existing session
   Future<void> _checkSession() async {
     try {
-      addDebugMessage('🔍 Checking saved credentials...');
-      print('DEBUG: Checking credentials');
-
       final token = StorageService.getToken();
       final userId = StorageService.getUserId();
       final username = StorageService.getUsername();
       final role = StorageService.getRole();
 
-      print('DEBUG: Token: $token');
-      print('DEBUG: UserId: $userId');
-      print('DEBUG: Username: $username');
-      print('DEBUG: Role: $role');
-
-      addDebugMessage(
-          'Token: ${token != null ? '✅ Found' : '❌ Not found'}');
-      addDebugMessage(
-          'User ID: ${userId != null ? '✅ Found' : '❌ Not found'}');
-      addDebugMessage(
-          'Username: ${username != null ? '✅ Found' : '❌ Not found'}');
-      addDebugMessage(
-          'Role: ${role != null ? '✅ Found' : '❌ Not found'}');
-
-      // Check if all required data exists
       if (token != null &&
           userId != null &&
           username != null &&
           role != null) {
-        addDebugMessage('✅ Valid session found');
-        addDebugMessage('═══════════════════════════════════════');
+        final activeRideId = StorageService.getActiveRideId();
+        if (activeRideId != null) {
+          StorageService.clearActiveRideId();
+        }
 
-        print(
-            'DEBUG: Valid session - navigating to ${role == 'DRIVER' ? 'driver' : 'rider'} home');
-
-        // Navigate to appropriate home screen based on role
         if (mounted) {
           if (role == 'DRIVER') {
             Navigator.of(context).pushAndRemoveUntil(
@@ -182,23 +132,15 @@ class _SplashScreenState extends State<SplashScreen>
           }
         }
       } else {
-        addDebugMessage('❌ No valid session - going to AuthScreen');
-        addDebugMessage('═══════════════════════════════════════');
-
-        print('DEBUG: No valid session - navigating to auth');
         _navigateToAuth();
       }
     } catch (e) {
-      print('DEBUG: Error checking session: $e');
-      addDebugMessage('❌ Error checking session: $e');
       _navigateToAuth();
     }
   }
 
-  /// Navigate to auth screen
   void _navigateToAuth() {
     if (mounted) {
-      print('DEBUG: Navigating to AuthScreen');
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (context) => const AuthScreen(),
@@ -223,7 +165,9 @@ class _SplashScreenState extends State<SplashScreen>
         decoration: const BoxDecoration(
           gradient: AppColors.darkGradient,
         ),
-        child: _locationRequired ? _buildLocationRequest() : _buildSplashContent(),
+        child: _locationRequired
+            ? _buildLocationRequest()
+            : _buildSplashContent(),
       ),
     );
   }
@@ -252,8 +196,7 @@ class _SplashScreenState extends State<SplashScreen>
               height: 100,
               decoration: BoxDecoration(
                 color: AppColors.primary,
-                borderRadius:
-                    BorderRadius.circular(AppSpacing.radiusXl),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.primary.withValues(alpha: 0.4),
@@ -342,13 +285,18 @@ class _SplashScreenState extends State<SplashScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.15),
+                color: AppColors.warning.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.3),
+                ),
               ),
               child: const Text(
                 'Location permission was permanently denied. Please enable it in Settings.',
-                style: TextStyle(color: Colors.orange, fontSize: 13),
+                style: TextStyle(
+                  color: AppColors.warning,
+                  fontSize: 13,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -362,7 +310,7 @@ class _SplashScreenState extends State<SplashScreen>
                 label: const Text('Open Settings'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.textPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -379,7 +327,7 @@ class _SplashScreenState extends State<SplashScreen>
                 label: const Text('Grant Location Access'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.textPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -389,7 +337,6 @@ class _SplashScreenState extends State<SplashScreen>
             const SizedBox(height: AppSpacing.md),
             TextButton(
               onPressed: () {
-                // User declined - show again on next app start
                 if (mounted) _navigateToAuth();
               },
               child: const Text(

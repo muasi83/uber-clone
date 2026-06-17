@@ -7,6 +7,9 @@ import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../utils/marker_utils.dart';
+import '../utils/map_style_loader.dart';
+import '../utils/marker_factory.dart';
 
 class RideLocationPickerScreen extends StatefulWidget {
   const RideLocationPickerScreen({super.key});
@@ -26,6 +29,8 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
   
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
+  BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
+  String? _mapStyle;
   
   int _step = 0; // 0 = pickup, 1 = dropoff
   double? _estimatedDistance;
@@ -39,7 +44,13 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
   @override
   void initState() {
     super.initState();
+    _loadMapStyle();
+    _initYellowPin();
     _initializeMap();
+  }
+
+  Future<void> _initYellowPin() async {
+    _yellowPinMarker = await getYellowPinMarker();
   }
 
   Future<void> _initializeMap() async {
@@ -63,9 +74,8 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
       }
       
       if (mounted) {
-        setState(() {
-          _updateMapMarkers();
-        });
+        setState(() {});
+        await _updateMapMarkers();
       }
       
       addDebugMessage('✅ Map initialized at: $_pickupAddress');
@@ -87,7 +97,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
     if (_step == 0) {
       // Selecting pickup
       _pickupLocation = position.target;
-      _updateMapMarkers();
+      await _updateMapMarkers();
       
       try {
         final placemarks = await placemarkFromCoordinates(
@@ -110,7 +120,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
     } else if (_step == 1) {
       // Selecting dropoff
       _dropoffLocation = position.target;
-      _updateMapMarkers();
+      await _updateMapMarkers();
       
       try {
         final placemarks = await placemarkFromCoordinates(
@@ -133,7 +143,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
     }
   }
 
-  void _updateMapMarkers() {
+  Future<void> _updateMapMarkers() async {
     _markers.clear();
     _polylines.clear();
     
@@ -145,41 +155,28 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
             markerId: const MarkerId('current'),
             position: _currentLocation!,
             infoWindow: const InfoWindow(title: 'Current Location'),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            icon: await MarkerFactory.userLocation,
           ),
         );
       }
       
-      if (_pickupLocation != null) {
-        _markers.add(
-          Marker(
-            markerId: const MarkerId('pickup'),
-            position: _pickupLocation!,
-            infoWindow: const InfoWindow(title: 'Pickup Location'),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          ),
-        );
-      }
-    } else if (_step == 1) {
-      // Show both pickup and dropoff
-      if (_pickupLocation != null) {
-        _markers.add(
-          Marker(
-            markerId: const MarkerId('pickup'),
-            position: _pickupLocation!,
-            infoWindow: const InfoWindow(title: 'Pickup Location'),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          ),
-        );
-      }
-      
-      if (_dropoffLocation != null) {
-        _markers.add(
-          Marker(
-            markerId: const MarkerId('dropoff'),
-            position: _dropoffLocation!,
-            infoWindow: const InfoWindow(title: 'Dropoff Location'),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+    if (_pickupLocation != null) {
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('pickup'),
+          position: _pickupLocation!,
+          infoWindow: const InfoWindow(title: 'Pickup Location'),
+          icon: _yellowPinMarker,
+        ),
+      );
+    }
+    if (_dropoffLocation != null) {
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('dropoff'),
+          position: _dropoffLocation!,
+          infoWindow: const InfoWindow(title: 'Dropoff Location'),
+          icon: _yellowPinMarker,
           ),
         );
       }
@@ -266,15 +263,15 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
     addDebugMessage('✅ Pickup confirmed: $_pickupAddress');
   }
 
-  void _backToPickup() {
+  Future<void> _backToPickup() async {
     setState(() {
       _step = 0;
       _dropoffLocation = null;
       _dropoffSearchController.clear();
       _estimatedDistance = null;
       _estimatedFare = null;
-      _updateMapMarkers();
     });
+    await _updateMapMarkers();
   }
 
   Future<void> _confirmDropoff() async {
@@ -311,11 +308,15 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
     });
   }
 
+  Future<void> _loadMapStyle() async {
+    _mapStyle = await MapStyleLoader.load();
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.error,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -331,7 +332,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
             onMapCreated: _onMapCreated,
             onCameraMove: _onCameraMove,
             initialCameraPosition: CameraPosition(
-              target: _pickupLocation ?? const LatLng(37.4219983, -122.084),
+              target: _pickupLocation ?? const LatLng(0, 0),
               zoom: 17,
             ),
             markers: _markers,
@@ -339,6 +340,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
             compassEnabled: true,
             zoomControlsEnabled: false,
             myLocationButtonEnabled: false,
+            style: _mapStyle,
           ),
           
           // Center pin
@@ -415,7 +417,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
             right: 16,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: AppSpacing.shadowLg,
               ),
@@ -556,7 +558,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
             bottom: 100,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: AppSpacing.shadowLg,
               ),

@@ -52,6 +52,7 @@ class AppSpacing {
   static const SizedBox hGapMd = SizedBox(width: md);
   static const SizedBox hGapLg = SizedBox(width: lg);
   static const SizedBox hGapXl = SizedBox(width: xl);
+  static const SizedBox hGapXxl = SizedBox(width: xxl);
 
   // Border radius
   static const double radiusXs = 4;
@@ -115,4 +116,6 @@ class AppSpacing {
   static const double bottomSheetTopRadius = 24;
   static const double appBarHeight = 56;
   static const double bottomNavHeight = 64;
+  static const double mapMinHeight = 250;
+  static const double driverCardHeight = 120;
 }

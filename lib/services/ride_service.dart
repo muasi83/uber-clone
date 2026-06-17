@@ -90,6 +90,8 @@ class RideService {
         addDebugMessage('✅ Ride requested: ID ${json['id']}');
         addDebugMessage('Estimated Fare: \$${json['estimatedFare']}');
         addDebugMessage('═══════════════════════════════════════');
+        await StorageService.saveActiveRideId(json['id'] as int);
+        await StorageService.saveActiveRideStatus('REQUESTED');
         return Ride.fromJson(json);
       } else {
         addDebugMessage('❌ Error: ${response.statusCode}');
@@ -163,6 +165,8 @@ class RideService {
         final json = jsonDecode(response.body);
         addDebugMessage('✅ Ride accepted!');
         addDebugMessage('═══════════════════════════════════════');
+        await StorageService.saveActiveRideId(json['id'] as int);
+        await StorageService.saveActiveRideStatus('ACCEPTED');
         return Ride.fromJson(json);
       } else {
         addDebugMessage('❌ Error: ${response.statusCode}');
@@ -217,6 +221,7 @@ class RideService {
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         addDebugMessage('✅ Ride completed!');
+        await StorageService.clearActiveRideId();
         return Ride.fromJson(json);
       } else {
         addDebugMessage('❌ Error completing ride');
@@ -246,6 +251,26 @@ class RideService {
       return null;
     } catch (e) {
       addDebugMessage('❌ Error getting ride details: $e');
+      return null;
+    }
+  }
+
+  static Future<Ride?> getActiveRide(String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/rides/active';
+      final response = await http
+          .get(Uri.parse(url), headers: _headers(token: token, json: false))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['active'] == true) {
+          return Ride.fromJson(json['ride']);
+        }
+      }
+      return null;
+    } catch (e) {
+      addDebugMessage('❌ Error checking active ride: $e');
       return null;
     }
   }
@@ -316,6 +341,14 @@ class RideService {
 
       if (response.statusCode == 200) {
         addDebugMessage('✅ Ride cancelled');
+        await StorageService.clearActiveRideId();
+        return true;
+      }
+      final body = response.body;
+      addDebugMessage('❌ Cancel returned ${response.statusCode}: $body');
+      if (response.statusCode == 400 && (body.contains('already') || body.contains('COMPLETED') || body.contains('CANCELLED'))) {
+        addDebugMessage('✅ Ride already finalised — clearing local state');
+        await StorageService.clearActiveRideId();
         return true;
       }
       return false;

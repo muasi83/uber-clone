@@ -10,6 +10,9 @@ import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/glass_card.dart';
 import 'dart:math' as math;
+import '../utils/marker_utils.dart';
+import '../utils/map_style_loader.dart';
+import '../utils/marker_factory.dart';
 
 class RideMapScreen extends StatefulWidget {
   final bool isDriver;
@@ -38,6 +41,9 @@ class _RideMapScreenState extends State<RideMapScreen> {
   late Set<Marker> markers = {};
   late Set<Polyline> polylines = {};
   
+  BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
+  String? _mapStyle;
+
   bool isLoading = true;
   String rideType = 'ECONOMY';
   double? estimatedDistance;
@@ -46,7 +52,13 @@ class _RideMapScreenState extends State<RideMapScreen> {
   @override
   void initState() {
     super.initState();
+    _loadMapStyle();
+    _initYellowPin();
     _getCurrentLocation();
+  }
+
+  Future<void> _initYellowPin() async {
+    _yellowPinMarker = await getYellowPinMarker();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -74,7 +86,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       
       if (mounted) {
         setState(() => isLoading = false);
-        _updateMapMarkers();
+        await _updateMapMarkers();
       }
       
       addDebugMessage('═══════════════════════════════════════');
@@ -83,7 +95,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       if (mounted) {
         setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -111,10 +123,10 @@ class _RideMapScreenState extends State<RideMapScreen> {
       setState(() => dropoffLocation = newLocation);
     }
     
-    _updateMapMarkers();
+    await _updateMapMarkers();
   }
 
-  void _updateMapMarkers() {
+  Future<void> _updateMapMarkers() async {
     markers.clear();
     polylines.clear();
     
@@ -125,7 +137,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
             markerId: const MarkerId('current'),
             position: currentLocation!,
             infoWindow: const InfoWindow(title: 'Current Location'),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            icon: await MarkerFactory.userLocation,
           ),
         );
       }
@@ -136,7 +148,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
             markerId: const MarkerId('pickup'),
             position: pickupLocation!,
             infoWindow: const InfoWindow(title: 'Pickup Location (Moving)'),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            icon: _yellowPinMarker,
           ),
         );
       }
@@ -147,7 +159,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
             markerId: const MarkerId('pickup'),
             position: pickupLocation!,
             infoWindow: const InfoWindow(title: 'Pickup Location (Fixed)'),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            icon: _yellowPinMarker,
           ),
         );
       }
@@ -158,7 +170,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
             markerId: const MarkerId('dropoff'),
             position: dropoffLocation!,
             infoWindow: const InfoWindow(title: 'Dropoff Location (Moving)'),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            icon: _yellowPinMarker,
           ),
         );
       }
@@ -209,6 +221,10 @@ class _RideMapScreenState extends State<RideMapScreen> {
     addDebugMessage('💰 Fare: \$$fare');
   }
 
+  Future<void> _loadMapStyle() async {
+    _mapStyle = await MapStyleLoader.load();
+  }
+
   double _toRad(double degree) => degree * (3.141592653589793 / 180);
 
   Future<void> _confirmPickup() async {
@@ -234,7 +250,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
     }
     
     setState(() => step = 2);
-    _updateMapMarkers();
+    await _updateMapMarkers();
     _animateToLocation(pickupLocation!);
     
     addDebugMessage('✅ Pickup location confirmed: $pickupAddress');
@@ -318,7 +334,7 @@ Future<void> _requestRide() async {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Ride requested! Waiting for driver...'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         
@@ -330,7 +346,7 @@ Future<void> _requestRide() async {
     addDebugMessage('❌ Error: $e');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
       );
     }
   } finally {
@@ -354,7 +370,7 @@ int _calculateDuration(double distanceKm) {
                   onMapCreated: _onMapCreated,
                   onCameraMove: _onCameraMove,
                   initialCameraPosition: CameraPosition(
-                    target: pickupLocation ?? const LatLng(37.4219983, -122.084),
+                    target: pickupLocation ?? const LatLng(0, 0),
                     zoom: 17,
                   ),
                   markers: markers,
@@ -362,6 +378,7 @@ int _calculateDuration(double distanceKm) {
                   compassEnabled: true,
                   zoomControlsEnabled: false,
                   myLocationButtonEnabled: false,
+                  style: _mapStyle,
                 ),
                 
                 Positioned(
@@ -436,7 +453,7 @@ int _calculateDuration(double distanceKm) {
                   bottom: 220,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: AppSpacing.shadowLg,
                     ),

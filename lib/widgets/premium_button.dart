@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
@@ -30,30 +31,13 @@ class PremiumButton extends StatefulWidget {
   State<PremiumButton> createState() => _PremiumButtonState();
 }
 
-class _PremiumButtonState extends State<PremiumButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
+class _PremiumButtonState extends State<PremiumButton> {
   bool _isPressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      duration: const Duration(milliseconds: 100),
-      vsync: this,
-    );
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
 
   bool get _enabled => widget.onPressed != null && !widget.isDisabled;
 
   Color get _bgColor {
-    if (!_enabled) return Colors.grey.shade300;
+    if (!_enabled) return AppColors.outline;
     switch (widget.variant) {
       case ButtonVariant.primary:
         return AppColors.primary;
@@ -73,7 +57,7 @@ class _PremiumButtonState extends State<PremiumButton>
   }
 
   Color get _fgColor {
-    if (!_enabled) return Colors.grey;
+    if (!_enabled) return AppColors.textTertiary;
     switch (widget.variant) {
       case ButtonVariant.outline:
       case ButtonVariant.text:
@@ -111,18 +95,25 @@ class _PremiumButtonState extends State<PremiumButton>
 
   @override
   Widget build(BuildContext context) {
-    final child = AnimatedScale(
+    return AnimatedScale(
       scale: _isPressed ? 0.97 : 1.0,
       duration: const Duration(milliseconds: 100),
       child: GestureDetector(
-        onTapDown: _enabled ? (_) => setState(() => _isPressed = true) : null,
+        onTapDown: _enabled
+            ? (_) {
+                HapticFeedback.lightImpact();
+                setState(() => _isPressed = true);
+              }
+            : null,
         onTapUp: _enabled
             ? (_) {
                 setState(() => _isPressed = false);
                 widget.onPressed?.call();
               }
             : null,
-        onTapCancel: _enabled ? () => setState(() => _isPressed = false) : null,
+        onTapCancel: _enabled
+            ? () => setState(() => _isPressed = false)
+            : null,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           width: widget.width ?? double.infinity,
@@ -168,8 +159,6 @@ class _PremiumButtonState extends State<PremiumButton>
         ),
       ),
     );
-
-    return child;
   }
 }
 

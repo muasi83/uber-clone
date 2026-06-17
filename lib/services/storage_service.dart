@@ -7,6 +7,8 @@ class StorageService {
   static const String _userIdKey = 'userId';
   static const String _usernameKey = 'username';
   static const String _roleKey = 'role';
+  static const String _activeRideIdKey = 'active_ride_id';
+  static const String _activeRideStatusKey = 'active_ride_status';
   
   static const String _defaultServerUrl = 'https://catalog-staring-hamstring.ngrok-free.dev';
   //https://catalog-staring-hamstring.ngrok-free.dev   http://localhost:8080
@@ -207,6 +209,43 @@ class StorageService {
     }
   }
 
+  static Future<void> saveActiveRideId(int rideId) async {
+    if (!_initialized) return;
+    await _prefs.setInt(_activeRideIdKey, rideId);
+  }
+
+  static int? getActiveRideId() {
+    if (!_initialized) return null;
+    return _prefs.getInt(_activeRideIdKey);
+  }
+
+  static Future<void> clearActiveRideId() async {
+    if (!_initialized) return;
+    await _prefs.remove(_activeRideIdKey);
+    await _prefs.remove(_activeRideStatusKey);
+  }
+
+  static Future<void> saveActiveRideStatus(String status) async {
+    if (!_initialized) return;
+    await _prefs.setString(_activeRideStatusKey, status);
+  }
+
+  static String? getActiveRideStatus() {
+    if (!_initialized) return null;
+    return _prefs.getString(_activeRideStatusKey);
+  }
+
+  // Stale ride skip tracking
+  static Future<void> saveStaleRideSkipped(int rideId) async {
+    if (!_initialized) return;
+    await _prefs.setBool('skip_stale_ride_$rideId', true);
+  }
+
+  static bool isStaleRideSkipped(int rideId) {
+    if (!_initialized) return false;
+    return _prefs.getBool('skip_stale_ride_$rideId') ?? false;
+  }
+
   // API Endpoints
   static String getAuthRegisterUrl() => '${getServerUrl()}/api/auth/register';
   static String getAuthLoginUrl() => '${getServerUrl()}/api/auth/login';
@@ -216,6 +255,7 @@ class StorageService {
   static String getChatSendUrl() => '${getServerUrl()}/api/chat/send';
   static String getChatHistoryUrl() => '${getServerUrl()}/api/chat/history';
   static String getNotificationsUrl() => '${getServerUrl()}/api/notifications';
+  static String getNotificationsUnreadCountUrl() => '${getServerUrl()}/api/notifications/unread-count';
   static String getWebSocketUrl() {
     final baseUrl = getServerUrl();
     return '${baseUrl
