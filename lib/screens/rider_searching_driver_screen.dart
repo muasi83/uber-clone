@@ -154,6 +154,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       });
 
       _acceptanceTimer?.cancel();
+      _pollTimer?.cancel();
       _pulseController.stop();
 
       ScaffoldMessenger.of(context).showSnackBar(

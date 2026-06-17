@@ -82,6 +82,8 @@ class WebSocketService {
           Uri.parse(fullUrl),
         );
         
+        await _channel!.ready.timeout(const Duration(seconds: 10));
+        
         _connectionStateController.add('connecting');
         
         // Send login message immediately (queued by browser until open)

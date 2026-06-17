@@ -63,6 +63,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   StreamSubscription<Map<String, dynamic>>? _chatMessagesSub;
 
   bool _isUpdatingLocation = false;
+  DateTime _lastLocationUpdate = DateTime.now().subtract(const Duration(seconds: 10));
   int _locationRetryCount = 0;
   int _unreadNotificationCount = 0;
   BitmapDescriptor _driverMarkerIcon = BitmapDescriptor.defaultMarker;
@@ -316,6 +317,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   Future<void> _acceptRide(Map<String, dynamic> rideData) async {
     if (_isAcceptingRide) return;
+    if (_currentRide != null) return;
     _isAcceptingRide = true;
 
     try {
@@ -417,7 +419,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 50,
+      distanceFilter: 10,
     );
 
     _positionStream = Geolocator.getPositionStream(
@@ -431,7 +433,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         _lastHeading = position.heading;
 
         if (_isUpdatingLocation) return;
+        if (DateTime.now().difference(_lastLocationUpdate).inSeconds < 5) return;
         _isUpdatingLocation = true;
+        _lastLocationUpdate = DateTime.now();
 
         try {
           await DriverService.updateLocation(

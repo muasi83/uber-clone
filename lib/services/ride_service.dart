@@ -7,11 +7,10 @@ import '../screens/debug_screen.dart';
 class RideService {
   static String _normalizeToken(String token) {
     var t = token.trim();
-    // remove wrapping quotes if any
-    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+    if (t.length >= 2 &&
+        ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'")))) {
       t = t.substring(1, t.length - 1).trim();
     }
-    // if token already contains "Bearer ", strip it
     final lower = t.toLowerCase();
     if (lower.startsWith('bearer ')) {
       t = t.substring(7).trim();

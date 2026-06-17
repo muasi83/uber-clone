@@ -158,15 +158,28 @@ class MyApp extends StatelessWidget {
           if (args is! Map<String, dynamic>) {
             return _routeError(context, 'Missing arguments for /rider-trip-details');
           }
+          final pickupLat = (args['pickupLat'] as num?)?.toDouble();
+          final pickupLng = (args['pickupLng'] as num?)?.toDouble();
+          final pickupAddress = args['pickupAddress'] as String?;
+          final dropoffLat = (args['dropoffLat'] as num?)?.toDouble();
+          final dropoffLng = (args['dropoffLng'] as num?)?.toDouble();
+          final dropoffAddress = args['dropoffAddress'] as String?;
+          final distance = (args['estimatedDistance'] as num?)?.toDouble();
+          final duration = (args['estimatedDuration'] as num?)?.toInt();
+          if (pickupLat == null || pickupLng == null || pickupAddress == null ||
+              dropoffLat == null || dropoffLng == null || dropoffAddress == null ||
+              distance == null || duration == null) {
+            return _routeError(context, 'Invalid /rider-trip-details arguments');
+          }
           return RiderTripDetailsScreen(
-            pickupLat: (args['pickupLat'] as num).toDouble(),
-            pickupLng: (args['pickupLng'] as num).toDouble(),
-            pickupAddress: args['pickupAddress'] as String,
-            dropoffLat: (args['dropoffLat'] as num).toDouble(),
-            dropoffLng: (args['dropoffLng'] as num).toDouble(),
-            dropoffAddress: args['dropoffAddress'] as String,
-            estimatedDistance: (args['estimatedDistance'] as num).toDouble(),
-            estimatedDuration: (args['estimatedDuration'] as num).toInt(),
+            pickupLat: pickupLat,
+            pickupLng: pickupLng,
+            pickupAddress: pickupAddress,
+            dropoffLat: dropoffLat,
+            dropoffLng: dropoffLng,
+            dropoffAddress: dropoffAddress,
+            estimatedDistance: distance,
+            estimatedDuration: duration,
             initialRideType: (args['rideType'] as String?) ?? 'ECONOMY',
           );
         },
@@ -176,11 +189,18 @@ class MyApp extends StatelessWidget {
           if (args is! Map<String, dynamic>) {
             return _routeError(context, 'Missing arguments for /rider-searching');
           }
+          final rideId = (args['rideId'] as num?)?.toInt();
+          final pickup = args['pickupAddress'] as String?;
+          final dropoff = args['dropoffAddress'] as String?;
+          final fare = (args['estimatedFare'] as num?)?.toDouble();
+          if (rideId == null || pickup == null || dropoff == null || fare == null) {
+            return _routeError(context, 'Invalid /rider-searching arguments');
+          }
           return RiderSearchingDriverScreen(
-            rideId: (args['rideId'] as num).toInt(),
-            pickupAddress: args['pickupAddress'] as String,
-            dropoffAddress: args['dropoffAddress'] as String,
-            estimatedFare: (args['estimatedFare'] as num).toDouble(),
+            rideId: rideId,
+            pickupAddress: pickup,
+            dropoffAddress: dropoff,
+            estimatedFare: fare,
           );
         },
 
@@ -189,9 +209,14 @@ class MyApp extends StatelessWidget {
           if (args is! Map<String, dynamic>) {
             return _routeError(context, 'Missing arguments for /rider-tracking');
           }
+          final rideId = (args['rideId'] as num?)?.toInt();
+          final driverData = args['driverData'];
+          if (rideId == null || driverData is! Map) {
+            return _routeError(context, 'Invalid /rider-tracking arguments');
+          }
           return RiderTrackingScreen(
-            rideId: (args['rideId'] as num).toInt(),
-            driverData: (args['driverData'] as Map).cast<String, dynamic>(),
+            rideId: rideId,
+            driverData: driverData.cast<String, dynamic>(),
           );
         },
 
@@ -200,13 +225,23 @@ class MyApp extends StatelessWidget {
           if (args is! Map<String, dynamic>) {
             return _routeError(context, 'Missing arguments for /rider-active-ride');
           }
+          final rideId = (args['rideId'] as num?)?.toInt();
+          final pLat = (args['pickupLat'] as num?)?.toDouble();
+          final pLng = (args['pickupLng'] as num?)?.toDouble();
+          final dLat = (args['dropoffLat'] as num?)?.toDouble();
+          final dLng = (args['dropoffLng'] as num?)?.toDouble();
+          final dropoff = args['dropoffAddress'] as String?;
+          if (rideId == null || pLat == null || pLng == null ||
+              dLat == null || dLng == null || dropoff == null) {
+            return _routeError(context, 'Invalid /rider-active-ride arguments');
+          }
           return RiderActiveRideScreen(
-            rideId: (args['rideId'] as num).toInt(),
-            pickupLat: (args['pickupLat'] as num).toDouble(),
-            pickupLng: (args['pickupLng'] as num).toDouble(),
-            dropoffLat: (args['dropoffLat'] as num).toDouble(),
-            dropoffLng: (args['dropoffLng'] as num).toDouble(),
-            dropoffAddress: args['dropoffAddress'] as String,
+            rideId: rideId,
+            pickupLat: pLat,
+            pickupLng: pLng,
+            dropoffLat: dLat,
+            dropoffLng: dLng,
+            dropoffAddress: dropoff,
           );
         },
 
@@ -215,8 +250,12 @@ class MyApp extends StatelessWidget {
           if (args is! Map<String, dynamic>) {
             return _routeError(context, 'Missing arguments for /rider-completed');
           }
+          final rideId = (args['rideId'] as num?)?.toInt();
+          if (rideId == null) {
+            return _routeError(context, 'Invalid /rider-completed arguments');
+          }
           return RiderRideCompletedScreen(
-            rideId: (args['rideId'] as num).toInt(),
+            rideId: rideId,
             totalFare: (args['totalFare'] as num?)?.toDouble(),
             distance: (args['distance'] as num?)?.toDouble(),
             duration: (args['duration'] as num?)?.toInt(),
@@ -268,14 +307,25 @@ class MyApp extends StatelessWidget {
           if (args is! Map<String, dynamic>) {
             return _routeError(context, 'Missing arguments for /driver-navigation');
           }
+          final rideId = (args['rideId'] as num?)?.toInt();
+          final pickup = args['pickupAddress'] as String?;
+          final pLat = (args['pickupLat'] as num?)?.toDouble();
+          final pLng = (args['pickupLng'] as num?)?.toDouble();
+          final dropoffAddr = args['dropoffAddress'] as String?;
+          final dLat = (args['dropoffLat'] as num?)?.toDouble();
+          final dLng = (args['dropoffLng'] as num?)?.toDouble();
+          if (rideId == null || pickup == null || pLat == null ||
+              pLng == null || dropoffAddr == null || dLat == null || dLng == null) {
+            return _routeError(context, 'Invalid /driver-navigation arguments');
+          }
           return DriverNavigationToRiderScreen(
-            rideId: (args['rideId'] as num).toInt(),
-            pickupAddress: args['pickupAddress'] as String,
-            pickupLat: (args['pickupLat'] as num).toDouble(),
-            pickupLng: (args['pickupLng'] as num).toDouble(),
-            dropoffAddress: args['dropoffAddress'] as String,
-            dropoffLat: (args['dropoffLat'] as num).toDouble(),
-            dropoffLng: (args['dropoffLng'] as num).toDouble(),
+            rideId: rideId,
+            pickupAddress: pickup,
+            pickupLat: pLat,
+            pickupLng: pLng,
+            dropoffAddress: dropoffAddr,
+            dropoffLat: dLat,
+            dropoffLng: dLng,
           );
         },
 
@@ -284,11 +334,18 @@ class MyApp extends StatelessWidget {
           if (args is! Map<String, dynamic>) {
             return _routeError(context, 'Missing arguments for /driver-active-ride');
           }
+          final rideId = (args['rideId'] as num?)?.toInt();
+          final dropoffAddr = args['dropoffAddress'] as String?;
+          final dLat = (args['dropoffLat'] as num?)?.toDouble();
+          final dLng = (args['dropoffLng'] as num?)?.toDouble();
+          if (rideId == null || dropoffAddr == null || dLat == null || dLng == null) {
+            return _routeError(context, 'Invalid /driver-active-ride arguments');
+          }
           return driver_active.DriverActiveRideScreen(
-            rideId: (args['rideId'] as num).toInt(),
-            dropoffAddress: args['dropoffAddress'] as String,
-            dropoffLat: (args['dropoffLat'] as num).toDouble(),
-            dropoffLng: (args['dropoffLng'] as num).toDouble(),
+            rideId: rideId,
+            dropoffAddress: dropoffAddr,
+            dropoffLat: dLat,
+            dropoffLng: dLng,
           );
         },
 
@@ -297,8 +354,12 @@ class MyApp extends StatelessWidget {
           if (args is! Map<String, dynamic>) {
             return _routeError(context, 'Missing arguments for /driver-summary');
           }
+          final rideId = (args['rideId'] as num?)?.toInt();
+          if (rideId == null) {
+            return _routeError(context, 'Invalid /driver-summary arguments');
+          }
           return DriverRideSummaryScreen(
-            rideId: (args['rideId'] as num).toInt(),
+            rideId: rideId,
           );
         },
       },

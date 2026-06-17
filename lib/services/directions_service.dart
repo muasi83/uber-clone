@@ -27,7 +27,8 @@ class DirectionsResult {
 class DirectionsService {
   static String _normalizeToken(String token) {
     var t = token.trim();
-    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+    if (t.length >= 2 &&
+        ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'")))) {
       t = t.substring(1, t.length - 1).trim();
     }
     if (t.toLowerCase().startsWith('bearer ')) {
@@ -136,8 +137,22 @@ class DirectionsService {
   }
 
   static double calculateFare(double distanceKm, String rideType) {
-    const base = 2.0;
-    final rate = rideType == 'LUXURY' ? 0.35 : 0.20;
+    double base;
+    double rate;
+    switch (rideType.toUpperCase()) {
+      case 'LUXURY':
+        base = 6.0;
+        rate = 0.50;
+        break;
+      case 'COMFORT':
+        base = 4.0;
+        rate = 0.35;
+        break;
+      case 'ECONOMY':
+      default:
+        base = 2.0;
+        rate = 0.20;
+    }
     return base + (distanceKm * rate);
   }
 

@@ -101,7 +101,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
 
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 50,
+      distanceFilter: 10,
     );
 
     _positionStream = Geolocator.getPositionStream(
@@ -185,7 +185,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       ),
     );
 
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   Future<void> _updateRoute() async {
