@@ -388,6 +388,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         setState(() {
           _driverCurrentLocation = LatLng(position.latitude, position.longitude);
         });
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(
+            LatLng(position.latitude, position.longitude),
+            15,
+          ),
+        );
       }
 
       if (_isOnline) {

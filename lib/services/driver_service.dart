@@ -142,8 +142,9 @@ static Future<DriverProfile?> getDriverProfile(String token) async {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-        addDebugMessage('✅ Online: ${json['isOnline']}');
-        return true;
+        final isOnline = json['isOnline'] == true;
+        addDebugMessage('✅ Online: $isOnline');
+        return isOnline;
       }
       return false;
     } catch (e) {
