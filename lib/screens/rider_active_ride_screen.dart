@@ -11,9 +11,9 @@ import '../screens/debug_screen.dart';
 import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import '../widgets/cancel_ride_dialog.dart';
+
 import '../utils/marker_utils.dart';
-import '../widgets/premium_button.dart';
+import '../utils/bearing_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 
@@ -54,6 +54,9 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
   BitmapDescriptor _userLocationMarker = BitmapDescriptor.defaultMarker;
   String? _mapStyle;
+
+  Timer? _driverAnimTimer;
+  LatLng? _animatedDriverPos;
 
   Timer? _statusPollTimer;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
@@ -123,22 +126,22 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         final lng = (payload['longitude'] ?? payload['lng']) as double?;
 
           if (lat != null && lng != null) {
-            setState(() {
-              final prev = _driverLocation;
-              _driverLocation = LatLng(lat, lng);
-              final heading = payload['heading'];
-              if (heading != null) {
-                _driverHeading = (heading as num).toDouble();
-              } else if (prev != null) {
-                _driverHeading = _bearingBetween(prev, _driverLocation!);
-              }
-              addDebugMessage(
-                'driver_location heading=$_driverHeading '
-                'from(${prev?.latitude.toStringAsFixed(5) ?? '?'},${prev?.longitude.toStringAsFixed(5) ?? '?'}) '
-                'to(${_driverLocation!.latitude.toStringAsFixed(5)},${_driverLocation!.longitude.toStringAsFixed(5)})'
-              );
-              _updateMarkers();
-            });
+            final prev = _driverLocation;
+            final newLoc = LatLng(lat, lng);
+            _driverLocation = newLoc;
+            final heading = payload['heading'];
+            if (heading != null) {
+              _driverHeading = (heading as num).toDouble();
+            } else if (prev != null) {
+              _driverHeading = _bearingBetween(prev, _driverLocation!);
+            }
+            _startDriverMarkerAnimation(newLoc);
+
+            addDebugMessage(
+              'driver_location heading=$_driverHeading '
+              'from(${prev?.latitude.toStringAsFixed(5) ?? '?'},${prev?.longitude.toStringAsFixed(5) ?? '?'}) '
+              'to(${_driverLocation!.latitude.toStringAsFixed(5)},${_driverLocation!.longitude.toStringAsFixed(5)})'
+            );
 
           _updateRoute();
         }
@@ -150,6 +153,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
           if (_rideCompleting) return;
           _rideCompleting = true;
           _statusPollTimer?.cancel();
+          ChatScreen.clearAllCache();
           Navigator.pushReplacementNamed(
             context,
             '/rider-completed',
@@ -159,6 +163,21 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
               'distance': event['payload']?['distance'],
               'duration': event['payload']?['duration'],
             },
+          );
+        } else if (event['type'] == 'ride_cancelled') {
+          _statusPollTimer?.cancel();
+          ChatScreen.clearAllCache();
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/rider-home',
+            (route) => false,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(event['reason'] as String? ?? 'The ride was cancelled'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       });
@@ -180,6 +199,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
           _rideCompleting = true;
           _statusPollTimer?.cancel();
           addDebugMessage('✅ Poll detected ride COMPLETED');
+          ChatScreen.clearAllCache();
           Navigator.pushReplacementNamed(
             context,
             '/rider-completed',
@@ -249,14 +269,15 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
       );
     }
 
-    if (_driverLocation != null) {
+    final driverPos = _animatedDriverPos ?? _driverLocation;
+    if (driverPos != null) {
       addDebugMessage('_updateMarkers rotation=$_driverHeading');
       updated.add(
         Marker(
           markerId: const MarkerId('driver'),
-          position: _driverLocation!,
+          position: driverPos,
           icon: _carIcon,
-          rotation: _carRotation(_driverHeading % 360),
+          rotation: normalizeCarHeading(_driverHeading % 360),
           anchor: const Offset(0.5, 0.5),
           flat: true,
         ),
@@ -272,6 +293,29 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     );
 
     _markers = updated;
+  }
+
+  void _startDriverMarkerAnimation(LatLng target) {
+    _driverAnimTimer?.cancel();
+    final from = _animatedDriverPos ?? target;
+    final steps = 30;
+    var step = 0;
+    _driverAnimTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      step++;
+      final t = (step / steps).clamp(0.0, 1.0);
+      final eased = 1.0 - math.pow(1.0 - t, 3).toDouble();
+      _animatedDriverPos = LatLng(
+        from.latitude + (target.latitude - from.latitude) * eased,
+        from.longitude + (target.longitude - from.longitude) * eased,
+      );
+      if (mounted) setState(() {});
+      if (step >= steps) {
+        _driverAnimTimer?.cancel();
+        _driverAnimTimer = null;
+        _animatedDriverPos = target;
+        if (mounted) setState(() {});
+      }
+    });
   }
 
   Future<void> _updateRoute() async {
@@ -323,8 +367,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   double _toRadians(double deg) => deg * math.pi / 180;
   double _toDegrees(double rad) => rad * 180 / math.pi;
 
-  /// Car image front faces DOWN (south). Add 180° so rotation=0 → north.
-  double _carRotation(double heading) => (heading + 180) % 360;
+
 
   Future<void> _loadMapStyle() async {
     _mapStyle = await MapStyleLoader.load();
@@ -339,7 +382,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _showCancelRideDialog();
+        if (!didPop) Navigator.pop(context);
       },
       child: Scaffold(
       extendBodyBehindAppBar: true,
@@ -348,7 +391,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
-          onPressed: () => _showCancelRideDialog(),
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'En Route',
@@ -570,13 +613,6 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
                       ],
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  PremiumButton(
-                    label: 'Cancel Ride',
-                    onPressed: _showCancelRideDialog,
-                    variant: ButtonVariant.danger,
-                    icon: Icons.close,
-                  ),
                 ],
               ),
             ),
@@ -585,27 +621,6 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
       ),
     ),
     );
-  }
-
-  Future<void> _showCancelRideDialog() async {
-    final result = await showCancelRideDialog(context);
-    if (result != null && result.confirmed && mounted) {
-      final reason = result.reason;
-      try {
-        final token = StorageService.getToken();
-        if (token == null) return;
-        await RideService.cancelRide(widget.rideId, token, reason: reason);
-        if (mounted) {
-          WebSocketService.sendRideMessage('ride_cancelled', {
-            'rideId': widget.rideId,
-            'reason': reason,
-          });
-          Navigator.pushNamedAndRemoveUntil(context, '/rider-home', (route) => false);
-        }
-      } catch (e) {
-        addDebugMessage('❌ Error cancelling ride: $e');
-      }
-    }
   }
 
   Future<void> _openChat() async {
@@ -628,6 +643,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
               receiverId: ride.driver!.id!,
               receiverName: ride.driver!.fullName,
               token: token,
+              rideId: widget.rideId,
             ),
           ),
         );
@@ -640,6 +656,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   @override
   void dispose() {
     _rideCompleting = false;
+    _driverAnimTimer?.cancel();
     _statusPollTimer?.cancel();
     _rideEventsSub?.cancel();
     _driverLocationSub?.cancel();

@@ -181,6 +181,11 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
                       '\$${widget.totalFare?.toStringAsFixed(2) ?? '0.00'}',
                       isPrice: true,
                     ),
+                    const Divider(height: 1, color: AppColors.outline),
+                    _buildSummaryRow(
+                      'Payment',
+                      'COMPLETED',
+                    ),
                   ],
                 ),
               ),
@@ -317,6 +322,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
               receiverId: ride.driver!.id!,
               receiverName: ride.driver!.fullName,
               token: token,
+              rideId: widget.rideId,
             ),
           ),
         );

@@ -69,7 +69,15 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
       
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
-        _pickupAddress = '${place.street}, ${place.locality}';
+        final pStreet = (place.street ?? '').trim();
+        final pNeighborhood = (place.subLocality ?? '').trim();
+        final pCity = (place.locality ?? '').trim();
+        final pParts = <String>[
+          if (pCity.isNotEmpty) pCity,
+          if (pNeighborhood.isNotEmpty && pNeighborhood != pCity) pNeighborhood,
+          if (pStreet.isNotEmpty && pStreet != pNeighborhood) pStreet,
+        ];
+        _pickupAddress = pParts.join(' - ');
         _pickupSearchController.text = _pickupAddress;
       }
       
@@ -130,7 +138,15 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
         
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
-          _dropoffAddress = '${place.street}, ${place.locality}';
+          final dStreet = (place.street ?? '').trim();
+          final dNeighborhood = (place.subLocality ?? '').trim();
+          final dCity = (place.locality ?? '').trim();
+          final dParts = <String>[
+            if (dCity.isNotEmpty) dCity,
+            if (dNeighborhood.isNotEmpty && dNeighborhood != dCity) dNeighborhood,
+            if (dStreet.isNotEmpty && dStreet != dNeighborhood) dStreet,
+          ];
+          _dropoffAddress = dParts.join(' - ');
           if (mounted) {
             setState(() {
               _dropoffSearchController.text = _dropoffAddress;

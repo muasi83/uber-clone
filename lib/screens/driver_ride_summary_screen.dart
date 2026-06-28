@@ -23,6 +23,10 @@ class DriverRideSummaryScreen extends StatefulWidget {
 class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
   Ride? _ride;
   bool _isLoading = true;
+  int _rating = 0;
+  final TextEditingController _feedbackController = TextEditingController();
+  bool _isSubmitting = false;
+  bool _ratingSubmitted = false;
 
   @override
   void initState() {
@@ -48,6 +52,43 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
     } catch (e) {
       addDebugMessage('❌ Error loading ride details: $e');
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _submitRating() async {
+    if (_rating == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a rating'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    try {
+      setState(() => _isSubmitting = true);
+
+      final token = StorageService.getToken();
+      if (token == null) return;
+
+      addDebugMessage('⭐ Submitting rating (driver->rider): $_rating');
+
+      await RideService.submitRating(
+        rideId: widget.rideId,
+        rating: _rating,
+        feedback: _feedbackController.text,
+        token: token,
+      );
+
+      addDebugMessage('✅ Rating submitted');
+      if (mounted) {
+        setState(() => _ratingSubmitted = true);
+      }
+    } catch (e) {
+      addDebugMessage('❌ Error submitting rating: $e');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -142,35 +183,74 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
                       ],
                     ),
                   ),
+                  const Divider(color: AppColors.outline),
+                  _buildDetailRow('Payment', 'PENDING'),
                 ],
               ),
             ),
             AppSpacing.gapXxl,
-            // Rating section
-            const Text(
-              'Rate your rider',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+            if (!_ratingSubmitted) ...[
+              const Text(
+                'Rate your rider',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
               ),
-            ),
-            AppSpacing.gapMd,
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                5,
-                (i) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(
-                    i < 4 ? Icons.star : Icons.star_border,
-                    color: AppColors.warning,
-                    size: 36,
+              AppSpacing.gapMd,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  5,
+                  (i) => GestureDetector(
+                    onTap: () => setState(() => _rating = i + 1),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(
+                        i < _rating ? Icons.star : Icons.star_border,
+                        color: AppColors.warning,
+                        size: 36,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-            AppSpacing.gapXxxl,
+              AppSpacing.gapMd,
+              TextField(
+                controller: _feedbackController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  hintText: 'Additional feedback (optional)',
+                  hintStyle: const TextStyle(color: AppColors.textTertiary),
+                  filled: true,
+                  fillColor: AppColors.surfaceVariant,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(AppSpacing.md),
+                ),
+              ),
+              AppSpacing.gapXxl,
+              PremiumButton(
+                label: _isSubmitting ? 'Submitting...' : 'Submit Rating',
+                onPressed: _isSubmitting ? null : _submitRating,
+                isLoading: _isSubmitting,
+              ),
+              AppSpacing.gapMd,
+            ],
+            if (_ratingSubmitted)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'Rating submitted — thank you!',
+                  style: TextStyle(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             PremiumButton(
               label: 'Back to Home',
               onPressed: () {
@@ -212,5 +292,11 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _feedbackController.dispose();
+    super.dispose();
   }
 }

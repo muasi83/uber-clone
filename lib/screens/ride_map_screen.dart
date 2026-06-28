@@ -80,7 +80,15 @@ class _RideMapScreenState extends State<RideMapScreen> {
       
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
-        pickupAddress = '${place.street}, ${place.locality}';
+        final neighborhood = (place.subLocality ?? '').trim();
+        final street = (place.street ?? '').trim();
+        final locality = (place.locality ?? '').trim();
+        final parts = <String>[
+          if (neighborhood.isNotEmpty) neighborhood,
+          if (street.isNotEmpty) street,
+          if (locality.isNotEmpty) locality,
+        ];
+        pickupAddress = parts.join(' - ');
         addDebugMessage('✅ Address: $pickupAddress');
       }
       
@@ -243,10 +251,18 @@ class _RideMapScreenState extends State<RideMapScreen> {
       
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
-        pickupAddress = '${place.street}, ${place.locality}';
+        final neighborhood = (place.subLocality ?? '').trim();
+        final street = (place.street ?? '').trim();
+        final locality = (place.locality ?? '').trim();
+        final parts = <String>[
+          if (neighborhood.isNotEmpty) neighborhood,
+          if (street.isNotEmpty) street,
+          if (locality.isNotEmpty) locality,
+        ];
+        pickupAddress = parts.join(' - ');
       }
     } catch (e) {
-      pickupAddress = 'Unknown Location';
+      pickupAddress = 'Pickup location';
     }
     
     setState(() => step = 2);
@@ -272,10 +288,18 @@ class _RideMapScreenState extends State<RideMapScreen> {
       
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
-        dropoffAddress = '${place.street}, ${place.locality}';
+        final street = (place.street ?? '').trim();
+        final neighborhood = (place.subLocality ?? '').trim();
+        final city = (place.locality ?? '').trim();
+        final parts = <String>[
+          if (city.isNotEmpty) city,
+          if (neighborhood.isNotEmpty && neighborhood != city) neighborhood,
+          if (street.isNotEmpty && street != neighborhood) street,
+        ];
+        dropoffAddress = parts.join(' - ');
       }
     } catch (e) {
-      dropoffAddress = 'Unknown Location';
+      dropoffAddress = 'Dropoff location';
     }
     
     addDebugMessage('✅ Dropoff location confirmed: $dropoffAddress');

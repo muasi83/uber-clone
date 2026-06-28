@@ -3,14 +3,15 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../services/directions_service.dart';
 import '../services/websocket_service.dart';
+import '../services/location_service.dart';
 import '../services/driver_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
+import '../utils/bearing_utils.dart';
 import '../models/ride_model.dart';
 import '../screens/debug_screen.dart';
 import '../screens/rider_searching_driver_screen.dart';
@@ -211,34 +212,19 @@ class _RiderDropoffLocationScreenState
 
       setState(() => _isLoadingAddress = true);
 
-      String address =
-          'Lat: ${location.latitude.toStringAsFixed(4)}, Lng: ${location.longitude.toStringAsFixed(4)}';
+      String address = '';
 
       try {
-        if (!kIsWeb) {
-          final placemarks = await placemarkFromCoordinates(
-            location.latitude,
-            location.longitude,
-          ).timeout(const Duration(seconds: 5), onTimeout: () => <Placemark>[]);
+        final formattedAddress = await LocationService.getFormattedAddress(
+          location.latitude,
+          location.longitude,
+        );
 
-          if (placemarks.isNotEmpty) {
-            final p = placemarks.first;
-
-            final street = (p.street ?? '').trim();
-            final locality = (p.locality ?? '').trim();
-            final admin = (p.administrativeArea ?? '').trim();
-            final country = (p.country ?? '').trim();
-
-            final parts = <String>[
-              if (street.isNotEmpty) street,
-              if (locality.isNotEmpty) locality,
-              if (admin.isNotEmpty) admin,
-              if (country.isNotEmpty) country,
-            ];
-
-            final formatted = parts.join(', ').trim();
-            if (formatted.isNotEmpty) address = formatted;
-          }
+        if (formattedAddress != null && formattedAddress.isNotEmpty) {
+          address = formattedAddress;
+        } else {
+          address =
+              '${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}';
         }
 
         if (!mounted) return;
@@ -441,7 +427,7 @@ class _RiderDropoffLocationScreenState
         markerId: MarkerId(id),
         position: position,
         icon: _driverMarkerIcon,
-        rotation: _carRotation(rotation),
+        rotation: normalizeCarHeading(rotation),
         anchor: const Offset(0.5, 0.5),
         flat: true,
         infoWindow: InfoWindow(title: driver.user.fullName),
@@ -476,8 +462,7 @@ class _RiderDropoffLocationScreenState
   double _toRadians(double deg) => deg * math.pi / 180;
   double _toDegrees(double rad) => rad * 180 / math.pi;
 
-  /// Car image front faces DOWN (south). Add 180° so rotation=0 → north.
-  double _carRotation(double heading) => (heading + 180) % 360;
+
 
   void _handleDriverLocationEvent(Map<String, dynamic> event) {
     final type = event['type'] as String? ?? '';
@@ -494,7 +479,7 @@ class _RiderDropoffLocationScreenState
       if (existing == null) return;
       final heading = payload['heading'];
       if (heading == null) return;
-      final rotation = _carRotation((heading as num).toDouble() % 360);
+      final rotation = normalizeCarHeading((heading as num).toDouble() % 360);
       if (existing.rotation == rotation) return;
       _driverMarkers[id] = Marker(
         markerId: existing.markerId,
@@ -514,11 +499,11 @@ class _RiderDropoffLocationScreenState
     final heading = payload['heading'];
     double rotation;
     if (heading != null) {
-      rotation = _carRotation((heading as num).toDouble() % 360);
+      rotation = normalizeCarHeading((heading as num).toDouble() % 360);
     } else if (existing != null) {
-      rotation = _carRotation(_bearingBetween(existing.position, position));
+      rotation = normalizeCarHeading(_bearingBetween(existing.position, position));
     } else {
-      rotation = _carRotation(0);
+      rotation = normalizeCarHeading(0);
     }
 
     _driverMarkers[id] = Marker(
@@ -717,7 +702,7 @@ class _RiderDropoffLocationScreenState
       }
 
       final dropoffAddress = _dropoffAddress.isEmpty
-          ? 'Lat: ${_dropoffLocation!.latitude.toStringAsFixed(4)}, Lng: ${_dropoffLocation!.longitude.toStringAsFixed(4)}'
+          ? 'Dropoff location'
           : _dropoffAddress;
 
       final ride = await RideService.requestRide(
@@ -824,7 +809,7 @@ class _RiderDropoffLocationScreenState
                   zIndexInt: 10,
                 ),
             },
-            polylines: _polylines,
+            polylines: _showTripDetails ? _polylines : {},
             compassEnabled: true,
             zoomControlsEnabled: false,
             myLocationButtonEnabled: false,
@@ -963,33 +948,6 @@ class _RiderDropoffLocationScreenState
                           AppSpacing.hGapSm,
                           Text('Calculating route...'),
                         ],
-                      )
-                    else if (_routeDistanceKm != null &&
-                        _routeDurationMin != null)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.route,
-                                  size: 16, color: AppColors.primary),
-                              AppSpacing.hGapXs,
-                              Text('${_routeDistanceKm!.toStringAsFixed(2)} km',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              const Icon(Icons.access_time,
-                                  size: 16, color: AppColors.primary),
-                              AppSpacing.hGapXs,
-                              Text('$_routeDurationMin min',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ],
                       ),
                     AppSpacing.gapMd,
                     PremiumButton(
@@ -1041,9 +999,9 @@ class _RiderDropoffLocationScreenState
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
                               const SizedBox(height: 2),
-                              Text(
+                                                            Text(
                                 _dropoffAddress.isEmpty
-                                    ? 'Lat: ${_dropoffLocation!.latitude.toStringAsFixed(4)}, Lng: ${_dropoffLocation!.longitude.toStringAsFixed(4)}'
+                                    ? 'Dropoff location'
                                     : _dropoffAddress,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -1052,6 +1010,8 @@ class _RiderDropoffLocationScreenState
                               ),
                             ],
                           ),
+
+                      
                         ),
                       ],
                     ),
@@ -1186,7 +1146,7 @@ class _RiderDropoffLocationScreenState
                   Expanded(
                     child: Text(
                       _dropoffAddress.isEmpty
-                          ? 'Lat: ${_dropoffLocation!.latitude.toStringAsFixed(4)}, Lng: ${_dropoffLocation!.longitude.toStringAsFixed(4)}'
+                          ? 'Dropoff location'
                           : _dropoffAddress,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

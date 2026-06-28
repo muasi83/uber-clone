@@ -13,6 +13,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/cancel_ride_dialog.dart';
+import '../utils/bearing_utils.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
@@ -45,6 +46,9 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   BitmapDescriptor _carIcon = BitmapDescriptor.defaultMarker;
   BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
   String? _mapStyle;
+
+  Timer? _driverAnimTimer;
+  LatLng? _animatedDriverPos;
 
   Timer? _statusPollTimer;
   late AnimationController _pulseController;
@@ -241,6 +245,33 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
           );
 
           addDebugMessage('Driver arrived notification');
+        } else if (type == 'ride_cancelled') {
+          addDebugMessage('❌ Ride cancelled by driver');
+          ChatScreen.clearAllCache();
+          if (mounted) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => AlertDialog(
+                icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 48),
+                title: const Text('Ride Cancelled'),
+                content: Text(event['reason'] as String? ?? 'The driver cancelled the ride'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/rider-home',
+                        (route) => false,
+                      );
+                    },
+                    child: const Text('Back to Home'),
+                  ),
+                ],
+              ),
+            );
+          }
         }
       });
 
@@ -286,18 +317,17 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     final lng = (payload['longitude'] ?? payload['lng']) as double?;
 
     if (lat != null && lng != null) {
-      setState(() {
-        final prev = _driverLocation;
-        _driverLocation = LatLng(lat, lng);
-        final heading = payload['heading'];
-        if (heading != null) {
-          _driverHeading = (heading as num).toDouble();
-        } else if (prev != null) {
-          _driverHeading = _bearingBetween(prev, _driverLocation!);
-        }
-        _updateMarkers();
-        _fitBounds();
-      });
+      final prev = _driverLocation;
+      final newLoc = LatLng(lat, lng);
+      _driverLocation = newLoc;
+      final heading = payload['heading'];
+      if (heading != null) {
+        _driverHeading = (heading as num).toDouble();
+      } else if (prev != null) {
+        _driverHeading = _bearingBetween(prev, _driverLocation!);
+      }
+      _startDriverMarkerAnimation(newLoc);
+      _fitBounds();
       _updateRoute();
     }
   }
@@ -316,14 +346,15 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
       );
     }
 
-    if (_driverLocation != null) {
+    final driverPos = _animatedDriverPos ?? _driverLocation;
+    if (driverPos != null) {
       addDebugMessage('_updateMarkers rotation=$_driverHeading');
       updated.add(
         Marker(
           markerId: const MarkerId('driver'),
-          position: _driverLocation!,
+          position: driverPos,
           icon: _carIcon,
-          rotation: _carRotation(_driverHeading % 360),
+          rotation: normalizeCarHeading(_driverHeading % 360),
           anchor: const Offset(0.5, 0.5),
           flat: true,
           infoWindow: InfoWindow(
@@ -334,6 +365,29 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     }
 
     _markers = updated;
+  }
+
+  void _startDriverMarkerAnimation(LatLng target) {
+    _driverAnimTimer?.cancel();
+    final from = _animatedDriverPos ?? target;
+    final steps = 30;
+    var step = 0;
+    _driverAnimTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      step++;
+      final t = (step / steps).clamp(0.0, 1.0);
+      final eased = 1.0 - math.pow(1.0 - t, 3).toDouble();
+      _animatedDriverPos = LatLng(
+        from.latitude + (target.latitude - from.latitude) * eased,
+        from.longitude + (target.longitude - from.longitude) * eased,
+      );
+      if (mounted) setState(() {});
+      if (step >= steps) {
+        _driverAnimTimer?.cancel();
+        _driverAnimTimer = null;
+        _animatedDriverPos = target;
+        if (mounted) setState(() {});
+      }
+    });
   }
 
   Future<void> _updateRoute() async {
@@ -415,8 +469,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   double _toRadians(double deg) => deg * math.pi / 180;
   double _toDegrees(double rad) => rad * 180 / math.pi;
 
-  /// Car image front faces DOWN (south). Add 180° so rotation=0 → north.
-  double _carRotation(double heading) => (heading + 180) % 360;
+
 
   Future<void> _openChat() async {
     final token = StorageService.getToken();
@@ -438,6 +491,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
               receiverId: ride.driver!.id!,
               receiverName: ride.driver!.fullName,
               token: token,
+              rideId: widget.rideId,
             ),
           ),
         );
@@ -748,6 +802,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   @override
   void dispose() {
     _rideStarting = false;
+    _driverAnimTimer?.cancel();
     _statusPollTimer?.cancel();
     _rideEventsSub?.cancel();
     _driverLocEventsSub?.cancel();

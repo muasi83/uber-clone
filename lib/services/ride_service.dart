@@ -275,10 +275,14 @@ class RideService {
   }
 
   static Future<List<Ride>> getRideHistory(String token) async {
-    try {
-      addDebugMessage('📋 FETCHING RIDE HISTORY');
+    return getRideHistoryPaginated(token, 0, 20);
+  }
 
-      final url = '${StorageService.getServerUrl()}/api/rides/user/history';
+  static Future<List<Ride>> getRideHistoryPaginated(String token, int page, int size) async {
+    try {
+      addDebugMessage('📋 FETCHING RIDE HISTORY page=$page size=$size');
+
+      final url = '${StorageService.getServerUrl()}/api/rides/user/history?page=$page&size=$size';
 
       final response = await http
           .get(

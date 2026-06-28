@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/ride_service.dart';
 import '../services/directions_service.dart';
 import '../services/storage_service.dart';
@@ -11,6 +13,7 @@ import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../widgets/cancel_ride_dialog.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
@@ -42,6 +45,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   final Set<Polyline> _polylines = {};
   BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
   String? _mapStyle;
+  bool _showDriverMarker = true;
   bool _rideStarted = false;
   bool _isCompleting = false;
   int _remainingMinutes = 0;
@@ -166,12 +170,13 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   Future<void> _updateMarkers() async {
     _markers.clear();
 
-    if (_driverLocation != null) {
+    if (_driverLocation != null && _showDriverMarker) {
       _markers.add(
         Marker(
           markerId: const MarkerId('driver'),
           position: _driverLocation!,
           icon: await MarkerFactory.driver,
+          flat: true,
         ),
       );
     }
@@ -286,6 +291,8 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
 
       addDebugMessage('✅ Ride completed');
 
+      ChatScreen.clearAllCache();
+
       WebSocketService.sendRideMessage('ride_completed', {
         'rideId': widget.rideId,
         'status': 'COMPLETED',
@@ -361,6 +368,26 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
             compassEnabled: true,
             zoomControlsEnabled: false,
             style: _mapStyle,
+          ),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: FloatingActionButton(
+              heroTag: 'toggle_marker_driver_active',
+              mini: true,
+              onPressed: () {
+                setState(() => _showDriverMarker = !_showDriverMarker);
+                _updateMarkers();
+              },
+              backgroundColor: _showDriverMarker
+                  ? AppColors.primary
+                  : AppColors.surfaceVariant,
+              child: Icon(
+                Icons.my_location,
+                color: _showDriverMarker ? Colors.white : AppColors.textSecondary,
+                size: 20,
+              ),
+            ),
           ),
           Positioned(
             bottom: 0,
@@ -474,6 +501,30 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
                           onPressed: _startRide,
                           variant: ButtonVariant.success,
                         ),
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _openGoogleMapsToDestination,
+                      icon: const Icon(Icons.map, size: 18),
+                      label: const Text('Navigate to Destination'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  PremiumButton(
+                    label: 'Cancel Ride',
+                    onPressed: _showCancelRideDialog,
+                    variant: ButtonVariant.danger,
+                    icon: Icons.close,
+                  ),
                 ],
               ),
             ),
@@ -485,6 +536,68 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
 
   Future<void> _loadMapStyle() async {
     _mapStyle = await MapStyleLoader.load();
+  }
+
+  Future<void> _showCancelRideDialog() async {
+    final result = await showCancelRideDialog(context);
+    if (result != null && result.confirmed && mounted) {
+      final reason = result.reason;
+      try {
+        final token = StorageService.getToken();
+        if (token == null) return;
+        await RideService.cancelRide(widget.rideId, token, reason: reason);
+        ChatScreen.clearAllCache();
+        if (mounted) {
+          WebSocketService.sendRideMessage('ride_cancelled', {
+            'rideId': widget.rideId,
+            'reason': reason,
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ride cancelled'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
+        }
+      } catch (e) {
+        addDebugMessage('❌ Error cancelling ride: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          );
+        }
+      }
+    }
+  }
+
+  void _openGoogleMapsToDestination() {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1'
+      '&destination=${widget.dropoffLat},${widget.dropoffLng}'
+      '&travelmode=driving',
+    );
+    _launchUrl(uri);
+  }
+
+  Future<void> _launchUrl(Uri uri) async {
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await Clipboard.setData(ClipboardData(text: uri.toString()));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open Maps — link copied to clipboard'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      addDebugMessage('Error launching maps: $e');
+    }
   }
 
   Future<void> _fetchChatPartnerId() async {
@@ -541,6 +654,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
               receiverId: otherUser.id!,
               receiverName: otherUser.fullName,
               token: token,
+              rideId: widget.rideId,
             ),
           ),
         );

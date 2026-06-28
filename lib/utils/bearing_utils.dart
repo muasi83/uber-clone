@@ -16,5 +16,7 @@ double calculateBearing(LatLng from, LatLng to) {
 
 double calculateCarRotation(LatLng from, LatLng to) {
   final bearing = calculateBearing(from, to);
-  return bearing;
+  return (bearing + 180) % 360;
 }
+
+double normalizeCarHeading(double heading) => (heading + 180) % 360;

@@ -10,8 +10,7 @@ class StorageService {
   static const String _activeRideIdKey = 'active_ride_id';
   static const String _activeRideStatusKey = 'active_ride_status';
   
-  static const String _defaultServerUrl = 'https://catalog-staring-hamstring.ngrok-free.dev';
-  //https://catalog-staring-hamstring.ngrok-free.dev   http://localhost:8080
+  static const String _defaultServerUrl = 'http://localhost:8080';
 
   static late SharedPreferences _prefs;
   static bool _initialized = false;

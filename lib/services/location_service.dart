@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../screens/debug_screen.dart';
 import '../models/location_model.dart';
+import 'storage_service.dart';
 
 class LocationService {
   static Future<bool> ensureServiceAndPermission({bool openSettingsIfNeeded = false}) async {
@@ -128,6 +131,198 @@ class LocationService {
       addDebugMessage('❌ Error requesting permission: $e');
       rethrow;
     }
+  }
+
+  /// Reverse geocode — tries backend first, then direct Google API
+  /// Returns formatted address: {CountryCode}-{CityCode3}-{District}-{Street}
+  static Future<String?> getFormattedAddress(double latitude, double longitude) async {
+    try {
+      // 1) Try backend endpoint
+      final serverUrl = StorageService.getServerUrl();
+      if (serverUrl.isNotEmpty) {
+        final backendUrl = '$serverUrl/api/routes/geocode?lat=$latitude&lng=$longitude';
+        addDebugMessage('📍 Geocoding via backend: $backendUrl');
+        try {
+          final backendRes = await http
+              .get(Uri.parse(backendUrl))
+              .timeout(const Duration(seconds: 5));
+          if (backendRes.statusCode == 200) {
+            final json = jsonDecode(backendRes.body) as Map<String, dynamic>;
+            final result = _formatGeocodeResponse(json);
+            if (result != null) return result;
+          }
+        } catch (_) {
+          addDebugMessage('ℹ️ Backend geocode unavailable, trying direct API');
+        }
+      }
+
+      // 2) Fallback: direct Google Geocoding API (works on web + mobile)
+      const googleKey = 'AIzaSyAzAVhrBKWMJZNrXyD9DGk6AZVM1yv2KiY';
+      final directUrl = 'https://maps.googleapis.com/maps/api/geocode/json'
+          '?latlng=$latitude,$longitude&key=$googleKey&language=en';
+
+      addDebugMessage('📍 Geocoding direct: $directUrl');
+      final directRes = await http
+          .get(Uri.parse(directUrl))
+          .timeout(const Duration(seconds: 10));
+
+      if (directRes.statusCode == 200) {
+        final root = jsonDecode(directRes.body) as Map<String, dynamic>;
+        final status = root['status'] as String? ?? '';
+        addDebugMessage('📍 Direct geocode status: $status');
+
+        if (status == 'OK') {
+          final results = root['results'] as List? ?? [];
+          if (results.isNotEmpty) {
+            final first = results[0] as Map<String, dynamic>;
+            final formattedAddress = first['formatted_address'] as String? ?? '';
+
+            String countryCode = '', city = '', district = '', street = '';
+            final components = first['address_components'] as List? ?? [];
+            for (final comp in components) {
+              final c = comp as Map<String, dynamic>;
+              final types = (c['types'] as List?)?.map((e) => e.toString()).toList() ?? [];
+              final longName = (c['long_name'] as String? ?? '');
+              final shortName = (c['short_name'] as String? ?? '');
+
+              if (types.contains('country')) {
+                countryCode = shortName;
+              } else if (types.contains('locality')) {
+                city = longName;
+              } else if (types.contains('sublocality') || types.contains('sublocality_level_1') || types.contains('neighborhood')) {
+                district = longName;
+              } else if (types.contains('administrative_area_level_1') && city.isEmpty) {
+                city = longName;
+              } else if (types.contains('route')) {
+                street = longName;
+              }
+            }
+
+            // If no district, try extracting from formatted address
+            if (district.isEmpty && formattedAddress.contains(',')) {
+              final commaParts = formattedAddress.split(',');
+              if (commaParts.length >= 3) {
+                final possible = commaParts[commaParts.length - 3].trim();
+                if (!possible.contains(RegExp(r'^\d')) && possible.length < 40) {
+                  district = possible;
+                }
+              }
+            }
+
+            // Build result
+            final cc = countryCode.toUpperCase() == 'SA' ? 'KSA' : countryCode.toUpperCase();
+            final cityCode = city.length >= 3
+                ? city.substring(0, 3).toUpperCase()
+                : city.isNotEmpty ? city.toUpperCase() : '';
+
+            String shortStreet = '';
+            if (street.isNotEmpty) {
+              final segs = street
+                  .split(RegExp(r'[,،/]'))
+                  .map((s) => s.trim())
+                  .where((s) => s.isNotEmpty && !RegExp(r'^\d+$').hasMatch(s))
+                  .toList();
+              shortStreet = segs.isNotEmpty ? segs.last : street;
+              if (shortStreet.length > 25) {
+                final words = shortStreet.split(' ');
+                final kept = <String>[];
+                for (final w in words) {
+                  if ((kept.join(' ').length + w.length) > 20) break;
+                  kept.add(w);
+                }
+                shortStreet = kept.isNotEmpty ? kept.join(' ') : words.first;
+              }
+            }
+
+            final parts = <String>[];
+            if (cc.isNotEmpty) parts.add(cc);
+            if (cityCode.isNotEmpty) parts.add(cityCode);
+            if (district.isNotEmpty) parts.add(district);
+            if (shortStreet.isNotEmpty) parts.add(shortStreet);
+
+            if (parts.length >= 2) {
+              final result = parts.join('-');
+              addDebugMessage('✅ Formatted: $result');
+              return result;
+            }
+
+            // Last fallback: just use district from formatted address
+            if (district.isNotEmpty) {
+              final fb = <String>[];
+              if (cc.isNotEmpty) fb.add(cc);
+              if (cityCode.isNotEmpty) fb.add(cityCode);
+              fb.add(district);
+              final result = fb.join('-');
+              addDebugMessage('✅ District-only: $result');
+              return result;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      addDebugMessage('❌ Geocoding error: $e');
+    }
+    return null;
+  }
+
+  static String? _formatGeocodeResponse(Map<String, dynamic> json) {
+    final countryCode = (json['countryCode'] as String? ?? '').trim().toUpperCase();
+    final cc = countryCode == 'SA' ? 'KSA' : (countryCode.isNotEmpty ? countryCode : '');
+    final district = (json['district'] as String? ?? '').trim();
+    final street = (json['street'] as String? ?? '').trim();
+    final city = (json['city'] as String? ?? '').trim();
+    final formatted = (json['formattedAddress'] as String? ?? '').trim();
+
+    final cityCode = city.length >= 3
+        ? city.substring(0, 3).toUpperCase()
+        : city.isNotEmpty ? city.toUpperCase() : '';
+
+    String shortStreet = '';
+    if (street.isNotEmpty) {
+      final segments = street
+          .split(RegExp(r'[,،/]'))
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty && !RegExp(r'^\d+$').hasMatch(s))
+          .toList();
+      shortStreet = segments.isNotEmpty ? segments.last : street;
+      if (shortStreet.length > 25) {
+        final words = shortStreet.split(' ');
+        final kept = <String>[];
+        for (final w in words) {
+          if ((kept.join(' ').length + w.length) > 20) break;
+          kept.add(w);
+        }
+        shortStreet = kept.isNotEmpty ? kept.join(' ') : words.first;
+      }
+    }
+
+    final parts = <String>[];
+    if (cc.isNotEmpty) parts.add(cc);
+    if (cityCode.isNotEmpty) parts.add(cityCode);
+    if (district.isNotEmpty) parts.add(district);
+    if (shortStreet.isNotEmpty) parts.add(shortStreet);
+
+    if (parts.length >= 2) {
+      addDebugMessage('✅ Backend formatted: ${parts.join('-')}');
+      return parts.join('-');
+    }
+
+    // Fallback: extract from formatted address
+    if (formatted.isNotEmpty && formatted.contains(',')) {
+      final commaParts = formatted.split(',');
+      if (commaParts.length >= 3) {
+        final districtFallback = commaParts[commaParts.length - 3].trim();
+        if (districtFallback.length < 40) {
+          final fb = <String>[];
+          if (cc.isNotEmpty) fb.add(cc);
+          if (cityCode.isNotEmpty) fb.add(cityCode);
+          fb.add(districtFallback);
+          addDebugMessage('✅ Backend fallback: ${fb.join('-')}');
+          return fb.join('-');
+        }
+      }
+    }
+    return null;
   }
 
   // Reverse Geocoding

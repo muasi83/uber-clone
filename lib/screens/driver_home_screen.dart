@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:vibration/vibration.dart';
@@ -18,6 +19,8 @@ import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../screens/settings_screen.dart';
 import '../screens/ride_preview_screen.dart';
+import '../screens/debug_screen.dart';
+import '../screens/trip_history_screen.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 
@@ -89,7 +92,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   Future<void> _initMarkerIcons() async {
-    _driverMarkerIcon = await MarkerFactory.driver;
+    try {
+      _driverMarkerIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(64, 64)),
+        'assets/images/car_marker.png',
+      );
+    } catch (e) {
+      addDebugMessage('⚠️ Car icon fallback: $e');
+      _driverMarkerIcon = await MarkerFactory.driver;
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadDriverProfile() async {
@@ -194,8 +206,35 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   void _handleNewRideRequest(Map<String, dynamic> event) {
     if (_currentRide != null || _isPreviewOpen) return;
 
+    final pickupLat = (event['pickupLat'] as num?)?.toDouble();
+    final pickupLng = (event['pickupLng'] as num?)?.toDouble();
+    if (pickupLat != null && pickupLng != null && _driverCurrentLocation != null) {
+      final distance = _haversineKm(
+        _driverCurrentLocation!,
+        LatLng(pickupLat, pickupLng),
+      );
+      if (distance > 15.0) {
+        addDebugMessage('🚫 Ride too far: ${distance.toStringAsFixed(1)}km > 15km');
+        return;
+      }
+    }
+
     _playRideAlert();
     _showRidePreview(event);
+  }
+
+  double _haversineKm(LatLng a, LatLng b) {
+    const r = 6371;
+    final dLat = (b.latitude - a.latitude) * (3.141592653589793 / 180);
+    final dLng = (b.longitude - a.longitude) * (3.141592653589793 / 180);
+    final lat1 = a.latitude * (3.141592653589793 / 180);
+    final lat2 = b.latitude * (3.141592653589793 / 180);
+    final dHalf = dLat / 2;
+    final lHalf = dLng / 2;
+    final aa = math.sin(dHalf) * math.sin(dHalf) +
+        math.sin(lHalf) * math.sin(lHalf) * math.cos(lat1) * math.cos(lat2);
+    final cc = 2 * math.asin(math.sqrt(aa));
+    return r * cc;
   }
 
   void _handleRideConfirmed(Map<String, dynamic> event) {
@@ -241,8 +280,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     try {
       _ringtonePlayer.play(
         ios: IosSounds.alarm,
-        android: AndroidSounds.ringtone,
-        volume: 0.8,
+        android: AndroidSounds.alarm,
+        volume: 1.0,
       );
       Vibration.vibrate(pattern: [0, 800, 400, 800, 400, 800], intensities: [0, 255, 0, 255, 0, 255]);
     } catch (e) {
@@ -1204,58 +1243,132 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   void _showNotificationsSheet() {
+    final token = StorageService.getToken();
+    if (token == null) return;
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppSpacing.bottomSheetTopRadius),
         ),
       ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            AppSpacing.sm,
-            AppSpacing.xl,
-            AppSpacing.lg,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return FutureBuilder<List<Map<String, dynamic>>>(
+            future: NotificationService.fetchNotifications(token),
+            builder: (context, snapshot) {
+              final notifications = snapshot.data ?? [];
+              final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+              return SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, AppSpacing.lg),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.outlineVariant,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.md,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Notifications',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            if (notifications.isNotEmpty)
+                              TextButton(
+                                onPressed: () async {
+                                  await NotificationService.clearNotifications(token);
+                                  setState(() => _unreadNotificationCount = 0);
+                                  Navigator.pop(ctx);
+                                },
+                                child: const Text('Clear All', style: TextStyle(fontSize: 13)),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Divider(height: 1, color: AppColors.outline.withValues(alpha: 0.5)),
+                      if (isLoading)
+                        const Padding(
+                          padding: EdgeInsets.all(32),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else if (notifications.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            children: [
+                              Icon(Icons.notifications_none, size: 48, color: AppColors.textTertiary),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No notifications yet',
+                                style: TextStyle(color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: MediaQuery.of(context).size.height * 0.55,
+                          ),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            itemCount: notifications.length,
+                            separatorBuilder: (_, __) =>
+                                Divider(height: 1, indent: 20, endIndent: 20,
+                                    color: AppColors.outline.withValues(alpha: 0.3)),
+                            itemBuilder: (context, index) {
+                              final n = notifications[index];
+                              return ListTile(
+                                leading: Icon(
+                                  n['type'] == 'chat' ? Icons.chat : Icons.notifications,
+                                  size: 20, color: AppColors.primary,
+                                ),
+                                title: Text(
+                                  n['title'] ?? '',
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                ),
+                                subtitle: Text(
+                                  n['body'] ?? '',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                dense: true,
+                                onTap: () {
+                                  Navigator.pop(ctx);
+                                  NotificationService.handleNotificationTap(n['type'] as String? ?? '');
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              const Text(
-                'Notifications',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 32),
-                child: Column(
-                  children: [
-                    Icon(Icons.notifications_none, size: 48, color: AppColors.textTertiary),
-                    SizedBox(height: 12),
-                    Text(
-                      'No new notifications',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -1295,6 +1408,32 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   color: AppColors.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.bug_report_outlined, size: 20),
+                title: const Text('Debug'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const DebugScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.history, size: 20),
+                title: const Text('Trip History'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TripHistoryScreen(),
+                    ),
+                  );
+                },
               ),
               ListTile(
                 leading: const Icon(Icons.settings, size: 20),

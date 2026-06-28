@@ -16,6 +16,7 @@ class ChatScreen extends StatefulWidget {
   final int receiverId;
   final String receiverName;
   final String token;
+  final int? rideId;
 
   const ChatScreen({
     super.key,
@@ -24,7 +25,16 @@ class ChatScreen extends StatefulWidget {
     required this.receiverId,
     required this.receiverName,
     required this.token,
+    this.rideId,
   });
+
+  static void clearCache(int userId1, int userId2) {
+    _ChatScreenState.clearCacheForRide(userId1, userId2);
+  }
+
+  static void clearAllCache() {
+    _ChatScreenState._messageCache.clear();
+  }
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -39,9 +49,31 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isReceiverTyping = false;
 
+  static final Map<String, List<Message>> _messageCache = {};
+
+  String get _cacheKey {
+    final a = widget.currentUserId;
+    final b = widget.receiverId;
+    return '${a < b ? a : b}-${a < b ? b : a}';
+  }
+
+  static void clearCacheForRide(int userId1, int userId2) {
+    final a = userId1;
+    final b = userId2;
+    final key = '${a < b ? a : b}-${a < b ? b : a}';
+    _messageCache.remove(key);
+  }
+
   @override
   void initState() {
     super.initState();
+
+    final cached = _messageCache[_cacheKey];
+    if (cached != null) {
+      messages = List.from(cached);
+      isLoading = false;
+    }
+
     _loadChatHistory();
 
     WebSocketService.unreadCounts[widget.receiverId] = 0;
@@ -60,6 +92,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _messageCache[_cacheKey] = List.from(messages);
     _messageController.dispose();
     _refreshTimer.cancel();
     if (_typingTimer.isActive) _typingTimer.cancel();
@@ -114,7 +147,10 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       if (mounted) {
-        setState(() => messages.add(newMessage));
+        setState(() {
+          messages.add(newMessage);
+          _messageCache[_cacheKey] = List.from(messages);
+        });
         _scrollToBottom();
       }
     }
@@ -147,16 +183,19 @@ class _ChatScreenState extends State<ChatScreen> {
 
         if (mounted) {
           setState(() {
-            messages = jsonList
-                .map((m) {
-                  try {
-                    return Message.fromJson(m);
-                  } catch (e) {
-                    return null;
-                  }
-                })
-                .whereType<Message>()
-                .toList();
+            if (jsonList.isNotEmpty) {
+              messages = jsonList
+                  .map((m) {
+                    try {
+                      return Message.fromJson(m);
+                    } catch (e) {
+                      return null;
+                    }
+                  })
+                  .whereType<Message>()
+                  .toList();
+              _messageCache[_cacheKey] = List.from(messages);
+            }
             isLoading = false;
           });
 
@@ -198,6 +237,7 @@ class _ChatScreenState extends State<ChatScreen> {
           status: 'sent',
           isDelivered: true,
         ));
+        _messageCache[_cacheKey] = List.from(messages);
       });
     }
 
@@ -216,18 +256,19 @@ class _ChatScreenState extends State<ChatScreen> {
             body: jsonEncode({
               'receiverId': widget.receiverId,
               'content': content,
+              if (widget.rideId != null) 'rideId': widget.rideId,
             }),
           )
           .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        WebSocketService.sendMessage(
-          widget.currentUserId,
-          widget.receiverId,
-          content,
-          widget.currentUsername,
-        );
+      WebSocketService.sendMessage(
+        widget.currentUserId,
+        widget.receiverId,
+        content,
+        widget.currentUsername,
+      );
 
+      if (response.statusCode == 200) {
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) _loadChatHistory();
       }
@@ -476,8 +517,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                       : Icons.done,
                               size: 14,
                               color: message.status == 'seen'
-                                  ? AppColors.secondaryLight
-                                  : Colors.white60,
+                                  ? Colors.blue
+                                  : message.status == 'delivered'
+                                      ? AppColors.secondaryLight
+                                      : Colors.white60,
                             ),
                           ],
                         ],

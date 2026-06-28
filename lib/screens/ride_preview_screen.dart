@@ -46,7 +46,6 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
   BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
   String? _mapStyle;
   Timer? _autoDismissTimer;
-  int _phase = 0; // 0=pickup zoom, 1=dropoff zoom, 2=full route
 
   @override
   void initState() {
@@ -55,11 +54,8 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
     addDebugMessage('RidePreviewScreen opened');
     _initYellowPin().then((_) => _updateMarkerIcons());
     _addMarkers();
-    if (widget.driverMode) {
-      // _loadRouteImmediately called from _onMapCreated after map is ready
-    } else {
-      _startPreviewSequence();
-      _autoDismissTimer = Timer(const Duration(seconds: 6), () {
+    if (!widget.driverMode) {
+      _autoDismissTimer = Timer(const Duration(seconds: 10), () {
         if (mounted) Navigator.of(context).pop();
       });
     }
@@ -129,40 +125,6 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
     });
   }
 
-  Future<void> _startPreviewSequence() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    // Phase 1: Zoom to pickup point (2-2.5 seconds)
-    setState(() => _phase = 0);
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(
-        LatLng(widget.pickupLat, widget.pickupLng),
-        16,
-      ),
-    );
-    addDebugMessage('Phase 1: Zooming to pickup');
-
-    await Future.delayed(const Duration(milliseconds: 2300));
-
-    // Phase 2: Zoom to dropoff point (2-2.5 seconds)
-    setState(() => _phase = 1);
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(
-        LatLng(widget.dropoffLat, widget.dropoffLng),
-        16,
-      ),
-    );
-    addDebugMessage('Phase 2: Zooming to dropoff');
-
-    await Future.delayed(const Duration(milliseconds: 2300));
-
-    // Phase 3: Show complete route with both points
-    setState(() => _phase = 2);
-    await _loadRoute();
-    _fitBothPoints();
-    addDebugMessage('Phase 3: Showing full route');
-  }
-
   Future<void> _loadRoute() async {
     try {
       final route = await DirectionsService.getDirections(
@@ -210,9 +172,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
         13,
       ),
     );
-    if (widget.driverMode) {
-      _loadRouteImmediately();
-    }
+    _loadRouteImmediately();
   }
 
   @override
@@ -409,11 +369,9 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                       color: AppColors.textPrimary,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                      _phase == 0 ? 'Showing pickup point...' :
-                      _phase == 1 ? 'Showing dropoff point...' :
-                      'Showing complete route',
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    child: const Text(
+                      'Loading route...',
+                      style: TextStyle(color: Colors.white, fontSize: 13),
                     ),
                   ),
                 ),

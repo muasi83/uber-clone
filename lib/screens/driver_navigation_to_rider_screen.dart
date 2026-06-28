@@ -13,6 +13,7 @@ import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../widgets/cancel_ride_dialog.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
@@ -51,6 +52,7 @@ class _DriverNavigationToRiderScreenState
   final Set<Polyline> _polylines = {};
   BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
   String? _mapStyle;
+  bool _showDriverMarker = true;
   bool _isArriving = false;
   int _remainingMinutes = 15;
   double? _distanceKm;
@@ -173,12 +175,13 @@ class _DriverNavigationToRiderScreenState
   Future<void> _updateMarkers() async {
     _markers.clear();
 
-    if (_driverLocation != null) {
+    if (_driverLocation != null && _showDriverMarker) {
       _markers.add(
         Marker(
           markerId: const MarkerId('driver'),
           position: _driverLocation!,
           icon: await MarkerFactory.driver,
+          flat: true,
           infoWindow: const InfoWindow(title: 'Your Location'),
         ),
       );
@@ -334,6 +337,39 @@ class _DriverNavigationToRiderScreenState
     }
   }
 
+  Future<void> _showCancelRideDialog() async {
+    final result = await showCancelRideDialog(context);
+    if (result != null && result.confirmed && mounted) {
+      final reason = result.reason;
+      try {
+        final token = StorageService.getToken();
+        if (token == null) return;
+        await RideService.cancelRide(widget.rideId, token, reason: reason);
+        ChatScreen.clearAllCache();
+        if (mounted) {
+          WebSocketService.sendRideMessage('ride_cancelled', {
+            'rideId': widget.rideId,
+            'reason': reason,
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ride cancelled'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
+        }
+      } catch (e) {
+        addDebugMessage('❌ Error cancelling ride: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          );
+        }
+      }
+    }
+  }
+
   void _openGoogleMaps() {
     final uri = Uri.parse(
       'https://www.google.com/maps/dir/?api=1'
@@ -408,6 +444,26 @@ class _DriverNavigationToRiderScreenState
             zoomControlsEnabled: false,
             myLocationButtonEnabled: true,
             style: _mapStyle,
+          ),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: FloatingActionButton(
+              heroTag: 'toggle_marker_nav',
+              mini: true,
+              onPressed: () {
+                setState(() => _showDriverMarker = !_showDriverMarker);
+                _updateMarkers();
+              },
+              backgroundColor: _showDriverMarker
+                  ? AppColors.primary
+                  : AppColors.surfaceVariant,
+              child: Icon(
+                Icons.my_location,
+                color: _showDriverMarker ? Colors.white : AppColors.textSecondary,
+                size: 20,
+              ),
+            ),
           ),
           if (_isArriving)
             Positioned.fill(
@@ -548,6 +604,13 @@ class _DriverNavigationToRiderScreenState
                       ),
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  PremiumButton(
+                    label: 'Cancel Ride',
+                    onPressed: _showCancelRideDialog,
+                    variant: ButtonVariant.danger,
+                    icon: Icons.close,
+                  ),
                 ],
               ),
             ),
@@ -615,6 +678,7 @@ class _DriverNavigationToRiderScreenState
               receiverId: otherUser.id!,
               receiverName: otherUser.fullName,
               token: token,
+              rideId: widget.rideId,
             ),
           ),
         );

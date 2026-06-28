@@ -20,6 +20,7 @@ import '../widgets/unread_badge.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../screens/settings_screen.dart';
+import '../screens/trip_history_screen.dart';
 
 class RiderHomeScreen extends StatefulWidget {
   const RiderHomeScreen({super.key});
@@ -394,22 +395,48 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
 
   Future<void> _initializeMap() async {
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
+      await Future.any([
+        _initializeLocation(),
+        Future.delayed(const Duration(seconds: 30)),
+      ]);
+      if (!mounted) return;
+      if (_currentLocation == null) {
+        setState(() {
+          _isInitializing = false;
+          _initError = 'Location initialization timed out. Please try again.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isInitializing = false;
+        _initError = 'Failed to get location. Please enable location services.';
+      });
+    }
+  }
+
+  Future<void> _initializeLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission()
+          .timeout(const Duration(seconds: 5));
       if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission()
+            .timeout(const Duration(seconds: 10));
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        setState(() {
-          _isInitializing = false;
-          _initError = 'Location permission required';
-        });
+        if (mounted) {
+          setState(() {
+            _isInitializing = false;
+            _initError = 'Location permission required';
+          });
+        }
         return;
       }
       Position position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 15),
+          timeLimit: Duration(seconds: 20),
         ),
       );
       _currentLocation = LatLng(position.latitude, position.longitude);
@@ -430,16 +457,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
       if (_locationRetryCount < 3) {
         _locationRetryCount++;
         Future.delayed(Duration(seconds: _locationRetryCount * 2), () {
-          if (mounted) _initializeMap();
+          if (mounted) _initializeLocation();
         });
         return;
       }
-      if (mounted) {
-        setState(() {
-          _isInitializing = false;
-          _initError = 'Failed to get location. Please enable location services.';
-        });
-      }
+      rethrow;
     }
   }
 
@@ -646,7 +668,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 title: const Text('Ride History'),
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Navigate to ride history
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TripHistoryScreen(),
+                    ),
+                  );
                 },
               ),
               ListTile(
@@ -933,6 +960,33 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                           ),
                           const SizedBox(height: 4),
                           ..._recentTrips.map((ride) => _buildRecentTripItem(ride)),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const TripHistoryScreen(),
+                                  ),
+                                );
+                              },
+                              child: const Row(
+                                children: [
+                                  Text(
+                                    'View All Trips',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.primary),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ],
                     ),

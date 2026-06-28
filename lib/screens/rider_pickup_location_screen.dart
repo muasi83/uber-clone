@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geocoding/geocoding.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
@@ -11,10 +10,12 @@ import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/glass_card.dart';
 import '../services/websocket_service.dart';
+import '../services/location_service.dart';
 import '../services/driver_service.dart';
 import '../models/ride_model.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
+import '../utils/bearing_utils.dart';
 import '../utils/marker_factory.dart';
 
 class RiderPickupLocationScreen extends StatefulWidget {
@@ -86,8 +87,8 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
 
-    mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(_pickupLocation!, 17),
+    mapController?.moveCamera(
+      CameraUpdate.newLatLng(_pickupLocation!),
     );
   }
 
@@ -148,39 +149,19 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
           _isLoadingAddress = true;
         });
 
-        String address = 'Lat: ${location.latitude.toStringAsFixed(4)}, '
-            'Lng: ${location.longitude.toStringAsFixed(4)}';
+        String address = '';
 
         try {
-          final placemarks = await placemarkFromCoordinates(
+          final formattedAddress = await LocationService.getFormattedAddress(
             location.latitude,
             location.longitude,
-          ).timeout(
-            const Duration(seconds: 5),
-            onTimeout: () => <Placemark>[],
           );
 
-          if (!mounted) return;
-
-          if (placemarks.isNotEmpty) {
-            final place = placemarks.first;
-
-            final street = (place.street ?? '').trim();
-            final locality = (place.locality ?? '').trim();
-            final administrativeArea = (place.administrativeArea ?? '').trim();
-            final country = (place.country ?? '').trim();
-
-            final parts = [
-              if (street.isNotEmpty) street,
-              if (locality.isNotEmpty) locality,
-              if (administrativeArea.isNotEmpty) administrativeArea,
-              if (country.isNotEmpty) country,
-            ];
-
-            final formatted = parts.join(', ').trim();
-            if (formatted.isNotEmpty) {
-              address = formatted;
-            }
+          if (formattedAddress != null && formattedAddress.isNotEmpty) {
+            address = formattedAddress;
+          } else {
+            address =
+                '${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}';
           }
 
           if (!mounted) return;
@@ -279,7 +260,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
         markerId: MarkerId(id),
         position: position,
         icon: _driverMarkerIcon,
-        rotation: _carRotation(rotation),
+        rotation: normalizeCarHeading(rotation),
         anchor: const Offset(0.5, 0.5),
         flat: true,
         infoWindow: InfoWindow(title: driver.user.fullName),
@@ -314,8 +295,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
   double _toRadians(double deg) => deg * math.pi / 180;
   double _toDegrees(double rad) => rad * 180 / math.pi;
 
-  /// Car image front faces DOWN (south). Add 180° so rotation=0 → north.
-  double _carRotation(double heading) => (heading + 180) % 360;
+
 
   void _handleDriverLocationEvent(Map<String, dynamic> event) {
     final type = event['type'] as String? ?? '';
@@ -332,7 +312,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
       if (existing == null) return;
       final heading = payload['heading'];
       if (heading == null) return;
-      final rotation = _carRotation((heading as num).toDouble() % 360);
+      final rotation = normalizeCarHeading((heading as num).toDouble() % 360);
       if (existing.rotation == rotation) return;
       _driverMarkers[id] = Marker(
         markerId: existing.markerId,
@@ -352,11 +332,11 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
     final heading = payload['heading'];
     double rotation;
     if (heading != null) {
-      rotation = _carRotation((heading as num).toDouble() % 360);
+      rotation = normalizeCarHeading((heading as num).toDouble() % 360);
     } else if (existing != null) {
-      rotation = _carRotation(_bearingBetween(existing.position, position));
+      rotation = normalizeCarHeading(_bearingBetween(existing.position, position));
     } else {
-      rotation = _carRotation(0);
+      rotation = normalizeCarHeading(0);
     }
 
     _driverMarkers[id] = Marker(
@@ -373,7 +353,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
   }
 
   void _confirmPickup() {
-    if (_pickupLocation == null || _pickupAddress.isEmpty) {
+    if (_pickupLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(

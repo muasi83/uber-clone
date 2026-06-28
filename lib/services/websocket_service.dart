@@ -9,6 +9,11 @@ class WebSocketService {
   static bool _isConnected = false;
   static bool _isManualDisconnect = false;
   static bool _isReconnecting = false;
+  static int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 10;
+  static int _lastUserId = 0;
+  static String _lastUsername = '';
+  static Timer? _reconnectTimer;
   
   static Function(Map<String, dynamic>)? onMessageReceived;
   static Function(int, String)? onUserOnline;
@@ -39,6 +44,9 @@ class WebSocketService {
   static Future<void> connect(int userId, String username) async {
     if (_isReconnecting) return;
     _isReconnecting = true;
+    _reconnectTimer?.cancel();
+    _lastUserId = userId;
+    _lastUsername = username;
     try {
       addDebugMessage('═══════════════════════════════════════');
       addDebugMessage('🔌 WebSocket CONNECTING');
@@ -101,6 +109,7 @@ class WebSocketService {
             if (!_didConnect) {
               _didConnect = true;
               _isConnected = true;
+              _reconnectAttempts = 0;
               _connectionStateController.add('connected');
               addDebugMessage('✅ WebSocket Connected!');
             }
@@ -119,13 +128,7 @@ class WebSocketService {
             addDebugMessage('❌ WebSocket Error: $error');
             _connectionStateController.add('error');
             
-            // ✅ Auto-reconnect after 5 seconds
-            Future.delayed(const Duration(seconds: 5), () {
-              if (!_isConnected && !_isManualDisconnect) {
-                addDebugMessage('🔄 Auto-reconnecting...');
-                connect(userId, username);
-              }
-            });
+            _scheduleReconnect();
           },
           onDone: () {
             addDebugMessage('🔌 WebSocket closed');
@@ -135,13 +138,7 @@ class WebSocketService {
             // ✅ ONLY EMIT if this is NOT a manual disconnect
             if (!_isManualDisconnect) {
               _connectionStateController.add('disconnected');
-              // Auto-reconnect after 5 seconds if closed unexpectedly
-              Future.delayed(const Duration(seconds: 5), () {
-                if (!_isConnected && !_isManualDisconnect) {
-                  addDebugMessage('🔄 Auto-reconnecting after unexpected close...');
-                  connect(userId, username);
-                }
-              });
+              _scheduleReconnect();
             }
           },
         );
@@ -277,6 +274,25 @@ class WebSocketService {
     _channel?.sink.add(jsonEncode(message));
   }
   
+  static void _scheduleReconnect() {
+    if (_isManualDisconnect) return;
+    _reconnectAttempts++;
+    if (_reconnectAttempts > _maxReconnectAttempts) {
+      addDebugMessage('❌ Max reconnect attempts ($_maxReconnectAttempts) reached. Giving up.');
+      _connectionStateController.add('error');
+      return;
+    }
+    final delay = Duration(seconds: [1, 2, 4, 8, 15, 30][(_reconnectAttempts - 1).clamp(0, 5)]);
+    addDebugMessage('🔄 Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts/$_maxReconnectAttempts)...');
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(delay, () {
+      if (!_isConnected && !_isManualDisconnect) {
+        addDebugMessage('🔄 Auto-reconnecting...');
+        connect(_lastUserId, _lastUsername);
+      }
+    });
+  }
+
   static void _startHeartbeat(int userId) {
     _stopHeartbeat();
     _heartbeatTimer = Timer.periodic(const Duration(minutes: 2), (_) {
@@ -400,6 +416,8 @@ class WebSocketService {
       
       // ✅ SET FLAG to prevent onDone/auto-reconnect
       _isManualDisconnect = true;
+      _reconnectAttempts = 0;
+      _reconnectTimer?.cancel();
       
       _stopHeartbeat();
       

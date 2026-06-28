@@ -60,6 +60,7 @@ class Message {
   final String status;
   final bool isRead;
   final bool isDelivered;
+  final int? rideId;
 
   Message({
     this.id,
@@ -70,6 +71,7 @@ class Message {
     this.status = 'sent',
     this.isRead = false,
     this.isDelivered = false,
+    this.rideId,
   }) : sentAt = sentAt ?? DateTime.now();
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
@@ -83,6 +85,7 @@ class Message {
         status: json['status'] as String? ?? 'sent',
         isRead: (json['isRead'] as int?) == 1,
         isDelivered: (json['isDelivered'] as int?) == 1,
+        rideId: json['rideId'] as int?,
       );
 
   Message copyWith({
@@ -94,6 +97,7 @@ class Message {
     String? status,
     bool? isRead,
     bool? isDelivered,
+    int? rideId,
   }) {
     return Message(
       id: id ?? this.id,
@@ -104,6 +108,7 @@ class Message {
       status: status ?? this.status,
       isRead: isRead ?? this.isRead,
       isDelivered: isDelivered ?? this.isDelivered,
+      rideId: rideId ?? this.rideId,
     );
   }
 
@@ -116,6 +121,7 @@ class Message {
         'status': status,
         'isRead': isRead ? 1 : 0,
         'isDelivered': isDelivered ? 1 : 0,
+        'rideId': rideId,
       };
 }
 
