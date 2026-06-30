@@ -699,6 +699,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   }
 
   Future<void> _openGoogleMapsToDestination() async {
+    addDebugMessage('▶️ _openGoogleMapsToDestination — starting background nav');
     try {
       await BackgroundNavigationService().start(
         rideId: widget.rideId,

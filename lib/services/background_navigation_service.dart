@@ -91,12 +91,14 @@ class BackgroundNavigationService {
     _navigationType = navigationType;
 
     addDebugMessage(
-      '🚀 Starting background navigation: $navigationType for ride $rideId',
+      '🚀 Background nav: $navigationType for ride $rideId — calling startService()',
     );
 
     try {
       final FlutterBackgroundService service = FlutterBackgroundService();
+      addDebugMessage('⏳ About to await startService()...');
       await service.startService();
+      addDebugMessage('✅ startService() returned successfully');
       _isRunning = true;
 
       _locationTimer = Timer.periodic(const Duration(seconds: 5), (_) {
