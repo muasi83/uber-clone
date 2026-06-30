@@ -731,7 +731,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                     color: AppColors.primary,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 16),
+                  child: const Icon(Icons.check, color: AppColors.primaryLight, size: 16),
                 ),
               ],
             ],

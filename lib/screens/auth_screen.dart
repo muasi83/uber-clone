@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/storage_service.dart';
+import '../services/firebase_service.dart';
 import '../screens/debug_screen.dart';
 import 'dart:async';
 import 'dart:io';
@@ -93,6 +94,7 @@ class _AuthScreenState extends State<AuthScreen>
         await StorageService.saveUserId(data['userId'] ?? 0);
         await StorageService.saveUsername(data['username'] ?? '');
         await StorageService.saveRole(data['role'] ?? 'RIDER');
+        await FirebaseService.sendTokenToServer();
 
         if (mounted) {
           final role = data['role'] ?? 'RIDER';
@@ -156,6 +158,7 @@ class _AuthScreenState extends State<AuthScreen>
         await StorageService.saveUserId(data['userId'] ?? 0);
         await StorageService.saveUsername(data['username'] ?? '');
         await StorageService.saveRole(data['role'] ?? 'RIDER');
+        await FirebaseService.sendTokenToServer();
 
         if (mounted) {
           final role = data['role'] ?? 'RIDER';
@@ -226,7 +229,7 @@ class _AuthScreenState extends State<AuthScreen>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: AppColors.primaryLight.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -239,7 +242,7 @@ class _AuthScreenState extends State<AuthScreen>
                       child: const Icon(
                         Icons.directions_car_rounded,
                         size: 36,
-                        color: Colors.white,
+                        color: AppColors.primaryLight,
                       ),
                     ),
                     AppSpacing.gapLg,
@@ -248,7 +251,7 @@ class _AuthScreenState extends State<AuthScreen>
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: AppColors.primaryLight,
                         letterSpacing: -0.5,
                       ),
                     ),
@@ -257,7 +260,7 @@ class _AuthScreenState extends State<AuthScreen>
                       'Sign in to continue',
                       style: TextStyle(
                         fontSize: 15,
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: AppColors.primaryLight.withValues(alpha: 0.85),
                       ),
                     ),
                   ],

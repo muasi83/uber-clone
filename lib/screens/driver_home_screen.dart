@@ -10,13 +10,11 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/status_badge.dart';
-import '../widgets/unread_badge.dart';
 import '../models/ride_model.dart';
 import '../services/ride_service.dart';
 import '../services/driver_service.dart';
 import '../services/websocket_service.dart';
 import '../services/storage_service.dart';
-import '../services/notification_service.dart';
 import '../screens/settings_screen.dart';
 import '../screens/ride_preview_screen.dart';
 import '../screens/debug_screen.dart';
@@ -55,7 +53,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   Timer? _ridePollTimer;
   Timer? _locationBroadcastTimer;
-  Timer? _notificationPollTimer;
 
   bool _isAlertPlaying = false;
   bool _isPreviewOpen = false;
@@ -68,7 +65,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   bool _isUpdatingLocation = false;
   DateTime _lastLocationUpdate = DateTime.now().subtract(const Duration(seconds: 10));
   int _locationRetryCount = 0;
-  int _unreadNotificationCount = 0;
+  LatLng? _animatedDriverPos;
+  Timer? _driverAnimTimer;
   BitmapDescriptor _driverMarkerIcon = BitmapDescriptor.defaultMarker;
 
   bool _isAcceptingRide = false;
@@ -84,7 +82,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _checkActiveRide();
     _connectWebSocket();
     _initializeDriverLocation();
-    _startNotificationPolling();
   }
 
   Future<void> _loadMapStyle() async {
@@ -139,11 +136,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _setupWebSocketListeners();
   }
 
-  void _handleForceLogout() {
+  void _handleForceLogout() async {
     if (!mounted) return;
     WebSocketService.disconnect();
-    StorageService.clearAllData();
-    Navigator.of(context).pushNamedAndRemoveUntil('/splash', (route) => false);
+    await StorageService.clearAllData();
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/splash', (route) => false);
+    }
   }
 
   void _setupWebSocketListeners() {
@@ -172,7 +171,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.chat, color: Colors.white, size: 18),
+                const Icon(Icons.chat, color: AppColors.primaryLight, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -204,7 +203,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   void _handleNewRideRequest(Map<String, dynamic> event) {
-    if (_currentRide != null || _isPreviewOpen) return;
+    if (!mounted || _currentRide != null || _isPreviewOpen) return;
 
     final pickupLat = (event['pickupLat'] as num?)?.toDouble();
     final pickupLng = (event['pickupLng'] as num?)?.toDouble();
@@ -282,14 +281,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         ios: IosSounds.alarm,
         android: AndroidSounds.alarm,
         volume: 1.0,
+        looping: true,
       );
       Vibration.vibrate(pattern: [0, 800, 400, 800, 400, 800], intensities: [0, 255, 0, 255, 0, 255]);
     } catch (e) {
-      // Silent fail
+      addDebugMessage('❌ Ride alert error: $e');
     }
 
     _alertTimeoutTimer?.cancel();
     _alertTimeoutTimer = Timer(const Duration(seconds: 30), () {
+      addDebugMessage('⏱️ Ride alert timed out after 30s');
       _stopRideAlert();
     });
   }
@@ -301,14 +302,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       _ringtonePlayer.stop();
       Vibration.cancel();
     } catch (e) {
-      // Silent fail
+      addDebugMessage('❌ Stop ride alert error: $e');
     }
     _alertTimeoutTimer?.cancel();
   }
 
   void _showRidePreview(Map<String, dynamic> event) {
     _isPreviewOpen = true;
-    _stopRideAlert();
+    // Alarm keeps playing — driver must accept, ignore, or let 30s timeout stop it
 
     final rideData = {
       'rideId': event['rideId'],
@@ -345,6 +346,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           driverMode: true,
           onAccept: () => _acceptRide(rideData),
           onIgnore: () {
+            _stopRideAlert();
             _isPreviewOpen = false;
           },
         ),
@@ -476,6 +478,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         final newLocation = LatLng(position.latitude, position.longitude);
         _driverCurrentLocation = newLocation;
         _lastHeading = position.heading;
+        _startDriverMarkerAnimation(newLocation);
 
         if (_isUpdatingLocation) return;
         if (DateTime.now().difference(_lastLocationUpdate).inSeconds < 5) return;
@@ -500,6 +503,34 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         }
       },
     );
+  }
+
+  void _startDriverMarkerAnimation(LatLng target) {
+    _driverAnimTimer?.cancel();
+    final origin = _animatedDriverPos ?? _driverCurrentLocation ?? target;
+
+    const steps = 30;
+    var step = 0;
+
+    _driverAnimTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      step++;
+      final t = step / steps;
+      final eased = 1.0 - math.pow(1.0 - t, 3).toDouble();
+
+      _animatedDriverPos = LatLng(
+        origin.latitude + (target.latitude - origin.latitude) * eased,
+        origin.longitude + (target.longitude - origin.longitude) * eased,
+      );
+
+      if (mounted) setState(() {});
+
+      if (step >= steps) {
+        _driverAnimTimer?.cancel();
+        _driverAnimTimer = null;
+        _animatedDriverPos = null;
+        if (mounted) setState(() {});
+      }
+    });
   }
 
   void _stopLocationTracking() {
@@ -571,25 +602,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
   }
 
-  void _startNotificationPolling() {
-    _fetchUnreadCount();
-    _notificationPollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      _fetchUnreadCount();
-    });
-  }
-
-  Future<void> _fetchUnreadCount() async {
-    if (!mounted) return;
-    try {
-      final count = await NotificationService.getUnreadCount(widget.token);
-      if (mounted) {
-        setState(() => _unreadNotificationCount = count);
-      }
-    } catch (e) {
-      // Silent fail
-    }
-  }
-
   Future<void> _toggleOnlineStatus() async {
     setState(() => _isLoading = true);
 
@@ -623,7 +635,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     try {
       _stopLocationTracking();
       _stopRidePolling();
-      _notificationPollTimer?.cancel();
 
       final userId = StorageService.getUserId();
       final token = StorageService.getToken();
@@ -674,7 +685,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             bottom: 120,
             child: FloatingActionButton.small(
               heroTag: 'recenter',
-              backgroundColor: Colors.white.withValues(alpha: 0.9),
+              backgroundColor: AppColors.surfaceVariant.withValues(alpha: 0.9),
               elevation: 2,
               onPressed: _recenterMap,
               shape: RoundedRectangleBorder(
@@ -704,7 +715,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         if (_driverCurrentLocation != null)
           Marker(
             markerId: const MarkerId('driver'),
-            position: _driverCurrentLocation!,
+            position: _animatedDriverPos ?? _driverCurrentLocation!,
             icon: _driverMarkerIcon,
             rotation: _lastHeading,
             anchor: const Offset(0.5, 0.5),
@@ -824,22 +835,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           const Spacer(),
           _buildOnlineToggle(),
           const Spacer(),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              _buildFloatingButton(
-                icon: Icons.notifications_outlined,
-                onPressed: _showNotificationsSheet,
-                heroTag: 'notifications',
-              ),
-              if (_unreadNotificationCount > 0)
-                Positioned(
-                  right: -2,
-                  top: -2,
-                  child: UnreadBadge(count: _unreadNotificationCount),
-                ),
-            ],
-          ),
         ],
       ),
     );
@@ -871,7 +866,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  color: AppColors.secondaryLight,
                 ),
               )
             else
@@ -879,7 +874,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                  color: _isOnline ? Colors.white : AppColors.textTertiary,
+                  color: _isOnline ? AppColors.primaryLight : AppColors.textTertiary,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -887,7 +882,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             Text(
               _isOnline ? 'Online' : 'Offline',
               style: TextStyle(
-                color: _isOnline ? Colors.white : AppColors.textSecondary,
+                color: _isOnline ? AppColors.primaryLight : AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -905,7 +900,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }) {
     return FloatingActionButton.small(
       heroTag: heroTag,
-      backgroundColor: Colors.white.withValues(alpha: 0.9),
+      backgroundColor: AppColors.surfaceVariant.withValues(alpha: 0.9),
       elevation: 2,
       onPressed: onPressed,
       shape: RoundedRectangleBorder(
@@ -1242,137 +1237,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
-  void _showNotificationsSheet() {
-    final token = StorageService.getToken();
-    if (token == null) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSpacing.bottomSheetTopRadius),
-        ),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          return FutureBuilder<List<Map<String, dynamic>>>(
-            future: NotificationService.fetchNotifications(token),
-            builder: (context, snapshot) {
-              final notifications = snapshot.data ?? [];
-              final isLoading = snapshot.connectionState == ConnectionState.waiting;
-
-              return SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, AppSpacing.lg),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: AppColors.outlineVariant,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.md,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Notifications',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            if (notifications.isNotEmpty)
-                              TextButton(
-                                onPressed: () async {
-                                  await NotificationService.clearNotifications(token);
-                                  setState(() => _unreadNotificationCount = 0);
-                                  Navigator.pop(ctx);
-                                },
-                                child: const Text('Clear All', style: TextStyle(fontSize: 13)),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Divider(height: 1, color: AppColors.outline.withValues(alpha: 0.5)),
-                      if (isLoading)
-                        const Padding(
-                          padding: EdgeInsets.all(32),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      else if (notifications.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            children: [
-                              Icon(Icons.notifications_none, size: 48, color: AppColors.textTertiary),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No notifications yet',
-                                style: TextStyle(color: AppColors.textSecondary),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxHeight: MediaQuery.of(context).size.height * 0.55,
-                          ),
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            itemCount: notifications.length,
-                            separatorBuilder: (_, __) =>
-                                Divider(height: 1, indent: 20, endIndent: 20,
-                                    color: AppColors.outline.withValues(alpha: 0.3)),
-                            itemBuilder: (context, index) {
-                              final n = notifications[index];
-                              return ListTile(
-                                leading: Icon(
-                                  n['type'] == 'chat' ? Icons.chat : Icons.notifications,
-                                  size: 20, color: AppColors.primary,
-                                ),
-                                title: Text(
-                                  n['title'] ?? '',
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                ),
-                                subtitle: Text(
-                                  n['body'] ?? '',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                dense: true,
-                                onTap: () {
-                                  Navigator.pop(ctx);
-                                  NotificationService.handleNotificationTap(n['type'] as String? ?? '');
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
   void _recenterMap() {
     if (_driverCurrentLocation != null && _mapController != null) {
       _mapController!.animateCamera(
@@ -1455,10 +1319,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               ListTile(
                 leading: const Icon(Icons.logout, size: 20),
                 title: const Text('Logout'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _onLogout();
-                },
+                onTap: _onLogout,
               ),
             ],
           ),
@@ -1472,11 +1333,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _positionStream?.cancel();
     _ridePollTimer?.cancel();
     _locationBroadcastTimer?.cancel();
-    _notificationPollTimer?.cancel();
     _rideEventsSub?.cancel();
     _chatMessagesSub?.cancel();
     _alertTimeoutTimer?.cancel();
-    _ringtonePlayer.stop();
+    _driverAnimTimer?.cancel();
+    try { _ringtonePlayer.stop(); } catch (_) {}
     super.dispose();
   }
 }

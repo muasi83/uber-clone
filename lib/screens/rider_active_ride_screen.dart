@@ -16,6 +16,8 @@ import '../utils/marker_utils.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
+import '../widgets/cancel_ride_dialog.dart';
+import '../widgets/payment_dialog.dart';
 
 class RiderActiveRideScreen extends StatefulWidget {
   final int rideId;
@@ -49,6 +51,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   String? _driverName;
   int? _otherUserId;
   bool _rideCompleting = false;
+  bool _paymentInProgress = false;
   double _driverHeading = 0;
   BitmapDescriptor _carIcon = BitmapDescriptor.defaultMarker;
   BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
@@ -99,6 +102,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
       addDebugMessage('Car icon fallback: $e');
       _carIcon = await MarkerFactory.driver;
     }
+    if (mounted) _updateMarkers();
   }
 
   Future<void> _getRiderLocation() async {
@@ -154,16 +158,35 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
           _rideCompleting = true;
           _statusPollTimer?.cancel();
           ChatScreen.clearAllCache();
-          Navigator.pushReplacementNamed(
-            context,
-            '/rider-completed',
-            arguments: {
-              'rideId': widget.rideId,
-              'totalFare': event['payload']?['totalFare'],
-              'distance': event['payload']?['distance'],
-              'duration': event['payload']?['duration'],
-            },
-          );
+          _handlePayment(event['payload']?['totalFare'] ?? 0.0);
+        } else if (event['type'] == 'payment_finalized') {
+          if (!_paymentInProgress) return;
+          _paymentInProgress = false;
+          if (mounted) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/rider-completed',
+              arguments: {
+                'rideId': widget.rideId,
+                'totalFare': event['payload']?['totalFare'],
+                'paymentStatus': 'PAID',
+              },
+            );
+          }
+        } else if (event['type'] == 'payment_refunded') {
+          if (!_paymentInProgress) return;
+          _paymentInProgress = false;
+          if (mounted) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/rider-completed',
+              arguments: {
+                'rideId': widget.rideId,
+                'totalFare': event['payload']?['totalFare'],
+                'paymentStatus': 'REFUNDED',
+              },
+            );
+          }
         } else if (event['type'] == 'ride_cancelled') {
           _statusPollTimer?.cancel();
           ChatScreen.clearAllCache();
@@ -186,6 +209,29 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     }
   }
 
+  Future<void> _handlePayment(dynamic totalFare) async {
+    _paymentInProgress = true;
+    final amount = (totalFare as num?)?.toDouble() ?? 0.0;
+
+    final result = await showPaymentDialog(context, amount: amount);
+    if (result != null && result.confirmed && mounted) {
+      try {
+        final token = StorageService.getToken();
+        if (token != null) {
+          await RideService.confirmPayment(widget.rideId, token);
+        }
+      } catch (e) {
+        addDebugMessage('⚠️ Payment confirm error: $e');
+      }
+    } else {
+      _paymentInProgress = false;
+      _rideCompleting = false;
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/rider-home', (route) => false);
+      }
+    }
+  }
+
   void _startStatusPolling() {
     _statusPollTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
       if (!mounted || _rideCompleting) return;
@@ -195,21 +241,12 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         final ride = await RideService.getRideDetails(widget.rideId, token);
         if (ride == null || !mounted || _rideCompleting) return;
 
-        if (ride.status == 'COMPLETED') {
+        if (ride.status == 'COMPLETED' && !_paymentInProgress) {
           _rideCompleting = true;
           _statusPollTimer?.cancel();
           addDebugMessage('✅ Poll detected ride COMPLETED');
           ChatScreen.clearAllCache();
-          Navigator.pushReplacementNamed(
-            context,
-            '/rider-completed',
-            arguments: {
-              'rideId': widget.rideId,
-              'totalFare': ride.finalFare,
-              'distance': ride.estimatedDistance,
-              'duration': ride.estimatedDuration,
-            },
-          );
+          _handlePayment(ride.finalFare);
         }
       } catch (e) {
         addDebugMessage('⚠️ Status poll error: $e');
@@ -249,7 +286,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
         child: Text(
           count > 9 ? '9+' : '$count',
-          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
       ),
@@ -382,7 +419,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) Navigator.pop(context);
+        if (!didPop) _showCancelRideDialog();
       },
       child: Scaffold(
       extendBodyBehindAppBar: true,
@@ -391,7 +428,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
-          onPressed: () => Navigator.pop(context),
+          onPressed: _showCancelRideDialog,
         ),
         title: const Text(
           'En Route',
@@ -651,6 +688,32 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     } catch (e) {
       addDebugMessage('❌ Chat error: $e');
     }
+  }
+
+  Future<void> _showCancelRideDialog() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: AppColors.warning, size: 24),
+            SizedBox(width: 8),
+            Text('Cannot Cancel'),
+          ],
+        ),
+        content: const Text(
+          'The trip has already started. Please ask your driver to cancel the ride.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

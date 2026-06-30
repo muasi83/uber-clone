@@ -233,7 +233,7 @@ final response = await http.get(
         title: const Text(
           'Chats',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.primaryLight,
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
@@ -241,7 +241,7 @@ final response = await http.get(
         actions: [
           IconButton(
             icon: const Icon(Icons.bug_report_outlined),
-            color: Colors.white,
+            color: AppColors.primaryLight,
             tooltip: 'Debug Console',
             onPressed: () {
               Navigator.of(context).push(
@@ -253,7 +253,7 @@ final response = await http.get(
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            color: Colors.white,
+            color: AppColors.primaryLight,
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -269,7 +269,7 @@ final response = await http.get(
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(0.5),
-          child: Container(color: Colors.white24, height: 0.5),
+          child: Container(color: AppColors.primaryLight.withValues(alpha: 0.15), height: 0.5),
         ),
       ),
       body: isLoading
@@ -339,7 +339,7 @@ final response = await http.get(
                               child: Text(
                                 user.fullName[0].toUpperCase(),
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.primaryLight,
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -415,7 +415,7 @@ final response = await http.get(
                                 child: Text(
                                   '$unread',
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.primaryLight,
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),

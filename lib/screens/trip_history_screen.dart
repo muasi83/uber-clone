@@ -98,7 +98,8 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
       appBar: AppBar(
         title: const Text('Trip History'),
         backgroundColor: AppColors.textPrimary,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.primaryLight,
+        iconTheme: const IconThemeData(color: AppColors.primaryLight),
       ),
       body: _isLoading && _rides.isEmpty
           ? const Center(child: CircularProgressIndicator())

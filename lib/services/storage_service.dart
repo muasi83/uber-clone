@@ -10,7 +10,7 @@ class StorageService {
   static const String _activeRideIdKey = 'active_ride_id';
   static const String _activeRideStatusKey = 'active_ride_status';
   
-  static const String _defaultServerUrl = 'http://localhost:8080';
+  static const String _defaultServerUrl = 'https://catalog-staring-hamstring.ngrok-free.dev';
 
   static late SharedPreferences _prefs;
   static bool _initialized = false;
@@ -201,8 +201,10 @@ class StorageService {
         addDebugMessage('⚠️ StorageService not initialized');
         return;
       }
+      final savedUrl = getServerUrl();
       await _prefs.clear();
-      addDebugMessage('✅ All data cleared');
+      await setServerUrl(savedUrl);
+      addDebugMessage('✅ All data cleared (server URL preserved)');
     } catch (e) {
       addDebugMessage('❌ Error clearing data: $e');
     }
@@ -253,8 +255,7 @@ class StorageService {
   static String getUsersUrl() => '${getServerUrl()}/api/users';
   static String getChatSendUrl() => '${getServerUrl()}/api/chat/send';
   static String getChatHistoryUrl() => '${getServerUrl()}/api/chat/history';
-  static String getNotificationsUrl() => '${getServerUrl()}/api/notifications';
-  static String getNotificationsUnreadCountUrl() => '${getServerUrl()}/api/notifications/unread-count';
+
   static String getWebSocketUrl() {
     final baseUrl = getServerUrl();
     return '${baseUrl

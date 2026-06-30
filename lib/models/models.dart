@@ -125,49 +125,4 @@ class Message {
       };
 }
 
-class AppNotification {
-  final int? id;
-  final int userId;
-  final String title;
-  final String body;
-  final String type;
-  final bool isRead;
-  final DateTime createdAt;
-  final String? relatedUserId;
 
-  AppNotification({
-    this.id,
-    required this.userId,
-    required this.title,
-    required this.body,
-    required this.type,
-    this.isRead = false,
-    DateTime? createdAt,
-    this.relatedUserId,
-  }) : createdAt = createdAt ?? DateTime.now();
-
-  factory AppNotification.fromJson(Map<String, dynamic> json) =>
-      AppNotification(
-        id: json['id'] as int?,
-        userId: json['userId'] as int,
-        title: json['title'] as String,
-        body: json['body'] as String,
-        type: json['type'] as String,
-        isRead: (json['isRead'] as int?) == 1,
-        createdAt: json['createdAt'] != null
-            ? DateTime.parse(json['createdAt'] as String)
-            : DateTime.now(),
-        relatedUserId: json['relatedUserId'] as String?,
-      );
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'userId': userId,
-        'title': title,
-        'body': body,
-        'type': type,
-        'isRead': isRead ? 1 : 0,
-        'createdAt': createdAt.toIso8601String(),
-        'relatedUserId': relatedUserId,
-      };
-}

@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
 import '../models/ride_model.dart';
 import 'storage_service.dart';
 import '../screens/debug_screen.dart';
@@ -409,6 +410,64 @@ class RideService {
     }
   }
 
+  static Future<bool> confirmPayment(int rideId, String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/payments/$rideId/confirm';
+      final response = await http
+          .post(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        addDebugMessage('✅ Payment confirmed for ride #$rideId');
+        return true;
+      }
+      addDebugMessage('❌ Payment confirm error: ${response.body}');
+      return false;
+    } catch (e) {
+      addDebugMessage('❌ Payment confirm exception: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> confirmPaymentReceived(int rideId, String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/payments/$rideId/receive';
+      final response = await http
+          .post(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        addDebugMessage('✅ Payment received confirmed for ride #$rideId');
+        return true;
+      }
+      addDebugMessage('❌ Payment receive error: ${response.body}');
+      return false;
+    } catch (e) {
+      addDebugMessage('❌ Payment receive exception: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> disputePayment(int rideId, String token, {String reason = 'Driver disputed payment'}) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/payments/$rideId/dispute';
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+            body: jsonEncode({'reason': reason}),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        addDebugMessage('✅ Payment disputed for ride #$rideId');
+        return true;
+      }
+      addDebugMessage('❌ Payment dispute error: ${response.body}');
+      return false;
+    } catch (e) {
+      addDebugMessage('❌ Payment dispute exception: $e');
+      return false;
+    }
+  }
+
   static Future<bool> submitRating({
     required int rideId,
     required int rating,
@@ -435,6 +494,29 @@ class RideService {
       return false;
     } catch (e) {
       addDebugMessage('❌ Error submitting rating: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> registerDeviceToken(String fcmToken, String token) async {
+    try {
+      final url = StorageService.getAuthDeviceTokenUrl();
+      final platform = Platform.isIOS ? 'ios' : 'android';
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+            body: jsonEncode({'deviceToken': fcmToken, 'platform': platform}),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      }
+      addDebugMessage('❌ Device token register: ${response.statusCode}');
+      return false;
+    } catch (e) {
+      addDebugMessage('❌ Error registering device token: $e');
       return false;
     }
   }

@@ -827,12 +827,12 @@ class _RiderDropoffLocationScreenState
               backgroundColor: Colors.transparent,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: const Icon(Icons.arrow_back, color: AppColors.primary),
                 onPressed: () => Navigator.pop(context),
               ),
               title: const Text(
                 'Set Destination',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.primary),
               ),
               centerTitle: true,
             ),
@@ -864,7 +864,7 @@ class _RiderDropoffLocationScreenState
                     height: 4,
                     margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: AppColors.outlineVariant.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -882,8 +882,8 @@ class _RiderDropoffLocationScreenState
                           child: const Center(
                             child: Text('A',
                                 style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold)),
+                              color: AppColors.primaryLight,
+                              fontWeight: FontWeight.bold)),
                           ),
                         ),
                         AppSpacing.hGapMd,
@@ -911,8 +911,8 @@ class _RiderDropoffLocationScreenState
                           child: const Center(
                             child: Text('B',
                                 style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold)),
+                                  color: AppColors.primaryLight,
+                                  fontWeight: FontWeight.bold)),
                           ),
                         ),
                         AppSpacing.hGapMd,
@@ -1319,7 +1319,7 @@ class _RiderDropoffLocationScreenState
                 Container(
                   width: 24, height: 24,
                   decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                  child: const Icon(Icons.check, color: Colors.white, size: 16),
+                  child: const Icon(Icons.check, color: AppColors.primaryLight, size: 16),
                 ),
               ],
             ],
@@ -1438,7 +1438,7 @@ class _DropPinPainter extends CustomPainter {
     canvas.drawCircle(Offset(centerX, topY), 5, tipPaint);
 
     final centerPaint = Paint()
-      ..color = Colors.white
+      ..color = AppColors.primaryLight
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(centerX, topY), 2, centerPaint);
 

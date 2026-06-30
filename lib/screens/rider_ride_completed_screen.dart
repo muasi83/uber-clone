@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import '../models/ride_model.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../screens/debug_screen.dart';
-import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
@@ -30,14 +30,29 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
   int _rating = 0;
   final TextEditingController _feedbackController = TextEditingController();
   bool _isSubmitting = false;
+  Ride? _ride;
 
   @override
   void initState() {
     super.initState();
+    _loadRideDetails();
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('✅ RIDE COMPLETED');
     addDebugMessage('Ride ID: ${widget.rideId}');
     addDebugMessage('═══════════════════════════════════════');
+  }
+
+  Future<void> _loadRideDetails() async {
+    try {
+      final token = StorageService.getToken();
+      if (token == null) return;
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (mounted) {
+        setState(() => _ride = ride);
+      }
+    } catch (e) {
+      addDebugMessage('❌ Error loading ride details: $e');
+    }
   }
 
   Future<void> _submitRating() async {
@@ -119,13 +134,6 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, color: AppColors.textPrimary),
-            tooltip: 'Chat with Driver',
-            onPressed: _openChat,
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(AppSpacing.xxl, AppSpacing.xxxl + AppSpacing.giant, AppSpacing.xxl, AppSpacing.xxl),
@@ -166,19 +174,21 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
                 padding: AppSpacing.cardPadding,
                 child: Column(
                   children: [
+                    _buildAddressSection(),
+                    const Divider(height: 1, color: AppColors.outline),
                     _buildSummaryRow(
                       'Distance',
-                      '${widget.distance?.toStringAsFixed(2) ?? '0.00'} km',
+                      '${_ride?.estimatedDistance?.toStringAsFixed(2) ?? widget.distance?.toStringAsFixed(2) ?? '0.00'} km',
                     ),
                     const Divider(height: 1, color: AppColors.outline),
                     _buildSummaryRow(
                       'Duration',
-                      '${widget.duration ?? 0} min',
+                      '${_ride?.estimatedDuration ?? widget.duration ?? 0} min',
                     ),
                     const Divider(height: 1, color: AppColors.outline),
                     _buildSummaryRow(
                       'Total Fare',
-                      '\$${widget.totalFare?.toStringAsFixed(2) ?? '0.00'}',
+                      '\$${(_ride?.finalFare ?? _ride?.estimatedFare ?? widget.totalFare ?? 0).toStringAsFixed(2)}',
                       isPrice: true,
                     ),
                     const Divider(height: 1, color: AppColors.outline),
@@ -264,6 +274,72 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
     );
   }
 
+  Widget _buildAddressSection() {
+    final pickup = _ride?.pickupAddress ?? '';
+    final dropoff = _ride?.dropoffAddress ?? '';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: AppColors.pickupMarker,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  Container(
+                    width: 2,
+                    height: 24,
+                    color: AppColors.outline,
+                  ),
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: AppColors.dropoffMarker,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      pickup,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      dropoff,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSummaryRow(
     String label,
     String value, {
@@ -300,36 +376,6 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
       '/rider-home',
       (route) => false,
     );
-  }
-
-  Future<void> _openChat() async {
-    final token = StorageService.getToken();
-    final currentUserId = StorageService.getUserId();
-    final currentUsername = StorageService.getUsername();
-    if (token == null || currentUserId == null || currentUsername == null) return;
-
-    try {
-      final ride = await RideService.getRideDetails(widget.rideId, token);
-      if (ride == null || ride.driver == null || ride.driver!.id == null) return;
-
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChatScreen(
-              currentUserId: currentUserId,
-              currentUsername: currentUsername,
-              receiverId: ride.driver!.id!,
-              receiverName: ride.driver!.fullName,
-              token: token,
-              rideId: widget.rideId,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      addDebugMessage('❌ Chat error: $e');
-    }
   }
 
   @override

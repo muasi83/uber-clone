@@ -155,6 +155,8 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
               ),
               child: Column(
                 children: [
+                  _buildAddressSection(),
+                  const Divider(color: AppColors.outline),
                   _buildDetailRow('Distance', '${_ride?.estimatedDistance?.toStringAsFixed(1) ?? '0.0'} km'),
                   const Divider(color: AppColors.outline),
                   _buildDetailRow('Duration', '${_ride?.estimatedDuration ?? 0} minutes'),
@@ -264,6 +266,65 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAddressSection() {
+    final pickup = _ride?.pickupAddress ?? '';
+    final dropoff = _ride?.dropoffAddress ?? '';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 10, height: 10,
+                decoration: const BoxDecoration(
+                  color: AppColors.pickupMarker,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Container(
+                width: 2, height: 24,
+                color: AppColors.outline,
+              ),
+              Container(
+                width: 10, height: 10,
+                decoration: const BoxDecoration(
+                  color: AppColors.dropoffMarker,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pickup,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  dropoff,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

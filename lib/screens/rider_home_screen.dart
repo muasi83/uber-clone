@@ -7,7 +7,6 @@ import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../services/driver_service.dart';
 import '../services/ride_service.dart';
-import '../services/notification_service.dart';
 import '../models/ride_model.dart';
 import '../screens/rider_pickup_location_screen.dart';
 import '../screens/rider_dropoff_location_screen.dart';
@@ -16,7 +15,6 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/bearing_utils.dart';
 import '../widgets/bottom_sheet_handle.dart';
-import '../widgets/unread_badge.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../screens/settings_screen.dart';
@@ -50,8 +48,6 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   bool _isNetworkAvailable = true;
   int _consecutiveFailures = 0;
   int _locationRetryCount = 0;
-  int _unreadNotificationCount = 0;
-  Timer? _notificationPollTimer;
   String? _mapStyle;
 
   List<Ride> _recentTrips = [];
@@ -70,7 +66,6 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     _initCustomMarkers();
     _startDriverPolling();
     _checkActiveRide();
-    _startNotificationPolling();
     _loadRecentTrips();
 
     _sheetController = DraggableScrollableController();
@@ -141,28 +136,6 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     _driverPollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       _fetchNearbyDrivers();
     });
-  }
-
-  void _startNotificationPolling() {
-    _fetchUnreadCount();
-    _notificationPollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      _fetchUnreadCount();
-    });
-  }
-
-  Future<void> _fetchUnreadCount() async {
-    if (!mounted) return;
-    final token = StorageService.getToken();
-    if (token == null) return;
-
-    try {
-      final count = await NotificationService.getUnreadCount(token);
-      if (mounted) {
-        setState(() => _unreadNotificationCount = count);
-      }
-    } catch (e) {
-      // Silent fail
-    }
   }
 
   Future<void> _fetchNearbyDrivers() async {
@@ -279,7 +252,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.chat, color: Colors.white, size: 18),
+                  const Icon(Icons.chat, color: AppColors.primaryLight, size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -837,29 +810,6 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
             child: _buildDriverCountBadge(),
           ),
 
-        // Notification button
-        Positioned(
-          key: const ValueKey('notifications'),
-          top: MediaQuery.of(context).padding.top + 8,
-          right: 60,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              _buildFloatingButton(
-                icon: Icons.notifications_outlined,
-                onPressed: _showNotificationSheet,
-                heroTag: 'notifications',
-              ),
-              if (_unreadNotificationCount > 0)
-                Positioned(
-                  right: -2,
-                  top: -2,
-                  child: UnreadBadge(count: _unreadNotificationCount),
-                ),
-            ],
-          ),
-        ),
-
         // Settings button
         Positioned(
           key: const ValueKey('settings'),
@@ -1000,137 +950,6 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     );
   }
 
-  void _showNotificationSheet() {
-    final token = StorageService.getToken();
-    if (token == null) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSpacing.bottomSheetTopRadius),
-        ),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          return FutureBuilder<List<Map<String, dynamic>>>(
-            future: NotificationService.fetchNotifications(token),
-            builder: (context, snapshot) {
-              final notifications = snapshot.data ?? [];
-              final isLoading = snapshot.connectionState == ConnectionState.waiting;
-
-              return SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, AppSpacing.lg),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const BottomSheetHandle(),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.md,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Notifications',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            if (notifications.isNotEmpty)
-                              TextButton(
-                                onPressed: () async {
-                                  await NotificationService.clearNotifications(token);
-                                  setState(() => _unreadNotificationCount = 0);
-                                  Navigator.pop(ctx);
-                                },
-                                child: const Text('Clear All', style: TextStyle(fontSize: 13)),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Divider(height: 1, color: AppColors.outline.withValues(alpha: 0.5)),
-                      if (isLoading)
-                        const Padding(
-                          padding: EdgeInsets.all(32),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      else if (notifications.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            children: [
-                              Icon(Icons.notifications_none, size: 48, color: AppColors.textTertiary),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No notifications yet',
-                                style: TextStyle(color: AppColors.textSecondary),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxHeight: MediaQuery.of(context).size.height * 0.55,
-                          ),
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            itemCount: notifications.length,
-                            separatorBuilder: (_, __) =>
-                                Divider(height: 1, indent: 20, endIndent: 20,
-                                    color: AppColors.outline.withValues(alpha: 0.3)),
-                            itemBuilder: (context, index) {
-                              final n = notifications[index];
-                              return ListTile(
-                                leading: Icon(
-                                  n['type'] == 'chat' ? Icons.chat : Icons.notifications,
-                                  size: 20, color: AppColors.primary,
-                                ),
-                                title: Text(
-                                  n['title'] ?? '',
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                ),
-                                subtitle: Text(
-                                  n['body'] ?? '',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                trailing: n['isRead'] == true
-                                    ? null
-                                    : Container(
-                                        width: 8, height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.primary, shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                dense: true,
-                                onTap: () {
-                                  Navigator.pop(ctx);
-                                  NotificationService.handleNotificationTap(n['type'] as String? ?? '');
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildFloatingButton({
     required IconData icon,
     required VoidCallback onPressed,
@@ -1138,7 +957,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   }) {
     return FloatingActionButton.small(
       heroTag: heroTag,
-      backgroundColor: Colors.white.withValues(alpha: 0.9),
+      backgroundColor: AppColors.surfaceVariant.withValues(alpha: 0.9),
       elevation: 2,
       onPressed: onPressed,
       shape: RoundedRectangleBorder(
@@ -1327,12 +1146,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: const Row(
           children: [
-            Icon(Icons.wifi_off, color: Colors.white, size: 16),
+            Icon(Icons.wifi_off, color: AppColors.primaryLight, size: 16),
             SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Connection lost — retrying...',
-                style: TextStyle(color: Colors.white, fontSize: 13),
+                style: TextStyle(color: AppColors.primaryLight, fontSize: 13),
               ),
             ),
           ],
@@ -1344,7 +1163,6 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   @override
   void dispose() {
     _driverPollTimer?.cancel();
-    _notificationPollTimer?.cancel();
     _driverLocationSub?.cancel();
     _rideEventsSub?.cancel();
     _chatMessagesSub?.cancel();

@@ -300,7 +300,20 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       final token = StorageService.getToken();
       if (token == null) return;
 
-      await RideService.cancelRide(widget.rideId, token, reason: reason);
+      final success = await RideService.cancelRide(widget.rideId, token, reason: reason);
+
+      if (!success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to cancel search. Please try again.'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
 
       _acceptanceTimer?.cancel();
       _pulseController.stop();
@@ -308,11 +321,6 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       addDebugMessage('✅ Search cancelled');
 
       if (mounted) {
-        WebSocketService.sendRideMessage('ride_cancelled', {
-          'rideId': widget.rideId,
-          'reason': reason,
-        });
-
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/rider-home',
@@ -362,20 +370,20 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
                 height: 130,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: AppColors.primaryLight.withValues(alpha: 0.15),
                 ),
                 child: Center(
                   child: Container(
                     width: 110,
                     height: 110,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white24,
+                      color: AppColors.primaryLight.withValues(alpha: 0.24),
                     ),
                     child: const Center(
                       child: Icon(
                         Icons.local_taxi,
-                        color: Colors.white,
+                        color: AppColors.primaryLight,
                         size: 54,
                       ),
                     ),
@@ -387,7 +395,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
             const Text(
               'Finding your driver',
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.primaryLight,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
@@ -397,7 +405,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
             Text(
               'Searching nearby drivers$progressString',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: AppColors.primaryLight.withValues(alpha: 0.7),
                 fontSize: 15,
               ),
               textAlign: TextAlign.center,
@@ -406,13 +414,13 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
+                color: AppColors.primaryLight.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
               ),
               child: Text(
                 '${_searchSeconds}s',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.primaryLight,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
@@ -456,7 +464,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
           const Text(
             'Driver Found!',
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.primaryLight,
               fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
@@ -465,7 +473,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
           Text(
             'Redirecting to tracking...',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: AppColors.primaryLight.withValues(alpha: 0.7),
               fontSize: 14,
             ),
           ),

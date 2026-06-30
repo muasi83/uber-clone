@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../screens/debug_screen.dart';
-import 'storage_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._();
@@ -19,6 +16,12 @@ class NotificationService {
   static int _messageId = 0;
 
   static int get _nextId => ++_messageId;
+
+  static bool get isInitialized => _initialized;
+
+  // Dedicated channels
+  static const String _chatChannelId = 'chat_messages';
+  static const String _rideAlertChannelId = 'ride_alerts';
 
   static Future<void> init() async {
     if (_initialized) return;
@@ -36,49 +39,36 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _plugin.initialize(
-      settings: settings,
-      onDidReceiveNotificationResponse: _onNotificationTap,
-    );
+    await _plugin.initialize(settings: settings);
+
+    // Create high-priority ride alert channel
+    await _createRideAlertChannel();
 
     _initialized = true;
     addDebugMessage('✅ NotificationService initialized');
   }
 
-  static void handleNotificationTap(String payload) {
-    addDebugMessage('🔔 Notification tapped from sheet: $payload');
-    final navigator = navigatorKey?.currentState;
-    if (navigator == null || payload.isEmpty) return;
-
-    if (payload == 'ride_accepted' || payload == 'ride_started' || payload == 'driver_arrived') {
-      navigator.pushNamed('/rider-tracking');
-    } else if (payload == 'ride_completed') {
-      navigator.pushNamed('/rider-completed');
-    } else if (payload == 'ride_cancelled' || payload == 'search_timeout') {
-      navigator.pushNamedAndRemoveUntil('/rider-home', (route) => false);
-    } else if (payload == 'ride_available' || payload == 'ride_confirmed') {
-      navigator.pushNamed('/driver-home');
-    } else {
-      navigator.pushNamedAndRemoveUntil('/rider-home', (route) => false);
-    }
-  }
-
-  static void _onNotificationTap(NotificationResponse response) {
-    addDebugMessage('🔔 Notification tapped: ${response.payload}');
-    final navigator = navigatorKey?.currentState;
-    if (navigator == null || response.payload == null) return;
-
-    final payload = response.payload!;
-    if (payload == 'ride_accepted' || payload == 'ride_started' || payload == 'driver_arrived') {
-      navigator.pushNamed('/rider-tracking');
-    } else if (payload == 'ride_completed') {
-      navigator.pushNamed('/rider-completed');
-    } else if (payload == 'ride_cancelled' || payload == 'search_timeout') {
-      navigator.pushNamedAndRemoveUntil('/rider-home', (route) => false);
-    } else if (payload == 'ride_available' || payload == 'ride_confirmed') {
-      navigator.pushNamed('/driver-home');
-    } else {
-      navigator.pushNamedAndRemoveUntil('/rider-home', (route) => false);
+  static Future<void> _createRideAlertChannel() async {
+    try {
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        await android.createNotificationChannel(
+          const AndroidNotificationChannel(
+            _rideAlertChannelId,
+            'Ride Alerts',
+            description: 'High-priority ride request notifications',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+            enableLights: true,
+            ledColor: Colors.red,
+          ),
+        );
+        addDebugMessage('✅ Ride alert notification channel created');
+      }
+    } catch (e) {
+      addDebugMessage('⚠️ Failed to create ride alert channel: $e');
     }
   }
 
@@ -99,9 +89,9 @@ class NotificationService {
     if (!_initialized) return;
 
     const androidDetails = AndroidNotificationDetails(
-      'chat_messages',
+      _chatChannelId,
       'Chat Messages',
-      channelDescription: 'Notifications for new chat messages',
+      channelDescription: 'New chat messages during your ride',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
@@ -129,29 +119,36 @@ class NotificationService {
     addDebugMessage('🔔 Chat notification shown: $senderName: $message');
   }
 
-  static Future<void> showRideNotification({
+  /// Show a high-priority ride alert notification (for background FCM)
+  static Future<void> showRideAlertNotification({
     required String title,
     required String body,
-    String? payload,
+    int? rideId,
   }) async {
     if (!_initialized) return;
 
-    const androidDetails = AndroidNotificationDetails(
-      'ride_events',
-      'Ride Events',
-      channelDescription: 'Notifications for ride status updates',
-      importance: Importance.high,
-      priority: Priority.high,
+    final androidDetails = AndroidNotificationDetails(
+      _rideAlertChannelId,
+      'Ride Alerts',
+      channelDescription: 'High-priority ride request notifications',
+      importance: Importance.max,
+      priority: Priority.max,
+      playSound: true,
+      enableVibration: true,
       showWhen: true,
+      fullScreenIntent: true,
+      category: AndroidNotificationCategory.alarm,
+      color: const Color(0xFF9DBB2D),
     );
 
-    const iosDetails = DarwinNotificationDetails(
+    final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      interruptionLevel: InterruptionLevel.timeSensitive,
     );
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
@@ -161,78 +158,9 @@ class NotificationService {
       title: title,
       body: body,
       notificationDetails: details,
-      payload: payload,
+      payload: rideId?.toString(),
     );
 
-    addDebugMessage('🔔 Ride notification shown: $title: $body');
-  }
-
-  static Future<int> getUnreadCount(String token) async {
-    try {
-      final url = StorageService.getNotificationsUnreadCountUrl();
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['unreadCount'] ?? 0;
-      }
-    } catch (e) {
-      addDebugMessage('⚠️ Failed to get unread count: $e');
-    }
-    return 0;
-  }
-
-  static Future<List<Map<String, dynamic>>> fetchNotifications(String token) async {
-    try {
-      final url = StorageService.getNotificationsUrl();
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200 && response.body.isNotEmpty) {
-        final data = jsonDecode(response.body) as List;
-        return data.cast<Map<String, dynamic>>();
-      }
-    } catch (e) {
-      addDebugMessage('⚠️ Failed to fetch notifications: $e');
-    }
-    return [];
-  }
-
-  static Future<void> markAllAsRead(String token) async {
-    try {
-      await http.post(
-        Uri.parse('${StorageService.getNotificationsUrl()}/read-all'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 5));
-    } catch (e) {
-      addDebugMessage('⚠️ Failed to mark all as read: $e');
-    }
-  }
-
-  static Future<void> clearNotifications(String token) async {
-    try {
-      await http.delete(
-        Uri.parse(StorageService.getNotificationsUrl()),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 5));
-    } catch (e) {
-      addDebugMessage('⚠️ Failed to clear notifications: $e');
-    }
+    addDebugMessage('🔔 Ride alert notification shown: $title');
   }
 }

@@ -208,7 +208,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: const Icon(
                 Icons.directions_car,
                 size: 60,
-                color: Colors.white,
+                color: AppColors.primaryLight,
               ),
             ),
           ),
@@ -217,17 +217,17 @@ class _SplashScreenState extends State<SplashScreen>
         const Text(
           'RideNow',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.primaryLight,
             fontSize: 32,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.5,
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        const Text(
+        Text(
           'Premium Ride Sharing',
           style: TextStyle(
-            color: Colors.white70,
+            color: AppColors.primaryLight.withValues(alpha: 0.7),
             fontSize: 14,
             letterSpacing: 1.0,
           ),
@@ -235,10 +235,10 @@ class _SplashScreenState extends State<SplashScreen>
         const Spacer(),
         _BouncingDots(controller: _animationController),
         const SizedBox(height: AppSpacing.lg),
-        const Text(
+        Text(
           'v1.0.0',
           style: TextStyle(
-            color: Colors.white38,
+            color: AppColors.primaryLight.withValues(alpha: 0.38),
             fontSize: 12,
             letterSpacing: 0.5,
           ),
@@ -264,18 +264,18 @@ class _SplashScreenState extends State<SplashScreen>
           const Text(
             'Location Access Required',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
+            color: AppColors.primaryLight,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
           ),
-          const SizedBox(height: AppSpacing.md),
-          const Text(
-            'RideNow needs your location to find nearby rides and drivers. This permission is required to use the app.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'RideNow needs your location to find nearby rides and drivers. This permission is required to use the app.',
+          style: TextStyle(
+            color: AppColors.primaryLight.withValues(alpha: 0.7),
+            fontSize: 14,
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -339,9 +339,9 @@ class _SplashScreenState extends State<SplashScreen>
               onPressed: () {
                 if (mounted) _navigateToAuth();
               },
-              child: const Text(
+              child: Text(
                 'Not Now',
-                style: TextStyle(color: Colors.white54),
+                style: TextStyle(color: AppColors.primaryLight.withValues(alpha: 0.54)),
               ),
             ),
           ],
@@ -378,7 +378,7 @@ class _BouncingDots extends StatelessWidget {
                   width: 10,
                   height: 10,
                   decoration: const BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.primaryLight,
                     shape: BoxShape.circle,
                   ),
                 ),

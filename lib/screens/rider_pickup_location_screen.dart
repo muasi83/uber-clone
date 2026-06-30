@@ -409,12 +409,12 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
               backgroundColor: Colors.transparent,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: const Icon(Icons.arrow_back, color: AppColors.primary),
                 onPressed: () => Navigator.pop(context),
               ),
               title: const Text(
                 'Set Pickup Location',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.primary),
               ),
               centerTitle: true,
             ),
@@ -446,7 +446,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
                     height: 4,
                     margin: const EdgeInsets.only(bottom: AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: AppColors.outlineVariant.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -594,7 +594,7 @@ class _PickupDropPinPainter extends CustomPainter {
     canvas.drawCircle(Offset(centerX, topY), 5, tipPaint);
 
     final centerPaint = Paint()
-      ..color = Colors.white
+      ..color = AppColors.primaryLight
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(centerX, topY), 2, centerPaint);
 

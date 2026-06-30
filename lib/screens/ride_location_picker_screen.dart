@@ -380,7 +380,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: AppColors.surfaceVariant.withValues(alpha: 0.9),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.arrow_back, color: AppColors.textPrimary, size: 20),
@@ -390,7 +390,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
               title: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: AppColors.surfaceVariant.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -639,11 +639,11 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
       ),
       child: Center(
         child: active
-            ? const Icon(Icons.check, color: Colors.white, size: 14)
+            ? const Icon(Icons.check, color: AppColors.primaryLight, size: 14)
             : Text(
                 '${index + 1}',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.primaryLight,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
@@ -671,7 +671,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
             Icon(
               type == 'ECONOMY' ? Icons.directions_car : Icons.diamond_outlined,
               size: 16,
-              color: selected ? Colors.white : AppColors.textSecondary,
+              color: selected ? AppColors.primaryLight : AppColors.textSecondary,
             ),
             const SizedBox(width: 6),
             Column(
@@ -681,14 +681,14 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 11,
-                    color: selected ? Colors.white : AppColors.textPrimary,
+                    color: selected ? AppColors.primaryLight : AppColors.textPrimary,
                   ),
                 ),
                 Text(
                   price,
                   style: TextStyle(
                     fontSize: 9,
-                    color: selected ? Colors.white.withValues(alpha: 0.8) : AppColors.textTertiary,
+                    color: selected ? AppColors.primaryLight.withValues(alpha: 0.8) : AppColors.textTertiary,
                   ),
                 ),
               ],

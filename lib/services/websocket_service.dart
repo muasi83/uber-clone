@@ -35,6 +35,16 @@ class WebSocketService {
   // Unread message counts: receiverId -> count
   static final Map<int, int> unreadCounts = {};
 
+  // Buffer for incoming chat messages received while chat screen is closed
+  static final Map<String, List<Map<String, dynamic>>> _pendingMessages = {};
+
+  static String _chatKey(int a, int b) => '${a < b ? a : b}-${a < b ? b : a}';
+
+  /// Retrieve and remove pending messages for a given conversation.
+  static List<Map<String, dynamic>> getPendingMessages(int userId1, int userId2) {
+    return _pendingMessages.remove(_chatKey(userId1, userId2)) ?? [];
+  }
+
   // ✅ Expose as streams
   static Stream<Map<String, dynamic>> get rideEvents => _rideEventController.stream;
   static Stream<Map<String, dynamic>> get driverLocationEvents => _driverLocationController.stream;
@@ -337,6 +347,8 @@ class WebSocketService {
       case 'message':
         onMessageReceived?.call(message);
         _chatMessageController.add(message);
+        // Store in pending buffer for when chat screen opens
+        _storePendingMessage(message);
         // Track unread count for receiver
         final msgSenderId = message['senderId'] as int?;
         if (msgSenderId != null) {
@@ -370,6 +382,9 @@ class WebSocketService {
       case 'ride_completed':
       case 'search_timeout':
       case 'ride_cancelled':
+      case 'payment_confirmed':
+      case 'payment_finalized':
+      case 'payment_refunded':
         addDebugMessage('🚗 Ride event: $type');
         _rideEventController.add(message);
         onRideStatusUpdate?.call(message);
@@ -398,7 +413,16 @@ class WebSocketService {
         break;
     }
   }
-  
+
+  static void _storePendingMessage(Map<String, dynamic> message) {
+    final senderId = message['senderId'] as int?;
+    final receiverId = message['receiverId'] as int?;
+    if (senderId == null || receiverId == null) return;
+    final key = _chatKey(senderId, receiverId);
+    _pendingMessages.putIfAbsent(key, () => []);
+    _pendingMessages[key]!.add(Map<String, dynamic>.from(message));
+  }
+
   static bool isConnected() => _isConnected;
   
   // ✅ STEP 5: Cleanup streams
@@ -436,6 +460,10 @@ class WebSocketService {
         }
       }
       
+      // Stop processing incoming messages immediately
+      _channelSubscription?.cancel();
+      _channelSubscription = null;
+
       // Small delay to ensure message is sent
       Future.delayed(const Duration(milliseconds: 200), () {
         try {

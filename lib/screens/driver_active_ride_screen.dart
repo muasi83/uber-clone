@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -6,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/ride_service.dart';
 import '../services/directions_service.dart';
+import '../services/background_navigation_service.dart';
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../screens/debug_screen.dart';
@@ -14,9 +16,11 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/cancel_ride_dialog.dart';
+import '../widgets/received_payment_dialog.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
+import '../utils/bearing_utils.dart';
 
 class DriverActiveRideScreen extends StatefulWidget {
   final int rideId;
@@ -44,16 +48,22 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor _carIcon = BitmapDescriptor.defaultMarker;
+  double _driverHeading = 0;
   String? _mapStyle;
   bool _showDriverMarker = true;
   bool _rideStarted = false;
   bool _isCompleting = false;
+  bool _awaitingPayment = false;
   int _remainingMinutes = 0;
   double? _distanceKm;
   DateTime? _startTime;
   Timer? _rideTimer;
 
   StreamSubscription<Position>? _positionStream;
+  StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
+  LatLng? _animatedDriverPos;
+  Timer? _driverAnimTimer;
   int? _otherUserId;
 
   @override
@@ -71,12 +81,26 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
     addDebugMessage('═══════════════════════════════════════');
 
     _initYellowPin();
+    _initCarIcon();
     _initializeRide();
     _fetchChatPartnerId();
+    _setupPaymentListeners();
   }
 
   Future<void> _initYellowPin() async {
     _yellowPinMarker = await getYellowPinMarker();
+  }
+
+  Future<void> _initCarIcon() async {
+    try {
+      _carIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(64, 64)),
+        'assets/images/car_marker.png',
+      );
+    } catch (e) {
+      addDebugMessage('⚠️ Car icon fallback: $e');
+      _carIcon = await MarkerFactory.driver;
+    }
   }
 
   Future<void> _initializeRide() async {
@@ -115,6 +139,8 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         if (!mounted) return;
 
         _driverLocation = LatLng(position.latitude, position.longitude);
+        _driverHeading = position.heading;
+        _startDriverMarkerAnimation(_driverLocation!);
 
         addDebugMessage(
           '📍 Driver moved 50m+ — ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
@@ -159,6 +185,34 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
     );
   }
 
+  void _startDriverMarkerAnimation(LatLng target) {
+    _driverAnimTimer?.cancel();
+    final origin = _animatedDriverPos ?? _driverLocation ?? target;
+
+    const steps = 30;
+    var step = 0;
+
+    _driverAnimTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      step++;
+      final t = step / steps;
+      final eased = 1.0 - math.pow(1.0 - t, 3).toDouble();
+
+      _animatedDriverPos = LatLng(
+        origin.latitude + (target.latitude - origin.latitude) * eased,
+        origin.longitude + (target.longitude - origin.longitude) * eased,
+      );
+
+      _updateMarkers();
+
+      if (step >= steps) {
+        _driverAnimTimer?.cancel();
+        _driverAnimTimer = null;
+        _animatedDriverPos = null;
+        _updateMarkers();
+      }
+    });
+  }
+
   void _stopLocationStream() {
     if (_positionStream != null) {
       _positionStream!.cancel();
@@ -171,12 +225,14 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
     _markers.clear();
 
     if (_driverLocation != null && _showDriverMarker) {
+      final pos = _animatedDriverPos ?? _driverLocation!;
       _markers.add(
         Marker(
           markerId: const MarkerId('driver'),
-          position: _driverLocation!,
-          icon: await MarkerFactory.driver,
+          position: pos,
+          icon: _carIcon,
           flat: true,
+          rotation: normalizeCarHeading(_driverHeading % 360),
         ),
       );
     }
@@ -278,6 +334,71 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
     }
   }
 
+  void _setupPaymentListeners() {
+    _rideEventsSub = WebSocketService.rideEvents.listen((event) async {
+      if (!mounted) return;
+      final type = event['type'];
+
+      if (type == 'ride_cancelled') {
+        _awaitingPayment = false;
+        final reason = event['reason'] as String? ?? 'The ride was cancelled';
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.cancel, color: AppColors.error, size: 24),
+                SizedBox(width: 8),
+                Text('Ride Cancelled'),
+              ],
+            ),
+            content: Text('The rider cancelled the ride.\nReason: $reason'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
+                },
+                child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      if (!_awaitingPayment) return;
+      if (type == 'payment_confirmed') {
+        final amount = (event['payload']?['amount'] as num?)?.toDouble() ?? 0.0;
+        final result = await showReceivedPaymentDialog(context, amount: amount);
+        if (result == null || !mounted) return;
+
+        final token = StorageService.getToken();
+        if (token == null) return;
+
+        if (result.received) {
+          await RideService.confirmPaymentReceived(widget.rideId, token);
+        } else {
+          await RideService.disputePayment(widget.rideId, token,
+              reason: result.reason ?? 'Driver disputed payment');
+        }
+      } else if (type == 'payment_finalized' || type == 'payment_refunded') {
+        _awaitingPayment = false;
+        if (mounted) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/driver-summary',
+            arguments: {
+              'rideId': widget.rideId,
+            },
+          );
+        }
+      }
+    });
+  }
+
   Future<void> _completeRide() async {
     try {
       setState(() => _isCompleting = true);
@@ -298,15 +419,10 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         'status': 'COMPLETED',
       });
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(
-          context,
-          '/driver-summary',
-          arguments: {
-            'rideId': widget.rideId,
-          },
-        );
-      }
+      setState(() {
+        _isCompleting = false;
+        _awaitingPayment = true;
+      });
     } catch (e) {
       addDebugMessage('❌ Error: $e');
       if (mounted) {
@@ -339,14 +455,14 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         elevation: 0,
         title: Text(
           _rideStarted ? 'Active Ride' : 'Ready to Start',
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppColors.primary),
         ),
         actions: [
           Stack(
             clipBehavior: Clip.none,
             children: [
               IconButton(
-                icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
                 tooltip: 'Chat with Rider',
                 onPressed: _openChat,
               ),
@@ -384,7 +500,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
                   : AppColors.surfaceVariant,
               child: Icon(
                 Icons.my_location,
-                color: _showDriverMarker ? Colors.white : AppColors.textSecondary,
+                color: _showDriverMarker ? AppColors.primaryLight : AppColors.textSecondary,
                 size: 20,
               ),
             ),
@@ -489,12 +605,27 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
                   ],
                   const SizedBox(height: AppSpacing.xxl),
                   _rideStarted
-                      ? PremiumButton(
-                          label: _isCompleting ? 'Completing...' : 'Complete Ride',
-                          icon: _isCompleting ? Icons.hourglass_empty : Icons.flag,
-                          onPressed: _isCompleting ? null : _completeRide,
-                          variant: ButtonVariant.danger,
-                        )
+                      ? _awaitingPayment
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 20, height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text('Waiting for payment...'),
+                                ],
+                              ),
+                            )
+                          : PremiumButton(
+                              label: _isCompleting ? 'Completing...' : 'Complete Ride',
+                              icon: _isCompleting ? Icons.hourglass_empty : Icons.flag,
+                              onPressed: _isCompleting ? null : _completeRide,
+                              variant: ButtonVariant.danger,
+                            )
                       : PremiumButton(
                           label: 'Start Ride',
                           icon: Icons.play_arrow,
@@ -505,7 +636,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: _openGoogleMapsToDestination,
+                      onPressed: () async { await _openGoogleMapsToDestination(); },
                       icon: const Icon(Icons.map, size: 18),
                       label: const Text('Navigate to Destination'),
                       style: OutlinedButton.styleFrom(
@@ -548,10 +679,6 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         await RideService.cancelRide(widget.rideId, token, reason: reason);
         ChatScreen.clearAllCache();
         if (mounted) {
-          WebSocketService.sendRideMessage('ride_cancelled', {
-            'rideId': widget.rideId,
-            'reason': reason,
-          });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Ride cancelled'),
@@ -571,13 +698,35 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
     }
   }
 
-  void _openGoogleMapsToDestination() {
-    final uri = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1'
-      '&destination=${widget.dropoffLat},${widget.dropoffLng}'
-      '&travelmode=driving',
+  Future<void> _openGoogleMapsToDestination() async {
+    try {
+      await BackgroundNavigationService().start(
+        rideId: widget.rideId,
+        navigationType: 'dropoff',
+        destinationAddress: widget.dropoffAddress,
+      );
+    } catch (e) {
+      addDebugMessage('⚠️ _openGoogleMapsToDestination start error: $e');
+    }
+
+    await _openMapsApp(widget.dropoffLat, widget.dropoffLng);
+  }
+
+  Future<void> _openMapsApp(double lat, double lng) async {
+    final appUri = Uri.parse(
+      'comgooglemaps://?daddr=$lat,$lng&directionsmode=driving',
     );
-    _launchUrl(uri);
+    try {
+      if (await canLaunchUrl(appUri)) {
+        await launchUrl(appUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (e) {
+      addDebugMessage('⚠️ Maps app unavailable, using web: $e');
+    }
+    await _launchUrl(Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
+    ));
   }
 
   Future<void> _launchUrl(Uri uri) async {
@@ -624,7 +773,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
         child: Text(
           count > 9 ? '9+' : '$count',
-          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
       ),
@@ -667,8 +816,11 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   @override
   void dispose() {
     _stopLocationStream();
+    _driverAnimTimer?.cancel();
     _rideTimer?.cancel();
+    _rideEventsSub?.cancel();
     mapController?.dispose();
+    BackgroundNavigationService().stop();
     super.dispose();
   }
 }

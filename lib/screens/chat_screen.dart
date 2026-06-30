@@ -36,6 +36,9 @@ class ChatScreen extends StatefulWidget {
     _ChatScreenState._messageCache.clear();
   }
 
+  /// The receiver ID of the currently open chat, or null if no chat is open.
+  static int? activeChatPartnerId;
+
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
@@ -76,6 +79,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     _loadChatHistory();
 
+    _loadPendingMessages();
+
     WebSocketService.unreadCounts[widget.receiverId] = 0;
     WebSocketService.sendMessageRead(widget.currentUserId, widget.receiverId);
 
@@ -88,6 +93,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     WebSocketService.onMessageReceived = _handleIncomingMessage;
     WebSocketService.onTyping = _handleTypingIndicator;
+
+    ChatScreen.activeChatPartnerId = widget.receiverId;
   }
 
   @override
@@ -97,6 +104,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _refreshTimer.cancel();
     if (_typingTimer.isActive) _typingTimer.cancel();
     _scrollController.dispose();
+    ChatScreen.activeChatPartnerId = null;
     super.dispose();
   }
 
@@ -153,6 +161,39 @@ class _ChatScreenState extends State<ChatScreen> {
         });
         _scrollToBottom();
       }
+    }
+  }
+
+  void _loadPendingMessages() {
+    final pending = WebSocketService.getPendingMessages(
+      widget.currentUserId,
+      widget.receiverId,
+    );
+    if (pending.isEmpty) return;
+
+    final newMessages = pending.map((msg) {
+      final senderId = msg['senderId'] as int? ?? 0;
+      final receiverId = msg['receiverId'] as int? ?? 0;
+      return Message(
+        senderId: senderId,
+        receiverId: receiverId,
+        content: msg['content'] as String? ?? '',
+        status: msg['status'] as String? ?? 'sent',
+        isRead: false,
+        isDelivered: senderId == widget.currentUserId,
+      );
+    }).where((m) {
+      return !messages.any((existing) =>
+        existing.content == m.content &&
+        existing.senderId == m.senderId);
+    }).toList();
+
+    if (newMessages.isNotEmpty && mounted) {
+      setState(() {
+        messages.addAll(newMessages);
+        _messageCache[_cacheKey] = List.from(messages);
+      });
+      _scrollToBottom();
     }
   }
 
@@ -314,7 +355,7 @@ class _ChatScreenState extends State<ChatScreen> {
         backgroundColor: AppColors.primary,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primaryLight),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -329,7 +370,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ? widget.receiverName[0].toUpperCase()
                         : '?',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.primaryLight,
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
@@ -345,7 +386,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: AppColors.success,
                       shape: BoxShape.circle,
                       border: Border.fromBorderSide(
-                        BorderSide(color: Colors.white, width: 2),
+                        BorderSide(color: AppColors.primaryLight, width: 2),
                       ),
                     ),
                   ),
@@ -359,16 +400,16 @@ class _ChatScreenState extends State<ChatScreen> {
                 Text(
                   widget.receiverName,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                  color: AppColors.primaryLight,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                   ),
                 ),
                 if (_isReceiverTyping)
                   Text(
                     'typing...',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: AppColors.primaryLight.withValues(alpha: 0.7),
                       fontSize: 12,
                     ),
                   ),
@@ -503,7 +544,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           Text(
                             DateFormat('HH:mm').format(message.sentAt),
                             style: TextStyle(
-                              color: isSent ? Colors.white60 : AppColors.textTertiary,
+                              color: isSent ? AppColors.primaryLight.withValues(alpha: 0.6) : AppColors.textTertiary,
                               fontSize: 11,
                             ),
                           ),
@@ -520,7 +561,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   ? Colors.blue
                                   : message.status == 'delivered'
                                       ? AppColors.secondaryLight
-                                      : Colors.white60,
+                                      : AppColors.primaryLight.withValues(alpha: 0.6),
                             ),
                           ],
                         ],
@@ -635,7 +676,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 child: const Icon(
                   Icons.send_rounded,
-                  color: Colors.white,
+                  color: AppColors.primaryLight,
                   size: 20,
                 ),
               ),

@@ -1,10 +1,11 @@
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.chat_app"
+    namespace = "com.muasi.driversapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
@@ -19,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.chat_app"
+        applicationId = "com.muasi.driversapp"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

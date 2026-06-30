@@ -4,6 +4,10 @@ import 'package:intl/intl.dart';
 
 import 'services/storage_service.dart';
 import 'services/crash_reporter.dart';
+import 'services/notification_service.dart';
+import 'services/websocket_service.dart';
+import 'services/background_navigation_service.dart';
+import 'services/firebase_service.dart';
 import 'utils/map_style_loader.dart';
 
 import 'screens/auth_screen.dart';
@@ -18,14 +22,13 @@ import 'screens/rider_ride_completed_screen.dart';
 import 'screens/rider_searching_driver_screen.dart';
 import 'screens/rider_tracking_screen.dart';
 import 'screens/rider_trip_details_screen.dart';
+import 'screens/chat_screen.dart';
 import 'screens/splash_screen.dart';
 
 import 'screens/driver_active_ride_screen.dart' as driver_active;
 
 import 'theme/app_theme.dart';
 import 'theme/app_colors.dart';
-import 'services/notification_service.dart';
-import 'services/websocket_service.dart';
 
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
@@ -51,7 +54,15 @@ void main() async {
       await NotificationService.init();
       NotificationService.navigatorKey = _navigatorKey;
 
-      _setupNotificationListeners();
+      try {
+        await FirebaseService.init();
+      } catch (e) {
+        CrashReporter.addLog('FirebaseService.init failed: $e');
+      }
+
+      await BackgroundNavigationService().initialize();
+
+      _setupChatNotificationListener();
 
       await MapStyleLoader.load();
 
@@ -61,14 +72,18 @@ void main() async {
   );
 }
 
-void _clearNotifications() {
-  final token = StorageService.getToken();
-  if (token == null) return;
-  NotificationService.markAllAsRead(token);
-}
-
-void _setupNotificationListeners() {
+void _setupChatNotificationListener() {
   WebSocketService.chatMessages.listen((message) {
+    // Don't show notification if already on the chat screen for this conversation
+    final partnerId = ChatScreen.activeChatPartnerId;
+    if (partnerId != null) {
+      final msgSenderId = message['senderId'] as int?;
+      final msgReceiverId = message['receiverId'] as int?;
+      if (msgSenderId == partnerId || msgReceiverId == partnerId) {
+        return;
+      }
+    }
+
     final senderId = message['senderId'] as int?;
     final senderName = message['senderName'] as String? ?? 'Someone';
     final content = message['content'] as String? ?? '';
@@ -81,14 +96,13 @@ void _setupNotificationListeners() {
 
   WebSocketService.rideEvents.listen((event) {
     final type = event['type'] as String?;
+    if (type == null) return;
     String title;
     String body;
 
     switch (type) {
       case 'ride_available':
-        title = 'New Ride Request';
-        body = 'A passenger is nearby and needs a ride';
-        break;
+        return;
       case 'ride_accepted':
         title = 'Ride Accepted';
         body = 'A driver is on their way to pick you up';
@@ -108,25 +122,34 @@ void _setupNotificationListeners() {
       case 'ride_completed':
         title = 'Ride Completed';
         body = 'You have reached your destination';
-        _clearNotifications();
         break;
       case 'ride_cancelled':
         title = 'Ride Cancelled';
         body = 'The ride has been cancelled';
-        _clearNotifications();
         break;
       case 'search_timeout':
         title = 'No Drivers Found';
         body = 'No drivers are available nearby right now';
         break;
+      case 'payment_confirmed':
+        title = 'Payment Confirmed';
+        body = 'Payment has been confirmed';
+        break;
+      case 'payment_finalized':
+        title = 'Payment Finalized';
+        body = 'Your payment has been finalized';
+        break;
+      case 'payment_refunded':
+        title = 'Payment Refunded';
+        body = 'Your payment has been refunded';
+        break;
       default:
         return;
     }
 
-    NotificationService.showRideNotification(
-      title: title,
-      body: body,
-      payload: type,
+    NotificationService.showChatNotification(
+      senderName: title,
+      message: body,
     );
   });
 }

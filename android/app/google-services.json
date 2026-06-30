@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "834645037307",
+    "project_id": "instegram-a7904",
+    "storage_bucket": "instegram-a7904.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:834645037307:android:4ee4189de7bcd3da62605e",
+        "android_client_info": {
+          "package_name": "com.example.instegram"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBk4WNNMXrXbRgzZ2IWRVakMmcSwZ8apto"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:834645037307:android:6805df8cc2f347fb62605e",
+        "android_client_info": {
+          "package_name": "com.example.saleyoursteel"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBk4WNNMXrXbRgzZ2IWRVakMmcSwZ8apto"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:834645037307:android:527c1664db62ca2962605e",
+        "android_client_info": {
+          "package_name": "com.muasi.driversapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBk4WNNMXrXbRgzZ2IWRVakMmcSwZ8apto"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

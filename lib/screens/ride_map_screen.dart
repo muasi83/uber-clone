@@ -416,7 +416,7 @@ int _calculateDuration(double distanceKm) {
                       icon: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: AppColors.surfaceVariant.withValues(alpha: 0.9),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.arrow_back, color: AppColors.textPrimary, size: 20),
@@ -426,7 +426,7 @@ int _calculateDuration(double distanceKm) {
                     title: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: AppColors.surfaceVariant.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -520,7 +520,7 @@ int _calculateDuration(double distanceKm) {
         child: Text(
           '$number',
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.primaryLight,
             fontSize: 11,
             fontWeight: FontWeight.bold,
           ),
@@ -774,7 +774,7 @@ int _calculateDuration(double distanceKm) {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: selected ? Colors.white : AppColors.textSecondary),
+            Icon(icon, size: 18, color: selected ? AppColors.primaryLight : AppColors.textSecondary),
             const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -784,14 +784,14 @@ int _calculateDuration(double distanceKm) {
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
-                    color: selected ? Colors.white : AppColors.textPrimary,
+                    color: selected ? AppColors.primaryLight : AppColors.textPrimary,
                   ),
                 ),
                 Text(
                   price,
                   style: TextStyle(
                     fontSize: 10,
-                    color: selected ? Colors.white.withValues(alpha: 0.8) : AppColors.textTertiary,
+                    color: selected ? AppColors.primaryLight.withValues(alpha: 0.8) : AppColors.textTertiary,
                   ),
                 ),
               ],

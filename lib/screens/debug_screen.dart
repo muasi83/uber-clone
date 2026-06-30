@@ -129,7 +129,7 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
                     itemCount: debugMessages.length,
                     itemBuilder: (context, index) {
                       final message = debugMessages[index];
-                      Color textColor = Colors.white;
+                      Color textColor = AppColors.primaryLight;
                       if (message.contains('❌') || message.contains('ERROR')) {
                         textColor = AppColors.error;
                       } else if (message.contains('✅') || message.contains('SUCCESS')) {

@@ -188,7 +188,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
       backgroundColor: AppColors.textPrimary,
       appBar: AppBar(
         backgroundColor: AppColors.textPrimary,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.primaryLight,
         title: const Text('Trip Preview'),
         actions: [
           Center(
@@ -196,12 +196,12 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
               margin: const EdgeInsets.only(right: 12),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: AppColors.primaryLight.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
                 'Auto-closes in 6s',
-                style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+                style: TextStyle(fontSize: 12, color: AppColors.primaryLight.withValues(alpha: 0.7)),
               ),
             ),
           ),
@@ -371,7 +371,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                     ),
                     child: const Text(
                       'Loading route...',
-                      style: TextStyle(color: Colors.white, fontSize: 13),
+                      style: TextStyle(color: AppColors.primaryLight, fontSize: 13),
                     ),
                   ),
                 ),

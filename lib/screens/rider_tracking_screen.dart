@@ -127,6 +127,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
       addDebugMessage('Car icon fallback: $e');
       _carIcon = await MarkerFactory.driver;
     }
+    if (mounted) _updateMarkers();
   }
 
   void _initializeTracking() {
@@ -304,7 +305,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
         child: Text(
           count > 9 ? '9+' : '$count',
-          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
       ),
@@ -528,7 +529,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         title: const Text(
           'Trip to Destination',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.primaryLight,
             fontWeight: FontWeight.w600,
             fontSize: 18,
           ),
@@ -538,7 +539,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
             clipBehavior: Clip.none,
             children: [
               IconButton(
-                icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
+                icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary),
                 tooltip: 'Chat with Driver',
                 onPressed: _openChat,
               ),
@@ -785,12 +786,21 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
       try {
         final token = StorageService.getToken();
         if (token == null) return;
-        await RideService.cancelRide(widget.rideId, token, reason: reason);
+        final success = await RideService.cancelRide(widget.rideId, token, reason: reason);
+        if (!success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to cancel ride. Please try again.'),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return;
+        }
+        ChatScreen.clearAllCache();
         if (mounted) {
-          WebSocketService.sendRideMessage('ride_cancelled', {
-            'rideId': widget.rideId,
-            'reason': reason,
-          });
           Navigator.pushNamedAndRemoveUntil(context, '/rider-home', (route) => false);
         }
       } catch (e) {

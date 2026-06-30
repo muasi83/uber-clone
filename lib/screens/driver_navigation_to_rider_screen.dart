@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -6,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/ride_service.dart';
 import '../services/directions_service.dart';
+import '../services/background_navigation_service.dart';
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../screens/debug_screen.dart';
@@ -17,6 +19,7 @@ import '../widgets/cancel_ride_dialog.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
+import '../utils/bearing_utils.dart';
 
 class DriverNavigationToRiderScreen extends StatefulWidget {
   final int rideId;
@@ -51,6 +54,8 @@ class _DriverNavigationToRiderScreenState
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor _carIcon = BitmapDescriptor.defaultMarker;
+  double _driverHeading = 0;
   String? _mapStyle;
   bool _showDriverMarker = true;
   bool _isArriving = false;
@@ -58,6 +63,9 @@ class _DriverNavigationToRiderScreenState
   double? _distanceKm;
 
   StreamSubscription<Position>? _positionStream;
+  StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
+  LatLng? _animatedDriverPos;
+  Timer? _driverAnimTimer;
   int? _otherUserId;
 
   @override
@@ -75,12 +83,26 @@ class _DriverNavigationToRiderScreenState
     addDebugMessage('═══════════════════════════════════════');
 
     _initYellowPin();
+    _initCarIcon();
     _initializeNavigation();
     _fetchChatPartnerId();
+    _setupRideEventListeners();
   }
 
   Future<void> _initYellowPin() async {
     _yellowPinMarker = await getYellowPinMarker();
+  }
+
+  Future<void> _initCarIcon() async {
+    try {
+      _carIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(64, 64)),
+        'assets/images/car_marker.png',
+      );
+    } catch (e) {
+      addDebugMessage('⚠️ Car icon fallback: $e');
+      _carIcon = await MarkerFactory.driver;
+    }
   }
 
   Future<void> _initializeNavigation() async {
@@ -120,6 +142,8 @@ class _DriverNavigationToRiderScreenState
 
         final newLocation = LatLng(position.latitude, position.longitude);
         _driverLocation = newLocation;
+        _driverHeading = position.heading;
+        _startDriverMarkerAnimation(newLocation);
 
         addDebugMessage(
           '📍 Driver moved 50m+ — ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
@@ -164,6 +188,34 @@ class _DriverNavigationToRiderScreenState
     );
   }
 
+  void _startDriverMarkerAnimation(LatLng target) {
+    _driverAnimTimer?.cancel();
+    final origin = _animatedDriverPos ?? _driverLocation ?? target;
+
+    const steps = 30;
+    var step = 0;
+
+    _driverAnimTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      step++;
+      final t = step / steps;
+      final eased = 1.0 - math.pow(1.0 - t, 3).toDouble();
+
+      _animatedDriverPos = LatLng(
+        origin.latitude + (target.latitude - origin.latitude) * eased,
+        origin.longitude + (target.longitude - origin.longitude) * eased,
+      );
+
+      _updateMarkers();
+
+      if (step >= steps) {
+        _driverAnimTimer?.cancel();
+        _driverAnimTimer = null;
+        _animatedDriverPos = null;
+        _updateMarkers();
+      }
+    });
+  }
+
   void _stopLocationStream() {
     if (_positionStream != null) {
       _positionStream!.cancel();
@@ -176,12 +228,14 @@ class _DriverNavigationToRiderScreenState
     _markers.clear();
 
     if (_driverLocation != null && _showDriverMarker) {
+      final pos = _animatedDriverPos ?? _driverLocation!;
       _markers.add(
         Marker(
           markerId: const MarkerId('driver'),
-          position: _driverLocation!,
-          icon: await MarkerFactory.driver,
+          position: pos,
+          icon: _carIcon,
           flat: true,
+          rotation: normalizeCarHeading(_driverHeading % 360),
           infoWindow: const InfoWindow(title: 'Your Location'),
         ),
       );
@@ -347,10 +401,6 @@ class _DriverNavigationToRiderScreenState
         await RideService.cancelRide(widget.rideId, token, reason: reason);
         ChatScreen.clearAllCache();
         if (mounted) {
-          WebSocketService.sendRideMessage('ride_cancelled', {
-            'rideId': widget.rideId,
-            'reason': reason,
-          });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Ride cancelled'),
@@ -370,13 +420,36 @@ class _DriverNavigationToRiderScreenState
     }
   }
 
-  void _openGoogleMaps() {
-    final uri = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1'
-      '&destination=${widget.pickupLat},${widget.pickupLng}'
-      '&travelmode=driving',
+  Future<void> _openGoogleMaps() async {
+    try {
+      await BackgroundNavigationService().start(
+        rideId: widget.rideId,
+        navigationType: 'pickup',
+        destinationAddress: widget.pickupAddress,
+      );
+    } catch (e) {
+      addDebugMessage('⚠️ _openGoogleMaps start error: $e');
+    }
+
+    await _openMapsApp(widget.pickupLat, widget.pickupLng);
+  }
+
+  Future<void> _openMapsApp(double lat, double lng) async {
+    final appUri = Uri.parse(
+      'comgooglemaps://?daddr=$lat,$lng&directionsmode=driving',
     );
-    _launchUrl(uri);
+    try {
+      if (await canLaunchUrl(appUri)) {
+        await launchUrl(appUri, mode: LaunchMode.externalApplication);
+        addDebugMessage('Google Maps app opened: $appUri');
+        return;
+      }
+    } catch (e) {
+      addDebugMessage('⚠️ Maps app unavailable, using web: $e');
+    }
+    await _launchUrl(Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
+    ));
   }
 
   Future<void> _launchUrl(Uri uri) async {
@@ -409,19 +482,19 @@ class _DriverNavigationToRiderScreenState
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Navigate to Rider',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.primary),
         ),
         actions: [
           Stack(
             clipBehavior: Clip.none,
             children: [
               IconButton(
-                icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
                 tooltip: 'Chat with Rider',
                 onPressed: _openChat,
               ),
@@ -460,7 +533,7 @@ class _DriverNavigationToRiderScreenState
                   : AppColors.surfaceVariant,
               child: Icon(
                 Icons.my_location,
-                color: _showDriverMarker ? Colors.white : AppColors.textSecondary,
+                color: _showDriverMarker ? AppColors.primaryLight : AppColors.textSecondary,
                 size: 20,
               ),
             ),
@@ -472,25 +545,25 @@ class _DriverNavigationToRiderScreenState
                 duration: const Duration(milliseconds: 500),
                 child: Container(
                   color: AppColors.mapOverlay,
-                  child: const Center(
+                  child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle, color: Colors.white, size: 80),
-                        SizedBox(height: AppSpacing.lg),
-                        Text(
+                        const Icon(Icons.check_circle, color: AppColors.primaryLight, size: 80),
+                        const SizedBox(height: AppSpacing.lg),
+                        const Text(
                           'You have arrived!',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.primaryLight,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        SizedBox(height: AppSpacing.sm),
+                        const SizedBox(height: AppSpacing.sm),
                         Text(
                           'Rider has been notified',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: AppColors.primaryLight.withValues(alpha: 0.7),
                             fontSize: 16,
                           ),
                         ),
@@ -591,7 +664,7 @@ class _DriverNavigationToRiderScreenState
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: _openGoogleMaps,
+                      onPressed: () async { await _openGoogleMaps(); },
                       icon: const Icon(Icons.map, size: 18),
                       label: const Text('Open Google Maps'),
                       style: OutlinedButton.styleFrom(
@@ -624,6 +697,41 @@ class _DriverNavigationToRiderScreenState
     _mapStyle = await MapStyleLoader.load();
   }
 
+  void _setupRideEventListeners() {
+    _rideEventsSub?.cancel();
+    _rideEventsSub = WebSocketService.rideEvents.listen((event) {
+      if (!mounted) return;
+      final type = event['type'];
+      if (type == 'ride_cancelled') {
+        final reason = event['reason'] as String? ?? 'The ride was cancelled';
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.cancel, color: AppColors.error, size: 24),
+                SizedBox(width: 8),
+                Text('Ride Cancelled'),
+              ],
+            ),
+            content: Text('The rider cancelled the ride.\nReason: $reason'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
+                },
+                child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
   Future<void> _fetchChatPartnerId() async {
     final token = StorageService.getToken();
     if (token == null) return;
@@ -648,7 +756,7 @@ class _DriverNavigationToRiderScreenState
         constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
         child: Text(
           count > 9 ? '9+' : '$count',
-          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
       ),
@@ -691,7 +799,10 @@ class _DriverNavigationToRiderScreenState
   @override
   void dispose() {
     _stopLocationStream();
+    _rideEventsSub?.cancel();
+    _driverAnimTimer?.cancel();
     mapController?.dispose();
+    BackgroundNavigationService().stop();
     super.dispose();
   }
 }
