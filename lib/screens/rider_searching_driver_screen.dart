@@ -80,6 +80,14 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       final ride = await RideService.getRideDetails(widget.rideId, token);
       if (ride == null || !mounted) return;
 
+      if (ride.status == 'CANCELLED') {
+        addDebugMessage('❌ Poll detected ride CANCELLED');
+        _handleRideCancelled({
+          'reason': ride.cancellationReason ?? 'Your ride was cancelled',
+        });
+        return;
+      }
+
       if (ride.status == 'ACCEPTED' && ride.driver != null) {
         addDebugMessage('✅ Poll detected ride ACCEPTED by ${ride.driver!.fullName}');
 

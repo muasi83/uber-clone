@@ -241,6 +241,28 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         final ride = await RideService.getRideDetails(widget.rideId, token);
         if (ride == null || !mounted || _rideCompleting) return;
 
+        if (ride.status == 'CANCELLED') {
+          if (_rideCompleting) return;
+          _rideCompleting = true;
+          _statusPollTimer?.cancel();
+          ChatScreen.clearAllCache();
+          if (mounted) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/rider-home',
+              (route) => false,
+            );
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(ride.cancellationReason ?? 'The ride was cancelled'),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return;
+        }
+
         if (ride.status == 'COMPLETED' && !_paymentInProgress) {
           _rideCompleting = true;
           _statusPollTimer?.cancel();
@@ -345,11 +367,13 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         from.latitude + (target.latitude - from.latitude) * eased,
         from.longitude + (target.longitude - from.longitude) * eased,
       );
+      _updateMarkers();
       if (mounted) setState(() {});
       if (step >= steps) {
         _driverAnimTimer?.cancel();
         _driverAnimTimer = null;
         _animatedDriverPos = target;
+        _updateMarkers();
         if (mounted) setState(() {});
       }
     });

@@ -89,6 +89,37 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         final ride = await RideService.getRideDetails(widget.rideId, token);
         if (ride == null || !mounted) return;
 
+        if (ride.status == 'CANCELLED') {
+          addDebugMessage('❌ Poll detected ride CANCELLED');
+          _statusPollTimer?.cancel();
+          ChatScreen.clearAllCache();
+          if (mounted) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => AlertDialog(
+                icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 48),
+                title: const Text('Ride Cancelled'),
+                content: Text(ride.cancellationReason ?? 'The ride was cancelled'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/rider-home',
+                        (route) => false,
+                      );
+                    },
+                    child: const Text('Back to Home'),
+                  ),
+                ],
+              ),
+            );
+          }
+          return;
+        }
+
         if (ride.status == 'STARTED') {
           if (_rideStarting) return;
           _rideStarting = true;
@@ -381,11 +412,13 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         from.latitude + (target.latitude - from.latitude) * eased,
         from.longitude + (target.longitude - from.longitude) * eased,
       );
+      _updateMarkers();
       if (mounted) setState(() {});
       if (step >= steps) {
         _driverAnimTimer?.cancel();
         _driverAnimTimer = null;
         _animatedDriverPos = target;
+        _updateMarkers();
         if (mounted) setState(() {});
       }
     });

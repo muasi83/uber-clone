@@ -19,6 +19,7 @@ import '../screens/settings_screen.dart';
 import '../screens/ride_preview_screen.dart';
 import '../screens/debug_screen.dart';
 import '../screens/trip_history_screen.dart';
+import '../utils/bearing_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 
@@ -717,7 +718,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             markerId: const MarkerId('driver'),
             position: _animatedDriverPos ?? _driverCurrentLocation!,
             icon: _driverMarkerIcon,
-            rotation: _lastHeading,
+            rotation: normalizeCarHeading(_lastHeading % 360),
             anchor: const Offset(0.5, 0.5),
             flat: true,
           ),

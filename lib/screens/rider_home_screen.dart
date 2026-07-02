@@ -191,7 +191,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         markerId: MarkerId(id),
         position: position,
         icon: _driverMarkerIcon,
-        rotation: (rotation + 180) % 360,
+        rotation: normalizeCarHeading(rotation),
         anchor: const Offset(0.5, 0.5),
         flat: true,
         infoWindow: InfoWindow(
@@ -307,7 +307,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     } else if (existing != null) {
       rotation = calculateBearing(existing.position, position);
     }
-    rotation = (rotation + 180) % 360;
+    rotation = normalizeCarHeading(rotation);
 
     if (existing != null &&
         existing.position == position &&
@@ -349,7 +349,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     final id = 'driver_$driverId';
     final existing = _driverMarkers[id];
     if (existing == null) return;
-    final rotation = ((heading as num).toDouble() + 180) % 360;
+    final rotation = normalizeCarHeading((heading as num).toDouble());
 
     if (existing.rotation == rotation) return;
 
