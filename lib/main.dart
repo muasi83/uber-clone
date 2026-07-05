@@ -24,6 +24,8 @@ import 'screens/rider_tracking_screen.dart';
 import 'screens/rider_trip_details_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/admin_home_screen.dart';
+import 'screens/admin_trip_details_screen.dart';
 
 import 'screens/driver_active_ride_screen.dart' as driver_active;
 
@@ -384,6 +386,21 @@ class MyApp extends StatelessWidget {
           return DriverRideSummaryScreen(
             rideId: rideId,
           );
+        },
+
+        // Admin
+        '/admin-home': (_) => const AdminHomeScreen(),
+
+        '/admin-trip-details': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is! Map<String, dynamic>) {
+            return _routeError(context, 'Missing arguments for /admin-trip-details');
+          }
+          final rideId = (args['rideId'] as num?)?.toInt();
+          if (rideId == null) {
+            return _routeError(context, 'Invalid /admin-trip-details arguments');
+          }
+          return AdminTripDetailsScreen(rideId: rideId);
         },
       },
     );

@@ -19,6 +19,8 @@ import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../screens/settings_screen.dart';
 import '../screens/trip_history_screen.dart';
+import '../screens/admin_home_screen.dart';
+import '../screens/admin_driver_list_screen.dart';
 
 class RiderHomeScreen extends StatefulWidget {
   const RiderHomeScreen({super.key});
@@ -55,9 +57,13 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   late DraggableScrollableController _sheetController;
   bool _isSheetExpanded = false;
 
+  bool _isAdmin = false;
+  int _adminTabIndex = 0;
+
   @override
   void initState() {
     super.initState();
+    _isAdmin = StorageService.getRole() == 'ADMIN';
     _loadMapStyle();
     _initializeMap();
     _connectWebSocket();
@@ -664,29 +670,85 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    Widget body;
+  Widget _buildMapBodyWithOverlays() {
     if (_isInitializing) {
-      body = const Center(
+      return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       );
     } else if (_initError.isNotEmpty) {
-      body = _buildErrorState();
-    } else {
-      body = Stack(
-        children: [
-          _buildMapBody(),
-          if (!_mapReady)
-            const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            ),
-        ],
+      return _buildErrorState();
+    }
+    return Stack(
+      children: [
+        _buildMapBody(),
+        if (!_mapReady)
+          const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isAdmin) {
+      return Scaffold(
+        extendBodyBehindAppBar: true,
+        body: _buildMapBodyWithOverlays(),
       );
     }
+
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      body: body,
+      body: IndexedStack(
+        index: _adminTabIndex,
+        children: [
+          Scaffold(
+            extendBodyBehindAppBar: true,
+            body: _buildMapBodyWithOverlays(),
+          ),
+          const AdminHomeScreen(),
+          const AdminDriverListScreen(),
+        ],
+      ),
+      bottomNavigationBar: _buildAdminBottomNav(),
+    );
+  }
+
+  Widget _buildAdminBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: AppColors.outline.withValues(alpha: 0.5)),
+        ),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _adminTabIndex,
+        onTap: (index) => setState(() => _adminTabIndex = index),
+        backgroundColor: AppColors.surface,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textSecondary,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        selectedFontSize: 12,
+        unselectedFontSize: 11,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map_outlined),
+            activeIcon: Icon(Icons.map),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.route_outlined),
+            activeIcon: Icon(Icons.route),
+            label: 'Trips',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.directions_car_outlined),
+            activeIcon: Icon(Icons.directions_car),
+            label: 'Drivers',
+          ),
+        ],
+      ),
     );
   }
 
