@@ -498,6 +498,39 @@ class RideService {
     }
   }
 
+  static Future<int?> getPendingPaymentRideId(String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/payments/pending-ride';
+      final response = await http
+          .get(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return data['rideId'] as int?;
+      }
+      return null;
+    } catch (e) {
+      addDebugMessage('❌ Pending payment ride error: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getPaymentStatus(int rideId, String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/payments/$rideId/status';
+      final response = await http
+          .get(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      addDebugMessage('❌ Payment status error: $e');
+      return null;
+    }
+  }
+
   static Future<bool> registerDeviceToken(String fcmToken, String token) async {
     try {
       final url = StorageService.getAuthDeviceTokenUrl();

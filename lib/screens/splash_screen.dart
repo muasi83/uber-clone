@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/storage_service.dart';
+import '../services/ride_service.dart';
 import '../screens/auth_screen.dart';
 import '../screens/rider_home_screen.dart';
 import '../screens/driver_home_screen.dart';
@@ -123,6 +124,27 @@ class _SplashScreenState extends State<SplashScreen>
               (route) => false,
             );
           } else {
+            final pendingRideId = await RideService.getPendingPaymentRideId(token);
+            if (pendingRideId != null && mounted) {
+              final ride = await RideService.getRideDetails(pendingRideId, token);
+              if (ride != null && mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/rider-active-ride',
+                  (route) => false,
+                  arguments: {
+                    'rideId': ride.id,
+                    'pickupLat': ride.pickupLatitude,
+                    'pickupLng': ride.pickupLongitude,
+                    'dropoffLat': ride.dropoffLatitude,
+                    'dropoffLng': ride.dropoffLongitude,
+                    'dropoffAddress': ride.dropoffAddress,
+                  },
+                );
+                return;
+              }
+            }
+
+            if (!mounted) return;
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(
                 builder: (context) => const RiderHomeScreen(),

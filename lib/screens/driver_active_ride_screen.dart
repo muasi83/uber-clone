@@ -55,10 +55,12 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   bool _rideStarted = false;
   bool _isCompleting = false;
   bool _awaitingPayment = false;
+  bool _showingPaymentDialog = false;
   int _remainingMinutes = 0;
   double? _distanceKm;
   DateTime? _startTime;
   Timer? _rideTimer;
+  Timer? _paymentPollTimer;
 
   StreamSubscription<Position>? _positionStream;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
@@ -341,6 +343,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
 
       if (type == 'ride_cancelled') {
         _awaitingPayment = false;
+        _paymentPollTimer?.cancel();
         final reason = event['reason'] as String? ?? 'The ride was cancelled';
         showDialog(
           context: context,
@@ -370,9 +373,12 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       }
 
       if (!_awaitingPayment) return;
+      if (_showingPaymentDialog) return;
       if (type == 'payment_confirmed') {
+        _showingPaymentDialog = true;
         final amount = (event['payload']?['amount'] as num?)?.toDouble() ?? 0.0;
         final result = await showReceivedPaymentDialog(context, amount: amount);
+        _showingPaymentDialog = false;
         if (result == null || !mounted) return;
 
         final token = StorageService.getToken();
@@ -386,6 +392,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         }
       } else if (type == 'payment_finalized' || type == 'payment_refunded') {
         _awaitingPayment = false;
+        _paymentPollTimer?.cancel();
         if (mounted) {
           Navigator.pushReplacementNamed(
             context,
@@ -395,6 +402,47 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
             },
           );
         }
+      }
+    });
+  }
+
+  void _startPaymentPolling() {
+    _paymentPollTimer = Timer.periodic(const Duration(seconds: 15), (_) async {
+      if (!mounted || !_awaitingPayment) {
+        _paymentPollTimer?.cancel();
+        return;
+      }
+
+      final token = StorageService.getToken();
+      if (token == null) return;
+
+      final status = await RideService.getPaymentStatus(widget.rideId, token);
+      if (!mounted || !_awaitingPayment) return;
+
+      if (status == null) return;
+
+      final paymentStatus = status['status'] as String?;
+
+      if (paymentStatus == 'COMPLETED' && !_showingPaymentDialog) {
+        _showingPaymentDialog = true;
+        final amount = (status['amount'] as num?)?.toDouble() ?? 0.0;
+        final result = await showReceivedPaymentDialog(context, amount: amount);
+        _showingPaymentDialog = false;
+
+        if (result == null || !mounted || !_awaitingPayment) return;
+
+        final token = StorageService.getToken();
+        if (token == null) return;
+
+        if (result.received) {
+          await RideService.confirmPaymentReceived(widget.rideId, token);
+        } else {
+          await RideService.disputePayment(widget.rideId, token,
+              reason: result.reason ?? 'Driver disputed payment');
+        }
+      } else if (paymentStatus == 'FAILED') {
+        _paymentPollTimer?.cancel();
+        _awaitingPayment = false;
       }
     });
   }
@@ -414,15 +462,11 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
 
       ChatScreen.clearAllCache();
 
-      WebSocketService.sendRideMessage('ride_completed', {
-        'rideId': widget.rideId,
-        'status': 'COMPLETED',
-      });
-
       setState(() {
         _isCompleting = false;
         _awaitingPayment = true;
       });
+      _startPaymentPolling();
     } catch (e) {
       addDebugMessage('❌ Error: $e');
       if (mounted) {
@@ -819,6 +863,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
     _stopLocationStream();
     _driverAnimTimer?.cancel();
     _rideTimer?.cancel();
+    _paymentPollTimer?.cancel();
     _rideEventsSub?.cancel();
     mapController?.dispose();
     BackgroundNavigationService().stop();
