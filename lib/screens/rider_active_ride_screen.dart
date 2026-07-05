@@ -215,19 +215,68 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
 
     final result = await showPaymentDialog(context, amount: amount);
     if (result != null && result.confirmed && mounted) {
-      try {
-        final token = StorageService.getToken();
-        if (token != null) {
-          await RideService.confirmPayment(widget.rideId, token);
-        }
-      } catch (e) {
-        addDebugMessage('⚠️ Payment confirm error: $e');
-      }
+      await _confirmPaymentWithRetry();
     } else {
       _paymentInProgress = false;
       _rideCompleting = false;
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/rider-home', (route) => false);
+      }
+    }
+  }
+
+  /// Retry confirmPayment() locally to recover from transient
+  /// network/server failures without leaving the payment flow.
+  Future<void> _confirmPaymentWithRetry() async {
+    while (mounted) {
+      final token = StorageService.getToken();
+      if (token == null) return;
+
+      bool success;
+      try {
+        success = await RideService.confirmPayment(widget.rideId, token);
+      } catch (e) {
+        addDebugMessage('⚠️ Payment confirm error: $e');
+        success = false;
+      }
+
+      if (success) return;
+
+      if (!mounted) return;
+
+      final retry = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Payment Failed'),
+          content: const Text(
+            'We couldn\'t contact the server to confirm your payment. '
+            'Your payment has not been confirmed yet.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Try Again'),
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (retry != true) {
+        _paymentInProgress = false;
+        _rideCompleting = false;
+        return;
       }
     }
   }
