@@ -7,6 +7,7 @@ import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../services/driver_service.dart';
 import '../services/ride_service.dart';
+import '../services/ride_recovery_service.dart';
 import '../models/ride_model.dart';
 import '../screens/rider_pickup_location_screen.dart';
 import '../screens/rider_dropoff_location_screen.dart';
@@ -484,7 +485,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         return;
       }
 
-      final cancel = await showDialog<bool>(
+      final action = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
           shape: RoundedRectangleBorder(
@@ -497,18 +498,28 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
+              onPressed: () => Navigator.pop(ctx, 'later'),
               child: const Text('Later'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
+              onPressed: () => Navigator.pop(ctx, 'cancel'),
               style: TextButton.styleFrom(foregroundColor: AppColors.error),
               child: const Text('Cancel Ride'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, 'resume'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.textPrimary,
+              ),
+              child: const Text('Resume Trip'),
             ),
           ],
         ),
       );
-      if (cancel == true && mounted) {
+      if (action == 'resume' && mounted) {
+        _resumeActiveRide(activeRide);
+      } else if (action == 'cancel' && mounted) {
         final success = await RideService.cancelRide(
           rideId,
           token,
@@ -541,6 +552,34 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         await StorageService.saveStaleRideSkipped(rideId);
       }
     } catch (e) {}
+  }
+
+  void _resumeActiveRide(Ride ride) async {
+    final target = RideRecoveryService.getRecoveryTarget(ride);
+    if (!mounted) return;
+
+    if (target.canResume) {
+      final routeName = switch (target.destination) {
+        RideDestination.searching => '/rider-searching',
+        RideDestination.tracking => '/rider-tracking',
+        RideDestination.activeRide => '/rider-active-ride',
+        RideDestination.completed => '/rider-completed',
+        RideDestination.cancelled => null,
+      };
+      if (routeName != null && mounted) {
+        await Navigator.pushNamed(context, routeName,
+            arguments: target.arguments);
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(target.message ??
+              'Cannot resume ride'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _requestRide() async {
@@ -1088,6 +1127,13 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     };
     return InkWell(
       onTap: () {
+        if (ride.status == 'REQUESTED' ||
+            ride.status == 'ACCEPTED' ||
+            ride.status == 'DRIVER_ARRIVED' ||
+            ride.status == 'STARTED') {
+          _resumeActiveRide(ride);
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
