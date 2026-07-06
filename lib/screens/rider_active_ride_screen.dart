@@ -52,6 +52,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   int? _otherUserId;
   bool _rideCompleting = false;
   bool _paymentInProgress = false;
+  double _paymentAmount = 0.0;
   double _driverHeading = 0;
   BitmapDescriptor _carIcon = BitmapDescriptor.defaultMarker;
   BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
@@ -62,6 +63,8 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   LatLng? _animatedDriverPos;
 
   Timer? _statusPollTimer;
+  Timer? _paymentPollTimer;
+  bool _paymentPollInProgress = false;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
   StreamSubscription<Map<String, dynamic>>? _driverLocationSub;
 
@@ -211,12 +214,15 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
 
   Future<void> _handlePayment(dynamic totalFare) async {
     _paymentInProgress = true;
-    final amount = (totalFare as num?)?.toDouble() ?? 0.0;
+    _paymentAmount = (totalFare as num?)?.toDouble() ?? 0.0;
 
-    final result = await showPaymentDialog(context, amount: amount);
+    _startPaymentPolling();
+
+    final result = await showPaymentDialog(context, amount: _paymentAmount);
     if (result != null && result.confirmed && mounted) {
       await _confirmPaymentWithRetry();
     } else {
+      _paymentPollTimer?.cancel();
       _paymentInProgress = false;
       _rideCompleting = false;
       if (mounted) {
@@ -225,8 +231,6 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     }
   }
 
-  /// Retry confirmPayment() locally to recover from transient
-  /// network/server failures without leaving the payment flow.
   Future<void> _confirmPaymentWithRetry() async {
     while (mounted) {
       final token = StorageService.getToken();
@@ -240,7 +244,19 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         success = false;
       }
 
-      if (success) return;
+      if (success && mounted) {
+        _paymentInProgress = false;
+        _rideCompleting = false;
+        Navigator.pushReplacementNamed(
+          context,
+          '/rider-completed',
+          arguments: {
+            'rideId': widget.rideId,
+            'totalFare': _paymentAmount,
+          },
+        );
+        return;
+      }
 
       if (!mounted) return;
 
@@ -274,11 +290,53 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
       if (!mounted) return;
 
       if (retry != true) {
+        _paymentPollTimer?.cancel();
         _paymentInProgress = false;
         _rideCompleting = false;
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(context, '/rider-home', (route) => false);
+        }
         return;
       }
     }
+  }
+
+  void _startPaymentPolling() {
+    _paymentPollTimer = Timer.periodic(const Duration(seconds: 15), (_) async {
+      if (!mounted || !_paymentInProgress || _paymentPollInProgress) {
+        if (!mounted || !_paymentInProgress) _paymentPollTimer?.cancel();
+        return;
+      }
+      _paymentPollInProgress = true;
+
+      final token = StorageService.getToken();
+      if (token == null) { _paymentPollInProgress = false; return; }
+
+      final status = await RideService.getPaymentStatus(widget.rideId, token);
+      if (!mounted || !_paymentInProgress) {
+        _paymentPollInProgress = false;
+        _paymentPollTimer?.cancel();
+        return;
+      }
+      _paymentPollInProgress = false;
+
+      if (status == null) return;
+
+      final paymentStatus = status['status'] as String?;
+      if (paymentStatus == 'COMPLETED') {
+        _paymentPollTimer?.cancel();
+        _paymentInProgress = false;
+        _rideCompleting = false;
+        Navigator.pushReplacementNamed(
+          context,
+          '/rider-completed',
+          arguments: {
+            'rideId': widget.rideId,
+            'totalFare': status['amount'] ?? _paymentAmount,
+          },
+        );
+      }
+    });
   }
 
   void _startStatusPolling() {
@@ -312,11 +370,31 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
           return;
         }
 
-        if (ride.status == 'COMPLETED' && !_paymentInProgress) {
+        if (ride.status == 'COMPLETED') {
+          if (_paymentInProgress) return;
           _rideCompleting = true;
           _statusPollTimer?.cancel();
           addDebugMessage('✅ Poll detected ride COMPLETED');
           ChatScreen.clearAllCache();
+
+          final paymentStatus = await RideService.getPaymentStatus(widget.rideId, token);
+          final status = paymentStatus?['status'] as String?;
+          if (status == 'COMPLETED') {
+            _paymentInProgress = false;
+            _rideCompleting = false;
+            if (mounted) {
+              Navigator.pushReplacementNamed(
+                context,
+                '/rider-completed',
+                arguments: {
+                  'rideId': widget.rideId,
+                  'totalFare': paymentStatus?['amount'] ?? ride.finalFare,
+                },
+              );
+            }
+            return;
+          }
+
           _handlePayment(ride.finalFare);
         }
       } catch (e) {
@@ -794,6 +872,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     _rideCompleting = false;
     _driverAnimTimer?.cancel();
     _statusPollTimer?.cancel();
+    _paymentPollTimer?.cancel();
     _rideEventsSub?.cancel();
     _driverLocationSub?.cancel();
     mapController?.dispose();

@@ -7,6 +7,10 @@ class User {
   final String? deviceToken;
   bool isOnline;
   final bool isVerified;
+  final String? countryCode;
+  final String? phoneNumber;
+  final String? normalizedPhone;
+  final bool phoneVerified;
   final DateTime createdAt;
 
   User({
@@ -18,6 +22,10 @@ class User {
     this.deviceToken,
     this.isOnline = false,
     this.isVerified = false,
+    this.countryCode,
+    this.phoneNumber,
+    this.normalizedPhone,
+    this.phoneVerified = false,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -34,6 +42,12 @@ factory User.fromJson(Map<String, dynamic> json) => User(
   isVerified: json['isVerified'] is bool 
       ? json['isVerified'] as bool 
       : (json['isVerified'] as int?) == 1,
+  countryCode: json['countryCode'] as String?,
+  phoneNumber: json['phoneNumber'] as String?,
+  normalizedPhone: json['normalizedPhone'] as String?,
+  phoneVerified: json['phoneVerified'] is bool
+      ? json['phoneVerified'] as bool
+      : (json['phoneVerified'] as int?) == 1,
   createdAt: json['createdAt'] != null
       ? DateTime.parse(json['createdAt'] as String)
       : DateTime.now(),
@@ -47,6 +61,10 @@ factory User.fromJson(Map<String, dynamic> json) => User(
         'deviceToken': deviceToken,
         'isOnline': isOnline ? 1 : 0,
         'isVerified': isVerified ? 1 : 0,
+        'countryCode': countryCode,
+        'phoneNumber': phoneNumber,
+        'normalizedPhone': normalizedPhone,
+        'phoneVerified': phoneVerified ? 1 : 0,
         'createdAt': createdAt.toIso8601String(),
       };
 }

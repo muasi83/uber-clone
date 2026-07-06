@@ -26,6 +26,8 @@ import 'screens/chat_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/admin_home_screen.dart';
 import 'screens/admin_trip_details_screen.dart';
+import 'screens/forgot_password_screen.dart';
+import 'screens/reset_password_screen.dart';
 
 import 'screens/driver_active_ride_screen.dart' as driver_active;
 
@@ -173,6 +175,19 @@ class MyApp extends StatelessWidget {
       routes: {
         '/splash': (_) => const SplashScreen(),
         '/auth': (_) => const AuthScreen(),
+        '/forgot-password': (_) => const ForgotPasswordScreen(),
+        '/reset-password': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is! Map<String, dynamic>) {
+            return _routeError(context, 'Missing arguments for /reset-password');
+          }
+          final email = args['email'] as String?;
+          final code = args['code'] as String?;
+          if (email == null || code == null) {
+            return _routeError(context, 'Invalid /reset-password arguments');
+          }
+          return ResetPasswordScreen(email: email, code: code);
+        },
         '/debug': (_) => const DebugScreen(),
 
         // Rider

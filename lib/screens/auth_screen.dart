@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
+import 'dart:io';
+import 'package:country_code_picker/country_code_picker.dart';
 import '../services/storage_service.dart';
 import '../services/firebase_service.dart';
 import '../screens/debug_screen.dart';
-import 'dart:async';
-import 'dart:io';
+import '../screens/forgot_password_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
@@ -23,11 +25,13 @@ class _AuthScreenState extends State<AuthScreen>
   bool _isLogin = true;
   bool _isLoading = false;
   String _selectedRole = 'RIDER';
+  String _countryCode = '+966';
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -56,13 +60,24 @@ class _AuthScreenState extends State<AuthScreen>
       if (_emailController.text.isEmpty ||
           _passwordController.text.isEmpty ||
           _fullNameController.text.isEmpty ||
-          _usernameController.text.isEmpty) {
+          _phoneController.text.isEmpty ||
+          _confirmPasswordController.text.isEmpty) {
         _showError('Please fill all fields');
         return;
       }
 
       if (_passwordController.text.length < 6) {
         _showError('Password must be at least 6 characters');
+        return;
+      }
+
+      if (_passwordController.text != _confirmPasswordController.text) {
+        _showError('Passwords do not match');
+        return;
+      }
+
+      if (_phoneController.text.length < 6) {
+        _showError('Please enter a valid phone number');
         return;
       }
 
@@ -81,7 +96,8 @@ class _AuthScreenState extends State<AuthScreen>
               'email': _emailController.text,
               'password': _passwordController.text,
               'fullName': _fullNameController.text,
-              'username': _usernameController.text,
+              'countryCode': _countryCode,
+              'phoneNumber': _phoneController.text,
               'role': _selectedRole,
             }),
           )
@@ -425,7 +441,30 @@ class _AuthScreenState extends State<AuthScreen>
           isPassword: true,
           obscureText: true,
         ),
-        AppSpacing.gapXl,
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ForgotPasswordScreen(),
+                ),
+              );
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+            ),
+            child: const Text(
+              'Forgot Password?',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+        AppSpacing.gapMd,
         PremiumButton(
           label: 'Sign In',
           onPressed: _isLoading ? null : _login,
@@ -492,16 +531,50 @@ class _AuthScreenState extends State<AuthScreen>
         ),
         AppSpacing.gapLg,
         PremiumTextField(
-          controller: _usernameController,
-          label: 'Username',
-          prefixIcon: Icons.account_circle_outlined,
-        ),
-        AppSpacing.gapLg,
-        PremiumTextField(
           controller: _emailController,
           label: 'Email',
           prefixIcon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
+        ),
+        AppSpacing.gapLg,
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
+          ),
+          child: Row(
+            children: [
+              CountryCodePicker(
+                onChanged: (code) => _countryCode = code.dialCode ?? '+966',
+                initialSelection: 'SA',
+                favorite: ['+966', '+971', '+1'],
+                showFlagDialog: true,
+                alignLeft: false,
+                textStyle: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                ),
+                padding: EdgeInsets.zero,
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    hintText: 'Phone Number',
+                    hintStyle: TextStyle(color: AppColors.textTertiary.withValues(alpha: 0.7)),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         AppSpacing.gapLg,
         PremiumTextField(
@@ -509,7 +582,13 @@ class _AuthScreenState extends State<AuthScreen>
           label: 'Password',
           prefixIcon: Icons.lock_outlined,
           isPassword: true,
-          obscureText: true,
+        ),
+        AppSpacing.gapLg,
+        PremiumTextField(
+          controller: _confirmPasswordController,
+          label: 'Confirm Password',
+          prefixIcon: Icons.lock_outlined,
+          isPassword: true,
         ),
         AppSpacing.gapXl,
         const Text(
@@ -549,10 +628,14 @@ class _AuthScreenState extends State<AuthScreen>
               child: OutlinedButton.icon(
                 onPressed: () {
                   _fullNameController.text = 'Rider Two';
-                  _usernameController.text = 'rider2';
                   _emailController.text = 'rider2@test.com';
                   _passwordController.text = 'password123';
-                  setState(() => _selectedRole = 'RIDER');
+                  _confirmPasswordController.text = 'password123';
+                  _phoneController.text = '512345678';
+                  setState(() {
+                    _selectedRole = 'RIDER';
+                    _countryCode = '+966';
+                  });
                 },
                 icon: const Icon(Icons.person_outline, size: 16, color: AppColors.primary),
                 label: const Text('Rider 2'),
@@ -571,10 +654,14 @@ class _AuthScreenState extends State<AuthScreen>
               child: OutlinedButton.icon(
                 onPressed: () {
                   _fullNameController.text = 'Driver Two';
-                  _usernameController.text = 'driver2';
                   _emailController.text = 'driver2@test.com';
                   _passwordController.text = 'password123';
-                  setState(() => _selectedRole = 'DRIVER');
+                  _confirmPasswordController.text = 'password123';
+                  _phoneController.text = '512345679';
+                  setState(() {
+                    _selectedRole = 'DRIVER';
+                    _countryCode = '+966';
+                  });
                 },
                 icon: const Icon(Icons.local_taxi_outlined, size: 16, color: AppColors.primary),
                 label: const Text('Driver 2'),
@@ -734,7 +821,8 @@ class _AuthScreenState extends State<AuthScreen>
     _emailController.dispose();
     _passwordController.dispose();
     _fullNameController.dispose();
-    _usernameController.dispose();
+    _phoneController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 }

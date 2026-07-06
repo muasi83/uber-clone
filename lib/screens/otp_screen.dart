@@ -10,8 +10,21 @@ import '../widgets/premium_button.dart';
 
 class OtpScreen extends StatefulWidget {
   final String email;
+  final String? title;
+  final String? subtitle;
+  final String? verifyUrl;
+  final void Function(Map<String, dynamic> response, String code)? onVerified;
+  final VoidCallback? resendOtp;
 
-  const OtpScreen({super.key, required this.email});
+  const OtpScreen({
+    super.key,
+    required this.email,
+    this.title,
+    this.subtitle,
+    this.verifyUrl,
+    this.onVerified,
+    this.resendOtp,
+  });
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -20,7 +33,7 @@ class OtpScreen extends StatefulWidget {
 class _OtpScreenState extends State<OtpScreen> {
   final _otpController = TextEditingController();
   bool _isLoading = false;
-  int _remainingSeconds = 600;
+  int _remainingSeconds = 60;
 
   @override
   void initState() {
@@ -46,7 +59,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final url = StorageService.getAuthVerifyOtpUrl();
+      final url = widget.verifyUrl ?? StorageService.getAuthVerifyOtpUrl();
       final response = await http
           .post(
             Uri.parse(url),
@@ -60,6 +73,12 @@ class _OtpScreenState extends State<OtpScreen> {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
+
+        if (widget.onVerified != null) {
+          widget.onVerified!(json, _otpController.text);
+          return;
+        }
+
         await StorageService.saveToken(json['token']);
         await StorageService.saveUserId(json['userId']);
         await StorageService.saveUsername(json['username']);
@@ -124,18 +143,18 @@ class _OtpScreenState extends State<OtpScreen> {
               children: [
                 _buildMailIcon(),
                 AppSpacing.gapXxl,
-                const Text(
-                  'Check your email',
-                  style: TextStyle(
+                Text(
+                  widget.title ?? 'Check your email',
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
                   ),
                 ),
                 AppSpacing.gapMd,
-                const Text(
-                  'We sent a verification code to',
-                  style: TextStyle(
+                Text(
+                  widget.subtitle ?? 'We sent a verification code to',
+                  style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
                   ),
@@ -154,6 +173,7 @@ class _OtpScreenState extends State<OtpScreen> {
                   appContext: context,
                   length: 6,
                   controller: _otpController,
+                  autoDisposeControllers: false,
                   keyboardType: TextInputType.number,
                   pinTheme: PinTheme(
                     shape: PinCodeFieldShape.box,
@@ -212,8 +232,11 @@ class _OtpScreenState extends State<OtpScreen> {
         onPressed: _isLoading
             ? null
             : () {
+                if (widget.resendOtp != null) {
+                  widget.resendOtp!();
+                }
                 setState(() {
-                  _remainingSeconds = 600;
+                  _remainingSeconds = 60;
                   _otpController.clear();
                 });
                 _startTimer();

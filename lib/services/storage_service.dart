@@ -251,6 +251,9 @@ class StorageService {
   static String getAuthRegisterUrl() => '${getServerUrl()}/api/auth/register';
   static String getAuthLoginUrl() => '${getServerUrl()}/api/auth/login';
   static String getAuthVerifyOtpUrl() => '${getServerUrl()}/api/auth/verify-otp';
+  static String getAuthForgotPasswordUrl() => '${getServerUrl()}/api/auth/forgot-password';
+  static String getAuthVerifyResetOtpUrl() => '${getServerUrl()}/api/auth/verify-reset-otp';
+  static String getAuthResetPasswordUrl() => '${getServerUrl()}/api/auth/reset-password';
   static String getAuthDeviceTokenUrl() => '${getServerUrl()}/api/auth/device-token';
   static String getUsersUrl() => '${getServerUrl()}/api/users';
   static String getChatSendUrl() => '${getServerUrl()}/api/chat/send';
