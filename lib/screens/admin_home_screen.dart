@@ -84,6 +84,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       _currentPage = 0;
     });
     await _fetchTrips(page: 0, append: false);
+    if (!mounted) return;
     setState(() => _loading = false);
   }
 
@@ -91,6 +92,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     if (_loadingMore || !_hasMore || _token == null) return;
     setState(() => _loadingMore = true);
     await _fetchTrips(page: _currentPage + 1, append: true);
+    if (!mounted) return;
     setState(() => _loadingMore = false);
   }
 
@@ -117,6 +119,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         token: _token!,
       );
 
+      if (!mounted) return;
+
       if (result == null) {
         setState(() => _error = 'Failed to load trips');
         return;
@@ -135,6 +139,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         _hasMore = result['hasMore'] as bool? ?? false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = 'Error: $e');
     }
   }

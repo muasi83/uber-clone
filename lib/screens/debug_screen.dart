@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
@@ -8,7 +8,7 @@ List<String> debugMessages = [];
 
 void addDebugMessage(String message) {
   debugMessages.add('[${DateTime.now().hour}:${DateTime.now().minute}:${DateTime.now().second}] $message');
-  print(message);
+  if (kDebugMode) debugPrint(message);
 }
 
 class DebugScreen extends StatefulWidget {

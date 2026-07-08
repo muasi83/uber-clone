@@ -593,7 +593,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
           
           // Bottom buttons
           Positioned(
-            bottom: 16,
+            bottom: MediaQuery.of(context).padding.bottom + 16,
             left: 16,
             right: 16,
             child: _step == 0

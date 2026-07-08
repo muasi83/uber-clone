@@ -1,41 +1,98 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../screens/debug_screen.dart';
 
 class StorageService {
   static const String _serverUrlKey = 'server_url';
+  static const String _activeRideIdKey = 'active_ride_id';
+  static const String _activeRideStatusKey = 'active_ride_status';
+
+  // FlutterSecureStorage keys for sensitive data
   static const String _tokenKey = 'token';
   static const String _userIdKey = 'userId';
   static const String _usernameKey = 'username';
   static const String _roleKey = 'role';
-  static const String _activeRideIdKey = 'active_ride_id';
-  static const String _activeRideStatusKey = 'active_ride_status';
   
   static const String _defaultServerUrl = 'https://catalog-staring-hamstring.ngrok-free.dev';
 
   static late SharedPreferences _prefs;
   static bool _initialized = false;
 
-  // ✅ Better initialization
+  // In-memory cache for sensitive values loaded from FlutterSecureStorage
+  static String? _cachedToken;
+  static int? _cachedUserId;
+  static String? _cachedUsername;
+  static String? _cachedRole;
+
+  static const FlutterSecureStorage _secure = FlutterSecureStorage();
+
   static Future<void> init() async {
     try {
-      addDebugMessage('📦 Initializing SharedPreferences...');
+      addDebugMessage('📦 Initializing StorageService...');
       
       _prefs = await SharedPreferences.getInstance();
+      
+      // Load sensitive data from secure storage
+      _cachedToken = await _secure.read(key: _tokenKey);
+      _cachedUserId = _parseInt(await _secure.read(key: _userIdKey));
+      _cachedUsername = await _secure.read(key: _usernameKey);
+      _cachedRole = await _secure.read(key: _roleKey);
+      
+      // Migration: if secure storage is empty but SharedPreferences has legacy data, copy it over
+      if (_cachedToken == null) {
+        final legacyToken = _prefs.getString(_tokenKey);
+        if (legacyToken != null) {
+          addDebugMessage('📦 Migrating token from SharedPreferences to secure storage');
+          await _secure.write(key: _tokenKey, value: legacyToken);
+          _cachedToken = legacyToken;
+          await _prefs.remove(_tokenKey);
+        }
+      }
+      if (_cachedUserId == null) {
+        final legacyUserId = _prefs.getInt(_userIdKey);
+        if (legacyUserId != null) {
+          addDebugMessage('📦 Migrating userId from SharedPreferences to secure storage');
+          await _secure.write(key: _userIdKey, value: legacyUserId.toString());
+          _cachedUserId = legacyUserId;
+          await _prefs.remove(_userIdKey);
+        }
+      }
+      if (_cachedUsername == null) {
+        final legacyUsername = _prefs.getString(_usernameKey);
+        if (legacyUsername != null) {
+          addDebugMessage('📦 Migrating username from SharedPreferences to secure storage');
+          await _secure.write(key: _usernameKey, value: legacyUsername);
+          _cachedUsername = legacyUsername;
+          await _prefs.remove(_usernameKey);
+        }
+      }
+      if (_cachedRole == null) {
+        final legacyRole = _prefs.getString(_roleKey);
+        if (legacyRole != null) {
+          addDebugMessage('📦 Migrating role from SharedPreferences to secure storage');
+          await _secure.write(key: _roleKey, value: legacyRole);
+          _cachedRole = legacyRole;
+          await _prefs.remove(_roleKey);
+        }
+      }
+      
       _initialized = true;
       
-      addDebugMessage('✅ SharedPreferences initialized');
+      addDebugMessage('✅ StorageService initialized');
       addDebugMessage('Current server URL: ${getServerUrl()}');
     } catch (e) {
-      addDebugMessage('❌ Error initializing SharedPreferences: $e');
+      addDebugMessage('❌ Error initializing StorageService: $e');
       _initialized = false;
       rethrow;
     }
   }
 
-  // ✅ Check if initialized
+  static int? _parseInt(String? value) {
+    if (value == null) return null;
+    return int.tryParse(value);
+  }
+
   static bool isInitialized() => _initialized;
-
-
 
   static String getServerUrl() {
     try {
@@ -69,7 +126,8 @@ class StorageService {
         addDebugMessage('⚠️ StorageService not initialized');
         return;
       }
-      await _prefs.setString(_tokenKey, token);
+      await _secure.write(key: _tokenKey, value: token);
+      _cachedToken = token;
       addDebugMessage('✅ Token saved');
     } catch (e) {
       addDebugMessage('❌ Error saving token: $e');
@@ -77,16 +135,11 @@ class StorageService {
   }
 
   static String? getToken() {
-    try {
-      if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
-        return null;
-      }
-      return _prefs.getString(_tokenKey);
-    } catch (e) {
-      addDebugMessage('❌ Error getting token: $e');
+    if (!_initialized) {
+      addDebugMessage('⚠️ StorageService not initialized');
       return null;
     }
+    return _cachedToken;
   }
 
   static Future<void> saveUserId(int userId) async {
@@ -95,7 +148,8 @@ class StorageService {
         addDebugMessage('⚠️ StorageService not initialized');
         return;
       }
-      await _prefs.setInt(_userIdKey, userId);
+      await _secure.write(key: _userIdKey, value: userId.toString());
+      _cachedUserId = userId;
       addDebugMessage('✅ User ID saved: $userId');
     } catch (e) {
       addDebugMessage('❌ Error saving user ID: $e');
@@ -103,25 +157,21 @@ class StorageService {
   }
 
   static int? getUserId() {
-    try {
-      if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
-        return null;
-      }
-      return _prefs.getInt(_userIdKey);
-    } catch (e) {
-      addDebugMessage('❌ Error getting user ID: $e');
+    if (!_initialized) {
+      addDebugMessage('⚠️ StorageService not initialized');
       return null;
     }
+    return _cachedUserId;
   }
 
-    static Future<void> clearToken() async {
+  static Future<void> clearToken() async {
     try {
       if (!_initialized) {
         addDebugMessage('⚠️ StorageService not initialized');
         return;
       }
-      await _prefs.remove(_tokenKey);
+      await _secure.delete(key: _tokenKey);
+      _cachedToken = null;
       addDebugMessage('✅ Token cleared');
     } catch (e) {
       addDebugMessage('❌ Error clearing token: $e');
@@ -134,7 +184,8 @@ class StorageService {
         addDebugMessage('⚠️ StorageService not initialized');
         return;
       }
-      await _prefs.remove(_userIdKey);
+      await _secure.delete(key: _userIdKey);
+      _cachedUserId = null;
       addDebugMessage('✅ User ID cleared');
     } catch (e) {
       addDebugMessage('❌ Error clearing user ID: $e');
@@ -147,7 +198,8 @@ class StorageService {
         addDebugMessage('⚠️ StorageService not initialized');
         return;
       }
-      await _prefs.setString(_usernameKey, username);
+      await _secure.write(key: _usernameKey, value: username);
+      _cachedUsername = username;
       addDebugMessage('✅ Username saved: $username');
     } catch (e) {
       addDebugMessage('❌ Error saving username: $e');
@@ -155,16 +207,11 @@ class StorageService {
   }
 
   static String? getUsername() {
-    try {
-      if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
-        return null;
-      }
-      return _prefs.getString(_usernameKey);
-    } catch (e) {
-      addDebugMessage('❌ Error getting username: $e');
+    if (!_initialized) {
+      addDebugMessage('⚠️ StorageService not initialized');
       return null;
     }
+    return _cachedUsername;
   }
 
   static Future<void> saveRole(String role) async {
@@ -173,7 +220,8 @@ class StorageService {
         addDebugMessage('⚠️ StorageService not initialized');
         return;
       }
-      await _prefs.setString(_roleKey, role);
+      await _secure.write(key: _roleKey, value: role);
+      _cachedRole = role;
       addDebugMessage('✅ Role saved: $role');
     } catch (e) {
       addDebugMessage('❌ Error saving role: $e');
@@ -186,9 +234,8 @@ class StorageService {
         addDebugMessage('⚠️ StorageService not initialized');
         return null;
       }
-      final role = _prefs.getString(_roleKey);
-      addDebugMessage('📋 Retrieved role: $role');
-      return role;
+      addDebugMessage('📋 Retrieved role: $_cachedRole');
+      return _cachedRole;
     } catch (e) {
       addDebugMessage('❌ Error getting role: $e');
       return null;
@@ -203,6 +250,11 @@ class StorageService {
       }
       final savedUrl = getServerUrl();
       await _prefs.clear();
+      await _secure.deleteAll();
+      _cachedToken = null;
+      _cachedUserId = null;
+      _cachedUsername = null;
+      _cachedRole = null;
       await setServerUrl(savedUrl);
       addDebugMessage('✅ All data cleared (server URL preserved)');
     } catch (e) {

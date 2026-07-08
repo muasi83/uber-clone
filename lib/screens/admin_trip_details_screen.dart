@@ -88,12 +88,14 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> {
     setState(() => _loading = true);
     try {
       final detail = await AdminService.getTripDetail(widget.rideId, _token!);
+      if (!mounted) return;
       setState(() {
         _detail = detail;
         _loading = false;
         _error = detail == null ? 'Trip not found' : null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Error loading trip: $e';
         _loading = false;
@@ -107,6 +109,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> {
     try {
       final result = await AdminService.getTripEvents(
         widget.rideId, _token!, page: 0, size: 100);
+      if (!mounted) return;
       setState(() {
         _events = ((result?['events'] as List<dynamic>?) ?? [])
             .cast<Map<String, dynamic>>();
@@ -114,6 +117,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> {
         _eventLoadError = result == null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loadingEvents = false;
         _eventLoadError = true;
@@ -127,6 +131,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> {
     try {
       final result = await AdminService.getTripMessages(
         widget.rideId, _token!, page: 0, size: 100);
+      if (!mounted) return;
       setState(() {
         _messages = ((result?['messages'] as List<dynamic>?) ?? [])
             .cast<Map<String, dynamic>>();
@@ -134,6 +139,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> {
         _messageLoadError = result == null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loadingMessages = false;
         _messageLoadError = true;

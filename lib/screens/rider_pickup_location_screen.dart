@@ -434,7 +434,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
           Positioned(
             left: 0,
             right: 0,
-            bottom: 0,
+            bottom: MediaQuery.of(context).padding.bottom,
             child: GlassCard(
               borderRadius: AppSpacing.radiusXxl,
               padding: const EdgeInsets.all(AppSpacing.lg),

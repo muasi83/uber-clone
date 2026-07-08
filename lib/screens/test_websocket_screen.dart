@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/websocket_service.dart';
 import '../theme/app_colors.dart';
@@ -12,6 +13,8 @@ class TestWebSocketScreen extends StatefulWidget {
 class _TestWebSocketScreenState extends State<TestWebSocketScreen> {
   String _connectionStatus = 'Disconnected';
   final List<String> _messages = [];
+  StreamSubscription<dynamic>? _connectionSub;
+  StreamSubscription<dynamic>? _rideEventsSub;
 
   @override
   void initState() {
@@ -20,21 +23,26 @@ class _TestWebSocketScreenState extends State<TestWebSocketScreen> {
   }
 
   void _setupListeners() {
-    // Listen to connection state
-    WebSocketService.connectionState.listen((state) {
+    _connectionSub = WebSocketService.connectionState.listen((state) {
       setState(() {
         _connectionStatus = state;
         _messages.add('🔄 Status: $state');
       });
     });
 
-    // Listen to ride events
-    WebSocketService.rideEvents.listen((message) {
+    _rideEventsSub = WebSocketService.rideEvents.listen((message) {
       String type = message['type'] ?? 'unknown';
       setState(() {
         _messages.add('🚗 Event: $type');
       });
     });
+  }
+
+  @override
+  void dispose() {
+    _connectionSub?.cancel();
+    _rideEventsSub?.cancel();
+    super.dispose();
   }
 
   void _connect() {

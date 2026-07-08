@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -471,50 +472,50 @@ class _AuthScreenState extends State<AuthScreen>
           isLoading: _isLoading,
           variant: ButtonVariant.gradient,
         ),
-        AppSpacing.gapLg,
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  _emailController.text = 'rider2@test.com';
-                  _passwordController.text = 'password123';
-                  setState(() => _selectedRole = 'RIDER');
-                },
-                icon: const Icon(Icons.person_outline, size: 16, color: AppColors.primary),
-                label: const Text('Rider 2'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+        if (kDebugMode)
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    _emailController.text = 'rider2@test.com';
+                    _passwordController.text = 'password123';
+                    setState(() => _selectedRole = 'RIDER');
+                  },
+                  icon: const Icon(Icons.person_outline, size: 16, color: AppColors.primary),
+                  label: const Text('Rider 2'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
-            ),
-            AppSpacing.hGapMd,
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  _emailController.text = 'driver2@test.com';
-                  _passwordController.text = 'password123';
-                  setState(() => _selectedRole = 'DRIVER');
-                },
-                icon: const Icon(Icons.local_taxi_outlined, size: 16, color: AppColors.primary),
-                label: const Text('Driver 2'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              AppSpacing.hGapMd,
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    _emailController.text = 'driver2@test.com';
+                    _passwordController.text = 'password123';
+                    setState(() => _selectedRole = 'DRIVER');
+                  },
+                  icon: const Icon(Icons.local_taxi_outlined, size: 16, color: AppColors.primary),
+                  label: const Text('Driver 2'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
       ],
     );
   }
@@ -621,62 +622,62 @@ class _AuthScreenState extends State<AuthScreen>
             ),
           ],
         ),
-        AppSpacing.gapLg,
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  _fullNameController.text = 'Rider Two';
-                  _emailController.text = 'rider2@test.com';
-                  _passwordController.text = 'password123';
-                  _confirmPasswordController.text = 'password123';
-                  _phoneController.text = '512345678';
-                  setState(() {
-                    _selectedRole = 'RIDER';
-                    _countryCode = '+966';
-                  });
-                },
-                icon: const Icon(Icons.person_outline, size: 16, color: AppColors.primary),
-                label: const Text('Rider 2'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+        if (kDebugMode)
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    _fullNameController.text = 'Rider Two';
+                    _emailController.text = 'rider2@test.com';
+                    _passwordController.text = 'password123';
+                    _confirmPasswordController.text = 'password123';
+                    _phoneController.text = '512345678';
+                    setState(() {
+                      _selectedRole = 'RIDER';
+                      _countryCode = '+966';
+                    });
+                  },
+                  icon: const Icon(Icons.person_outline, size: 16, color: AppColors.primary),
+                  label: const Text('Rider 2'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
-            ),
-            AppSpacing.hGapMd,
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  _fullNameController.text = 'Driver Two';
-                  _emailController.text = 'driver2@test.com';
-                  _passwordController.text = 'password123';
-                  _confirmPasswordController.text = 'password123';
-                  _phoneController.text = '512345679';
-                  setState(() {
-                    _selectedRole = 'DRIVER';
-                    _countryCode = '+966';
-                  });
-                },
-                icon: const Icon(Icons.local_taxi_outlined, size: 16, color: AppColors.primary),
-                label: const Text('Driver 2'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              AppSpacing.hGapMd,
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    _fullNameController.text = 'Driver Two';
+                    _emailController.text = 'driver2@test.com';
+                    _passwordController.text = 'password123';
+                    _confirmPasswordController.text = 'password123';
+                    _phoneController.text = '512345679';
+                    setState(() {
+                      _selectedRole = 'DRIVER';
+                      _countryCode = '+966';
+                    });
+                  },
+                  icon: const Icon(Icons.local_taxi_outlined, size: 16, color: AppColors.primary),
+                  label: const Text('Driver 2'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         AppSpacing.gapXl,
         PremiumButton(
           label: 'Create Account',

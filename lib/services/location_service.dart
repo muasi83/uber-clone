@@ -157,7 +157,11 @@ class LocationService {
       }
 
       // 2) Fallback: direct Google Geocoding API (works on web + mobile)
-      const googleKey = 'AIzaSyAzAVhrBKWMJZNrXyD9DGk6AZVM1yv2KiY';
+      const googleKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
+      if (googleKey.isEmpty) {
+        addDebugMessage('❌ GOOGLE_MAPS_API_KEY not set — skipping direct geocode');
+        return null;
+      }
       final directUrl = 'https://maps.googleapis.com/maps/api/geocode/json'
           '?latlng=$latitude,$longitude&key=$googleKey&language=en';
 
