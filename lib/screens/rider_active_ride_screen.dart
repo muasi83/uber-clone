@@ -161,7 +161,11 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
           _rideCompleting = true;
           _statusPollTimer?.cancel();
           ChatScreen.clearAllCache();
-          _handlePayment(event['payload']?['totalFare'] ?? 0.0);
+          final payload = event['payload'] as Map<String, dynamic>? ?? {};
+          _handlePayment(
+            totalFare: payload['totalFare'] ?? 0.0,
+            paymentMethod: payload['paymentMethod'] as String? ?? 'WALLET',
+          );
         } else if (event['type'] == 'payment_finalized') {
           if (!_paymentInProgress) return;
           _paymentInProgress = false;
@@ -212,10 +216,65 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     }
   }
 
-  Future<void> _handlePayment(dynamic totalFare) async {
-    _paymentInProgress = true;
+  Future<void> _handlePayment({required dynamic totalFare, String paymentMethod = 'WALLET'}) async {
     _paymentAmount = (totalFare as num?)?.toDouble() ?? 0.0;
 
+    if (paymentMethod == 'CASH') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Cash Payment'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Please pay the driver directly:'),
+              const SizedBox(height: 16),
+              Text(
+                '\$${_paymentAmount.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Total Fare',
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true && mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          '/rider-completed',
+          arguments: {
+            'rideId': widget.rideId,
+            'totalFare': _paymentAmount,
+            'paymentStatus': 'CASH',
+          },
+        );
+      }
+      return;
+    }
+
+    _paymentInProgress = true;
     _startPaymentPolling();
 
     final result = await showPaymentDialog(context, amount: _paymentAmount);
@@ -236,15 +295,15 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
       final token = StorageService.getToken();
       if (token == null) return;
 
-      bool success;
+      String? error;
       try {
-        success = await RideService.confirmPayment(widget.rideId, token);
+        error = await RideService.confirmPayment(widget.rideId, token);
       } catch (e) {
         addDebugMessage('⚠️ Payment confirm error: $e');
-        success = false;
+        error = 'Unexpected error: $e';
       }
 
-      if (success && mounted) {
+      if (error == null && mounted) {
         _paymentInProgress = false;
         _rideCompleting = false;
         Navigator.pushReplacementNamed(
@@ -266,10 +325,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
         builder: (ctx) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Payment Failed'),
-          content: const Text(
-            'We couldn\'t contact the server to confirm your payment. '
-            'Your payment has not been confirmed yet.',
-          ),
+          content: Text(error ?? 'Payment confirmation failed'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -395,7 +451,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
             return;
           }
 
-          _handlePayment(ride.finalFare);
+          _handlePayment(totalFare: ride.finalFare);
         }
       } catch (e) {
         addDebugMessage('⚠️ Status poll error: $e');

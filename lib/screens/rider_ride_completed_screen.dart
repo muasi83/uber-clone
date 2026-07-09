@@ -12,6 +12,7 @@ class RiderRideCompletedScreen extends StatefulWidget {
   final double? totalFare;
   final double? distance;
   final int? duration;
+  final String paymentStatus;
 
   const RiderRideCompletedScreen({
     super.key,
@@ -19,6 +20,7 @@ class RiderRideCompletedScreen extends StatefulWidget {
     this.totalFare,
     this.distance,
     this.duration,
+    this.paymentStatus = 'COMPLETED',
   });
 
   @override
@@ -194,7 +196,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
                     const Divider(height: 1, color: AppColors.outline),
                     _buildSummaryRow(
                       'Payment',
-                      'COMPLETED',
+                      widget.paymentStatus,
                     ),
                   ],
                 ),

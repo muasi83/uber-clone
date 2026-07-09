@@ -56,6 +56,8 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   bool _isCompleting = false;
   bool _awaitingPayment = false;
   bool _showingPaymentDialog = false;
+  String _paymentMethod = 'WALLET';
+  bool _cashActionInProgress = false;
   int _remainingMinutes = 0;
   double? _distanceKm;
   DateTime? _startTime;
@@ -341,6 +343,14 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       if (!mounted) return;
       final type = event['type'];
 
+      if (type == 'ride_completed') {
+        final payload = event['payload'] as Map<String, dynamic>? ?? {};
+        _paymentMethod = payload['paymentMethod'] as String? ?? 'WALLET';
+        addDebugMessage('📌 Ride completed — paymentMethod: $_paymentMethod');
+        if (mounted) setState(() {});
+        return;
+      }
+
       if (type == 'ride_cancelled') {
         _awaitingPayment = false;
         _paymentPollTimer?.cancel();
@@ -475,6 +485,70 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
           SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
         );
       }
+    }
+  }
+
+  Future<void> _onCashReceived() async {
+    setState(() => _cashActionInProgress = true);
+    try {
+      final token = StorageService.getToken();
+      if (token == null) return;
+      final success = await RideService.cashReceived(widget.rideId, token);
+      if (success && mounted) {
+        addDebugMessage('✅ Cash received confirmed');
+        _awaitingPayment = false;
+        _paymentPollTimer?.cancel();
+        Navigator.pushReplacementNamed(
+          context,
+          '/driver-summary',
+          arguments: {'rideId': widget.rideId},
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: const Text('Failed to confirm cash receipt'), backgroundColor: AppColors.error),
+        );
+      }
+    } catch (e) {
+      addDebugMessage('❌ Cash received error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cashActionInProgress = false);
+    }
+  }
+
+  Future<void> _onCashUnpaid() async {
+    setState(() => _cashActionInProgress = true);
+    try {
+      final token = StorageService.getToken();
+      if (token == null) return;
+      final success = await RideService.cashUnpaid(widget.rideId, token);
+      if (success && mounted) {
+        addDebugMessage('✅ Cash marked as unpaid');
+        _awaitingPayment = false;
+        _paymentPollTimer?.cancel();
+        Navigator.pushReplacementNamed(
+          context,
+          '/driver-summary',
+          arguments: {'rideId': widget.rideId},
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: const Text('Failed to mark as unpaid'), backgroundColor: AppColors.error),
+        );
+      }
+    } catch (e) {
+      addDebugMessage('❌ Cash unpaid error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cashActionInProgress = false);
     }
   }
 
@@ -650,20 +724,56 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
                   const SizedBox(height: AppSpacing.xxl),
                   _rideStarted
                       ? _awaitingPayment
-                          ? const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    width: 20, height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                          ? _paymentMethod == 'CASH'
+                              ? Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text(
+                                      'Did the customer pay in cash?',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: PremiumButton(
+                                            label: _cashActionInProgress ? 'Processing...' : 'Cash Received',
+                                            icon: Icons.check_circle,
+                                            onPressed: _cashActionInProgress ? null : _onCashReceived,
+                                            variant: ButtonVariant.success,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: PremiumButton(
+                                            label: _cashActionInProgress ? 'Processing...' : 'Did Not Pay',
+                                            icon: Icons.cancel,
+                                            onPressed: _cashActionInProgress ? null : _onCashUnpaid,
+                                            variant: ButtonVariant.danger,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                )
+                              : const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 20, height: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      ),
+                                      SizedBox(width: 12),
+                                      Text('Waiting for payment...'),
+                                    ],
                                   ),
-                                  SizedBox(width: 12),
-                                  Text('Waiting for payment...'),
-                                ],
-                              ),
-                            )
+                                )
                           : PremiumButton(
                               label: _isCompleting ? 'Completing...' : 'Complete Ride',
                               icon: _isCompleting ? Icons.hourglass_empty : Icons.flag,

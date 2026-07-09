@@ -345,6 +345,7 @@ Future<void> _requestRide() async {
       dropoffLng: dropoffLocation!.longitude,
       dropoffAddress: dropoffAddress!,
       rideType: rideType,
+      paymentMethod: 'WALLET',
       estimatedDistance: estimatedDistance ?? 0.0,      // ✅ ADD THIS
       estimatedFare: estimatedFare ?? 0.0,              // ✅ ADD THIS
       estimatedDuration: _calculateDuration(estimatedDistance ?? 0.0),  // ✅ ADD THIS

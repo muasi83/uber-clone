@@ -299,6 +299,7 @@ class MyApp extends StatelessWidget {
             totalFare: (args['totalFare'] as num?)?.toDouble(),
             distance: (args['distance'] as num?)?.toDouble(),
             duration: (args['duration'] as num?)?.toInt(),
+            paymentStatus: args['paymentStatus'] as String? ?? 'COMPLETED',
           );
         },
 

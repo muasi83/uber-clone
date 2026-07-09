@@ -159,6 +159,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
         dropoffLng: widget.dropoffLng,
         dropoffAddress: widget.dropoffAddress,
         rideType: _selectedRideType,
+        paymentMethod: _selectedPaymentMethod,
         estimatedDistance: widget.estimatedDistance,
         estimatedFare: _selectedFare,
         estimatedDuration: widget.estimatedDuration,

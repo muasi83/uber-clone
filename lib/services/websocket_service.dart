@@ -101,7 +101,7 @@ class WebSocketService {
         );
         
         await _channel!.ready.timeout(const Duration(seconds: 10));
-        
+        _reconnectAttempts = 0;
         _connectionStateController.add('connecting');
         
         // Send login message immediately (queued by browser until open)
@@ -119,7 +119,6 @@ class WebSocketService {
             if (!_didConnect) {
               _didConnect = true;
               _isConnected = true;
-              _reconnectAttempts = 0;
               _connectionStateController.add('connected');
               addDebugMessage('✅ WebSocket Connected!');
             }

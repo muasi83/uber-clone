@@ -47,6 +47,7 @@ class RideService {
     required double estimatedFare,
     required int estimatedDuration,
     required String token,
+    String paymentMethod = 'WALLET',
   }) async {
     try {
       addDebugMessage('═══════════════════════════════════════');
@@ -54,6 +55,7 @@ class RideService {
       addDebugMessage('From: $pickupAddress');
       addDebugMessage('To: $dropoffAddress');
       addDebugMessage('Type: $rideType');
+      addDebugMessage('Payment: $paymentMethod');
       addDebugMessage('Distance: ${estimatedDistance.toStringAsFixed(2)} km (ACTUAL)');
       addDebugMessage('Duration: $estimatedDuration min');
       addDebugMessage('Fare: \$${estimatedFare.toStringAsFixed(2)} (REAL)');
@@ -68,6 +70,7 @@ class RideService {
         'dropoffLongitude': dropoffLng,
         'dropoffAddress': dropoffAddress,
         'rideType': rideType,
+        'paymentMethod': paymentMethod,
         'estimatedDistance': estimatedDistance,
         'estimatedFare': estimatedFare,
         'estimatedDuration': estimatedDuration,
@@ -410,7 +413,8 @@ class RideService {
     }
   }
 
-  static Future<bool> confirmPayment(int rideId, String token) async {
+  /// Returns null on success, or error message string on failure.
+  static Future<String?> confirmPayment(int rideId, String token) async {
     try {
       final url = '${StorageService.getServerUrl()}/api/payments/$rideId/confirm';
       final response = await http
@@ -418,13 +422,18 @@ class RideService {
           .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         addDebugMessage('✅ Payment confirmed for ride #$rideId');
-        return true;
+        return null;
       }
-      addDebugMessage('❌ Payment confirm error: ${response.body}');
-      return false;
+      final body = response.body;
+      addDebugMessage('❌ Payment confirm error: $body');
+      String? msg;
+      try {
+        msg = jsonDecode(body)['error'] as String?;
+      } catch (_) {}
+      return msg ?? 'Payment confirmation failed (${response.statusCode})';
     } catch (e) {
       addDebugMessage('❌ Payment confirm exception: $e');
-      return false;
+      return 'Network error: $e';
     }
   }
 
@@ -442,6 +451,42 @@ class RideService {
       return false;
     } catch (e) {
       addDebugMessage('❌ Payment receive exception: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> cashReceived(int rideId, String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/payments/$rideId/cash-received';
+      final response = await http
+          .post(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        addDebugMessage('✅ Cash received confirmed for ride #$rideId');
+        return true;
+      }
+      addDebugMessage('❌ Cash receive error: ${response.body}');
+      return false;
+    } catch (e) {
+      addDebugMessage('❌ Cash receive exception: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> cashUnpaid(int rideId, String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/payments/$rideId/cash-unpaid';
+      final response = await http
+          .post(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        addDebugMessage('✅ Cash unpaid marked for ride #$rideId');
+        return true;
+      }
+      addDebugMessage('❌ Cash unpaid error: ${response.body}');
+      return false;
+    } catch (e) {
+      addDebugMessage('❌ Cash unpaid exception: $e');
       return false;
     }
   }

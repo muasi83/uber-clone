@@ -713,6 +713,7 @@ class _RiderDropoffLocationScreenState
         dropoffLng: _dropoffLocation!.longitude,
         dropoffAddress: dropoffAddress,
         rideType: _selectedRideType,
+        paymentMethod: _selectedPaymentMethod,
         estimatedDistance: _routeDistanceKm ?? 0.0,
         estimatedFare: _selectedFare,
         estimatedDuration: _routeDurationMin ?? 0,
