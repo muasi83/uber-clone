@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/storage_service.dart';
 import '../services/admin_service.dart';
+import '../services/ui_event_recorder.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/shimmer_loading.dart';
 import '../theme/app_colors.dart';
+import 'trip_behaviour_screen.dart';
+import 'trip_replay_screen.dart';
+
 class AdminTripDetailsScreen extends StatefulWidget {
   final int rideId;
   const AdminTripDetailsScreen({super.key, required this.rideId});
@@ -13,7 +17,7 @@ class AdminTripDetailsScreen extends StatefulWidget {
   State<AdminTripDetailsScreen> createState() => _AdminTripDetailsScreenState();
 }
 
-class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> {
+class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with TickerProviderStateMixin {
   String? _token;
   bool _loading = true;
   bool _loadingEvents = true;
@@ -28,6 +32,9 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> {
   bool _togglingKeep = false;
   bool _eventLoadError = false;
   bool _messageLoadError = false;
+  late TabController _tabController;
+  int _syncStage = 0;
+  final _replayKey = GlobalKey<TripReplayScreenState>();
 
   static const _groupOrder = [
     'Ride Request',
@@ -69,14 +76,34 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        if (_tabController.index == 2) {
+          UiEventRecorder.setCurrentRideId(widget.rideId);
+          UiEventRecorder.setCurrentScreen('AdminTripDetails-Replay');
+        } else if (_tabController.index == 1) {
+          UiEventRecorder.setCurrentRideId(widget.rideId);
+          UiEventRecorder.setCurrentScreen('AdminTripDetails-Behaviour');
+        } else {
+          UiEventRecorder.setCurrentRideId(widget.rideId);
+          UiEventRecorder.setCurrentScreen('AdminTripDetails-Overview');
+        }
+      }
+    });
     _token = StorageService.getToken();
     _loadAll();
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _noteController.dispose();
     super.dispose();
+  }
+
+  void _onReplayStageSelected(int stageNumber) {
+    setState(() => _syncStage = stageNumber);
   }
 
   Future<void> _loadAll() async {
@@ -225,6 +252,18 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> {
             onPressed: _loadAll,
           ),
         ],
+        bottom: _loading || _error != null
+            ? null
+            : TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Overview'),
+                  Tab(text: 'Trip Behaviour'),
+                  Tab(text: 'Trip Replay'),
+                ],
+                labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                unselectedLabelStyle: const TextStyle(fontSize: 13),
+              ),
       ),
       body: _loading
           ? const Padding(
@@ -232,7 +271,18 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> {
               child: ShimmerList(itemCount: 6, itemHeight: 60))
           : _error != null
               ? _buildError()
-              : _buildContent(),
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildContent(),
+                    TripBehaviourScreen(rideId: widget.rideId),
+                    TripReplayScreen(
+                      key: _replayKey,
+                      rideId: widget.rideId,
+                      onStageSelected: _onReplayStageSelected,
+                    ),
+                  ],
+                ),
     );
   }
 

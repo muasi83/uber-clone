@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../services/storage_service.dart';
 import '../services/admin_drivers_service.dart';
 import '../theme/app_colors.dart';
+import '../services/recorded_screen_mixin.dart';
 
 class AdminDriverDetailsScreen extends StatefulWidget {
   final int driverId;
@@ -18,7 +19,7 @@ class AdminDriverDetailsScreen extends StatefulWidget {
   State<AdminDriverDetailsScreen> createState() => _AdminDriverDetailsScreenState();
 }
 
-class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> {
+class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> with RecordedScreenMixin<AdminDriverDetailsScreen> {
   Map<String, dynamic>? _detail;
   bool _loading = true;
   String? _token;
@@ -26,6 +27,7 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    recordEvent(eventName: 'ADMIN_SCREEN_OPENED');
     _token = StorageService.getToken();
     _loadDetail();
   }

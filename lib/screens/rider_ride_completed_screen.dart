@@ -6,6 +6,8 @@ import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../services/recorded_screen_mixin.dart';
+import '../services/event_recorder_service.dart';
 
 class RiderRideCompletedScreen extends StatefulWidget {
   final int rideId;
@@ -28,7 +30,7 @@ class RiderRideCompletedScreen extends StatefulWidget {
       _RiderRideCompletedScreenState();
 }
 
-class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
+class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> with RecordedScreenMixin<RiderRideCompletedScreen> {
   int _rating = 0;
   final TextEditingController _feedbackController = TextEditingController();
   bool _isSubmitting = false;
@@ -37,6 +39,11 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
   @override
   void initState() {
     super.initState();
+    recordEvent(
+      eventName: 'RIDE_COMPLETED_VIEWED',
+      category: 'FRONTEND',
+      summary: 'Rider viewed completed ride screen',
+    );
     _loadRideDetails();
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('✅ RIDE COMPLETED');
@@ -93,6 +100,11 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
       );
 
       addDebugMessage('✅ Rating submitted');
+      recordEvent(
+        eventName: 'RATING_SUBMITTED',
+        category: 'FRONTEND',
+        summary: 'Rider submitted rating for driver',
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -373,6 +385,11 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> {
   }
 
   void _skipRating() {
+    recordEvent(
+      eventName: 'SKIP_RATING',
+      category: 'FRONTEND',
+      summary: 'Rider skipped rating',
+    );
     Navigator.pushNamedAndRemoveUntil(
       context,
       '/rider-home',

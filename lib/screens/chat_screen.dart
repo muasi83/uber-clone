@@ -9,6 +9,7 @@ import '../services/websocket_service.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../services/recorded_screen_mixin.dart';
 
 class ChatScreen extends StatefulWidget {
   final int currentUserId;
@@ -43,7 +44,7 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with RecordedScreenMixin<ChatScreen> {
   final _messageController = TextEditingController();
   List<Message> messages = [];
   bool isLoading = true;
@@ -70,6 +71,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    recordEvent(eventName: 'SCREEN_OPENED');
 
     final cached = _messageCache[_cacheKey];
     if (cached != null) {
@@ -268,6 +270,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final content = _messageController.text;
     _messageController.clear();
     HapticFeedback.lightImpact();
+    recordEvent(eventName: 'MESSAGE_SENT');
 
     if (mounted) {
       setState(() {

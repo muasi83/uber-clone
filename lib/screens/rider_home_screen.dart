@@ -22,6 +22,11 @@ import '../screens/settings_screen.dart';
 import '../screens/trip_history_screen.dart';
 import '../screens/admin_home_screen.dart';
 import '../screens/admin_driver_list_screen.dart';
+import '../services/recorded_screen_mixin.dart';
+import '../services/event_recorder_service.dart';
+import '../services/location_monitor_service.dart';
+import 'rides_screen.dart';
+import 'account_screen.dart';
 
 class RiderHomeScreen extends StatefulWidget {
   const RiderHomeScreen({super.key});
@@ -30,7 +35,7 @@ class RiderHomeScreen extends StatefulWidget {
   State<RiderHomeScreen> createState() => _RiderHomeScreenState();
 }
 
-class _RiderHomeScreenState extends State<RiderHomeScreen> {
+class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMixin<RiderHomeScreen>, WidgetsBindingObserver {
   GoogleMapController? mapController;
   LatLng? _currentLocation;
   final Set<Marker> _markers = {};
@@ -59,12 +64,21 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   bool _isSheetExpanded = false;
 
   bool _isAdmin = false;
+  int _riderTabIndex = 0;
   int _adminTabIndex = 0;
+  StreamSubscription<bool>? _gpsSub;
 
   @override
   void initState() {
     super.initState();
     _isAdmin = StorageService.getRole() == 'ADMIN';
+    WidgetsBinding.instance.addObserver(this);
+    _gpsSub = LocationMonitorService().onStatusChanged.listen((enabled) {
+      if (enabled && _initError.isNotEmpty && mounted) {
+        _initError = '';
+        _initializeMap();
+      }
+    });
     _loadMapStyle();
     _initializeMap();
     _connectWebSocket();
@@ -73,6 +87,13 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     _initCustomMarkers();
     _startDriverPolling();
     _checkActiveRide();
+    EventRecorderService.recordEvent(
+      rideId: null,
+      eventName: 'HOME_SCREEN_OPENED',
+      category: 'FRONTEND',
+      summary: 'Rider home screen opened',
+      screenName: screenName,
+    );
     _loadRecentTrips();
 
     _sheetController = DraggableScrollableController();
@@ -112,6 +133,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     WebSocketService.disconnect();
     StorageService.clearAllData();
     Navigator.of(context).pushNamedAndRemoveUntil('/splash', (route) => false);
+    recordEvent(
+      eventName: 'SNACKBAR_SHOWN',
+      category: 'UI',
+      summary: 'Force logout snackbar: signed out from another device',
+      extraDetails: {'snackbarType': 'force_logout'},
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Signed out: logged in from another device'),
@@ -220,6 +247,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           final type = event['type'] ?? '';
           if (type == 'ride_accepted' || type == 'ride_cancelled') {
             if (mounted) {
+              recordEvent(
+                eventName: 'SNACKBAR_SHOWN',
+                category: 'UI',
+                summary: 'Ride status change: $type',
+                extraDetails: {'snackbarType': 'ride_status', 'rideEventType': type},
+              );
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -485,6 +518,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         return;
       }
 
+      recordEvent(
+        eventName: 'DIALOG_SHOWN',
+        category: 'UI',
+        summary: 'Active Ride Found dialog displayed',
+        extraDetails: {'dialogType': 'active_ride_found'},
+      );
       final action = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -527,6 +566,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         );
         if (success) {
           if (mounted) {
+            recordEvent(
+              eventName: 'SNACKBAR_SHOWN',
+              category: 'UI',
+              summary: 'Previous ride cancelled successfully',
+              extraDetails: {'snackbarType': 'ride_cancelled', 'outcome': 'success'},
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Previous ride cancelled'),
@@ -539,6 +584,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           await StorageService.clearActiveRideId();
           await StorageService.saveStaleRideSkipped(rideId);
           if (mounted) {
+            recordEvent(
+              eventName: 'SNACKBAR_SHOWN',
+              category: 'UI',
+              summary: 'Could not cancel ride — local data cleared',
+              extraDetails: {'snackbarType': 'ride_cancelled', 'outcome': 'failure'},
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Could not cancel ride — local data cleared'),
@@ -571,6 +622,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
             arguments: target.arguments);
       }
     } else if (mounted) {
+      recordEvent(
+        eventName: 'SNACKBAR_SHOWN',
+        category: 'UI',
+        summary: 'Cannot resume ride: ${target.message ?? "unknown"}',
+        extraDetails: {'snackbarType': 'ride_resume_error'},
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(target.message ??
@@ -584,6 +641,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
 
   Future<void> _requestRide() async {
     final messenger = ScaffoldMessenger.of(context);
+    recordEvent(
+      eventName: 'RIDE_REQUEST_INITIATED',
+      category: 'BUSINESS',
+      summary: 'User initiated ride request',
+    );
     try {
       if (_currentLocation == null) {
         messenger.showSnackBar(
@@ -607,6 +669,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         );
       }
     } catch (e) {
+      recordEvent(
+        eventName: 'SNACKBAR_SHOWN',
+        category: 'UI',
+        summary: 'Ride request error: $e',
+        extraDetails: {'snackbarType': 'request_error', 'error': '$e'},
+      );
       messenger.showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
@@ -648,6 +716,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   }
 
   void _showMenuSheet() {
+    recordEvent(
+      eventName: 'MODAL_BOTTOM_SHEET_SHOWN',
+      category: 'UI',
+      summary: 'Menu bottom sheet displayed',
+      extraDetails: {'sheetType': 'menu'},
+    );
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -732,8 +806,15 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   Widget build(BuildContext context) {
     if (!_isAdmin) {
       return Scaffold(
-        extendBodyBehindAppBar: true,
-        body: _buildMapBodyWithOverlays(),
+        body: IndexedStack(
+          index: _riderTabIndex,
+          children: [
+            _buildMapBodyWithOverlays(),
+            const RidesScreen(),
+            const AccountScreen(),
+          ],
+        ),
+        bottomNavigationBar: _buildRiderBottomNav(),
       );
     }
 
@@ -786,6 +867,31 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
             activeIcon: Icon(Icons.directions_car),
             label: 'Drivers',
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRiderBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: AppColors.outline.withValues(alpha: 0.5)),
+        ),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _riderTabIndex,
+        onTap: (index) => setState(() => _riderTabIndex = index),
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textSecondary,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        selectedFontSize: 12,
+        unselectedFontSize: 11,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.route_rounded), label: 'Rides'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Account'),
         ],
       ),
     );
@@ -887,7 +993,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           Positioned(
             key: const ValueKey('connectivity_banner'),
             top: 0, left: 0, right: 0,
-            child: _buildConnectivityBanner(),
+            child: SafeArea(
+              top: true,
+              bottom: false,
+              child: _buildConnectivityBanner(),
+            ),
           ),
 
         // Menu button
@@ -1269,12 +1379,23 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   }
 
   @override
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _initError.isNotEmpty && mounted) {
+      _initError = '';
+      _initializeMap();
+    }
+  }
+
+  @override
   void dispose() {
     _driverPollTimer?.cancel();
     _driverLocationSub?.cancel();
     _rideEventsSub?.cancel();
     _chatMessagesSub?.cancel();
     _sheetController.dispose();
+    _gpsSub?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 }

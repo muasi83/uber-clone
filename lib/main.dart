@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import 'services/storage_service.dart';
@@ -8,6 +9,10 @@ import 'services/notification_service.dart';
 import 'services/websocket_service.dart';
 import 'services/background_navigation_service.dart';
 import 'services/firebase_service.dart';
+import 'services/app_lifecycle_observer.dart';
+import 'services/navigation_recorder.dart';
+import 'services/location_monitor_service.dart';
+import 'widgets/location_banner.dart';
 import 'utils/map_style_loader.dart';
 
 import 'screens/auth_screen.dart';
@@ -158,18 +163,52 @@ void _setupChatNotificationListener() {
   });
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  final _lifecycleObserver = AppLifecycleObserver();
+  final _navigationRecorder = NavigationRecorder();
+  final _locationMonitor = LocationMonitorService();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
+    _locationMonitor.start();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+    _locationMonitor.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: _navigatorKey,
+      navigatorObservers: [_navigationRecorder],
       title: 'RideNow',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
+      builder: (context, child) => Stack(
+        children: [
+          if (child != null)
+            AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle.dark,
+              child: child,
+            ),
+          const Positioned.fill(child: LocationBanner()),
+        ],
+      ),
       home: const SplashScreen(),
 
       routes: {

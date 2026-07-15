@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:vibration/vibration.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -22,6 +23,10 @@ import '../screens/trip_history_screen.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
+import '../services/recorded_screen_mixin.dart';
+import '../services/event_recorder_service.dart';
+import '../models/scheduled_ride.dart';
+import '../services/scheduled_ride_service.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   final int userId;
@@ -39,7 +44,7 @@ class DriverHomeScreen extends StatefulWidget {
   State<DriverHomeScreen> createState() => _DriverHomeScreenState();
 }
 
-class _DriverHomeScreenState extends State<DriverHomeScreen> {
+class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreenMixin<DriverHomeScreen> {
   int _selectedIndex = 0;
   List<Ride> _availableRides = [];
   Ride? _currentRide;
@@ -74,6 +79,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   String? _mapStyle;
   Set<int?> _knownRideIds = {};
 
+  List<ScheduledRide> _pendingScheduledRides = [];
+  List<ScheduledRide> _driverScheduledRides = [];
+  Timer? _scheduledRidePollTimer;
+  final Set<int> _scheduledRideLoadingIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -82,7 +92,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _loadDriverProfile();
     _checkActiveRide();
     _connectWebSocket();
+    _fetchScheduledRides();
     _initializeDriverLocation();
+    recordEvent(
+      eventName: 'DRIVER_HOME_OPENED',
+      category: 'FRONTEND',
+      summary: 'Driver home screen opened',
+    );
   }
 
   Future<void> _loadMapStyle() async {
@@ -157,6 +173,89 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           _handleRideConfirmed(event);
         } else if (type == 'ride_cancelled') {
           _handleRideCancelled(event);
+        } else if (type == 'scheduled_ride_removed') {
+          final removedId = event['rideId'] as int?;
+          if (removedId != null && mounted) {
+            setState(() {
+              _pendingScheduledRides.removeWhere((r) => r.id == removedId);
+            });
+          }
+        } else if (type == 'scheduled_ride_30min_reminder') {
+          final payload = event['payload'] as Map<String, dynamic>?;
+          final pickup = payload?['pickupAddress'] as String? ?? '';
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.notifications, color: AppColors.warning, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text('Scheduled ride in 30 min: $pickup')),
+                  ],
+                ),
+                backgroundColor: AppColors.primary,
+                duration: const Duration(seconds: 5),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } else if (type == 'scheduled_ride_unassigned') {
+          final unassignedId = event['rideId'] as int?;
+          if (unassignedId != null && mounted) {
+            setState(() {
+              _driverScheduledRides.removeWhere((r) => r.id == unassignedId);
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Scheduled ride was cancelled'),
+                backgroundColor: AppColors.warning,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } else if (type == 'scheduled_ride_available') {
+          final payload = event['payload'] as Map<String, dynamic>?;
+          if (payload != null && mounted) {
+            final ride = ScheduledRide.fromJson(payload);
+            setState(() {
+              _driverScheduledRides.removeWhere((r) => r.id == ride.id);
+              if (!_pendingScheduledRides.any((r) => r.id == ride.id)) {
+                _pendingScheduledRides.add(ride);
+              }
+            });
+          }
+        } else if (type == 'scheduled_ride_cancelled') {
+          final cancelledId = event['rideId'] as int?;
+          if (cancelledId != null && mounted) {
+            setState(() {
+              _driverScheduledRides.removeWhere((r) => r.id == cancelledId);
+              _pendingScheduledRides.removeWhere((r) => r.id == cancelledId);
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('A scheduled ride was cancelled by the rider'),
+                backgroundColor: AppColors.warning,
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
+        } else if (type == 'scheduled_ride_expired') {
+          final expiredId = event['rideId'] as int?;
+          if (expiredId != null && mounted) {
+            setState(() {
+              _driverScheduledRides.removeWhere((r) => r.id == expiredId);
+              _pendingScheduledRides.removeWhere((r) => r.id == expiredId);
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('A scheduled ride has expired'),
+                backgroundColor: AppColors.warning,
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
         }
       },
     );
@@ -254,6 +353,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
     if (_currentRide?.id == rideId) {
       setState(() => _currentRide = null);
+      recordEvent(
+        eventName: 'DRIVER_RIDE_CANCELLED',
+        category: 'BUSINESS',
+        summary: 'Ride cancelled by passenger',
+        extraDetails: {'rideId': rideId},
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Ride has been cancelled'),
@@ -366,6 +471,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       final rideId = rideData['rideId'];
       if (rideId == null) return;
 
+      recordEvent(
+        eventName: 'DRIVER_ACCEPTED_RIDE',
+        category: 'BUSINESS',
+        summary: 'Driver accepted ride',
+        extraDetails: {'rideId': rideId},
+      );
+
       final ride = await RideService.acceptRide(rideId, widget.token);
       if (ride != null && mounted) {
         setState(() => _currentRide = ride);
@@ -386,6 +498,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       }
     } catch (e) {
       if (mounted) {
+        recordEvent(
+          eventName: 'DRIVER_ACCEPT_RIDE_FAILED',
+          category: 'BUSINESS',
+          summary: 'Failed to accept ride',
+          extraDetails: {'rideId': rideData['rideId'], 'error': e.toString()},
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to accept ride: $e'),
@@ -605,6 +723,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   Future<void> _toggleOnlineStatus() async {
     setState(() => _isLoading = true);
+    final isGoingOnline = !_isOnline;
 
     try {
       final result = await DriverService.toggleOnlineStatus(widget.token);
@@ -614,14 +733,27 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           _isLoading = false;
         });
 
+        recordEvent(
+          eventName: isGoingOnline ? 'DRIVER_WENT_ONLINE' : 'DRIVER_WENT_OFFLINE',
+          category: 'BUSINESS',
+          summary: isGoingOnline ? 'Driver went online' : 'Driver went offline',
+        );
+
         if (_isOnline) {
           _startLocationTracking();
           _startRidePolling();
           _fetchAvailableRides();
+          _fetchScheduledRides();
+          _startScheduledRidePolling();
         } else {
           _stopLocationTracking();
           _stopRidePolling();
-          setState(() => _availableRides = []);
+          _stopScheduledRidePolling();
+          setState(() {
+            _availableRides = [];
+            _pendingScheduledRides = [];
+            _driverScheduledRides = [];
+          });
         }
       }
     } catch (e) {
@@ -912,6 +1044,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   Widget _buildAvailableRidesOverlay() {
+    final hasAvailable = _availableRides.isNotEmpty;
+    final hasPendingScheduled = _pendingScheduledRides.isNotEmpty;
+    final hasDriverScheduled = _driverScheduledRides.isNotEmpty;
+    final isEmpty = !hasAvailable && !hasPendingScheduled && !hasDriverScheduled;
+
     return Positioned(
       top: MediaQuery.of(context).padding.top + 60,
       left: 0,
@@ -934,7 +1071,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               ),
             ),
             Expanded(
-              child: _availableRides.isEmpty
+              child: isEmpty
                   ? const Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -963,13 +1100,53 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                         ],
                       ),
                     )
-                  : ListView.builder(
+                  : ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _availableRides.length,
-                      itemBuilder: (context, index) {
-                        final ride = _availableRides[index];
-                        return _buildRideCard(ride);
-                      },
+                      children: [
+                        if (hasAvailable) ...[
+                          const Padding(
+                            padding: EdgeInsets.only(top: 4, bottom: 8),
+                            child: Text(
+                              'Available Now',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          ..._availableRides.map((ride) => _buildRideCard(ride)),
+                        ],
+                        if (hasPendingScheduled) ...[
+                          const Padding(
+                            padding: EdgeInsets.only(top: 16, bottom: 8),
+                            child: Text(
+                              'Scheduled Rides',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          ..._pendingScheduledRides.map((ride) => _buildScheduledRideCard(ride)),
+                        ],
+                        if (hasDriverScheduled) ...[
+                          const Padding(
+                            padding: EdgeInsets.only(top: 16, bottom: 8),
+                            child: Text(
+                              'My Upcoming',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          ..._driverScheduledRides.map((ride) => _buildDriverScheduledRideCard(ride)),
+                        ],
+                        const SizedBox(height: 16),
+                      ],
                     ),
             ),
           ],
@@ -1031,6 +1208,443 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _fetchScheduledRides() async {
+    if (!_isOnline) return;
+    if (_driverCurrentLocation == null) return;
+    try {
+      final pending = await ScheduledRideService.getNearby(
+        lat: _driverCurrentLocation!.latitude,
+        lng: _driverCurrentLocation!.longitude,
+        token: widget.token,
+      );
+      final driverUpcoming = await ScheduledRideService.getDriverUpcoming(widget.token);
+      if (mounted) {
+        setState(() {
+          _pendingScheduledRides = pending;
+          _driverScheduledRides = driverUpcoming;
+        });
+      }
+    } catch (e) {
+      addDebugMessage('Error fetching scheduled rides: $e');
+    }
+  }
+
+  void _startScheduledRidePolling() {
+    _scheduledRidePollTimer?.cancel();
+    _scheduledRidePollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _fetchScheduledRides();
+    });
+  }
+
+  void _stopScheduledRidePolling() {
+    _scheduledRidePollTimer?.cancel();
+  }
+
+  Widget _buildScheduledRideCard(ScheduledRide ride) {
+    final dateStr = DateFormat('MMM dd, yyyy – HH:mm').format(ride.scheduledAt);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.schedule, size: 16, color: AppColors.warning),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  dateStr,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              if (ride.estimatedFare != null)
+                Text(
+                  '\$${ride.estimatedFare!.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: AppColors.primary,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildAddressRow(Icons.circle, AppColors.success, ride.pickupAddress),
+          const SizedBox(height: 4),
+          _buildAddressRow(Icons.location_on, AppColors.error, ride.dropoffAddress),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              if (ride.estimatedDistance != null)
+                _buildInfoChip(Icons.straighten, '${ride.estimatedDistance!.toStringAsFixed(1)} km'),
+              const SizedBox(width: 8),
+              if (ride.estimatedDuration != null)
+                _buildInfoChip(Icons.schedule, '${ride.estimatedDuration} min'),
+              const Spacer(),
+              SizedBox(
+                height: 36,
+                child: ElevatedButton(
+                  onPressed: ride.id != null && _scheduledRideLoadingIds.contains(ride.id) ? null : () => _acceptScheduledRide(ride),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.textOnPrimary,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _scheduledRideLoadingIds.contains(ride.id)
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textOnPrimary))
+                    : const Text('Accept', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDriverScheduledRideCard(ScheduledRide ride) {
+    final dateStr = DateFormat('MMM dd, yyyy – HH:mm').format(ride.scheduledAt);
+    final timeLeft = ride.scheduledAt.difference(DateTime.now());
+    final timeLeftStr = timeLeft.inMinutes > 60
+        ? '${timeLeft.inHours}h ${timeLeft.inMinutes.remainder(60)}m'
+        : '${timeLeft.inMinutes}m';
+
+    Color statusColor;
+    switch (ride.status) {
+      case 'ASSIGNED':
+        statusColor = AppColors.info;
+        break;
+      case 'DRIVER_ARRIVED':
+        statusColor = AppColors.success;
+        break;
+      default:
+        statusColor = AppColors.warning;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  ride.status,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                dateStr,
+                style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+              ),
+              const Spacer(),
+              Text(
+                timeLeftStr,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: timeLeft.inMinutes < 10 ? AppColors.error : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildAddressRow(Icons.circle, AppColors.success, ride.pickupAddress),
+          const SizedBox(height: 4),
+          _buildAddressRow(Icons.location_on, AppColors.error, ride.dropoffAddress),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              if (ride.estimatedFare != null)
+                Text(
+                  '\$${ride.estimatedFare!.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: AppColors.primary,
+                  ),
+                ),
+              const Spacer(),
+              if (ride.isAssigned) ...[
+                SizedBox(
+                  height: 36,
+                  child: OutlinedButton(
+                    onPressed: ride.id != null && _scheduledRideLoadingIds.contains(ride.id) ? null : () => _unassignScheduledRide(ride),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      side: const BorderSide(color: AppColors.error),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: _scheduledRideLoadingIds.contains(ride.id)
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.error))
+                      : const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 36,
+                  child: ElevatedButton(
+                    onPressed: ride.id != null && _scheduledRideLoadingIds.contains(ride.id) ? null : () => _markArrivedForScheduledRide(ride),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      foregroundColor: AppColors.textOnPrimary,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: _scheduledRideLoadingIds.contains(ride.id)
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textOnPrimary))
+                      : const Text('Arrived', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
+                ),
+              ],
+              if (ride.isDriverArrived)
+                SizedBox(
+                  height: 36,
+                  child: ElevatedButton(
+                    onPressed: ride.id != null && _scheduledRideLoadingIds.contains(ride.id) ? null : () => _showPickupCodeDialog(ride),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.textOnPrimary,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: _scheduledRideLoadingIds.contains(ride.id)
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textOnPrimary))
+                      : const Text('Verify Code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _acceptScheduledRide(ScheduledRide ride) async {
+    if (ride.id == null) return;
+    if (_scheduledRideLoadingIds.contains(ride.id)) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Accept Scheduled Ride'),
+        content: Text('Accept ride scheduled for ${
+          DateFormat('MMM dd, HH:mm').format(ride.scheduledAt)
+        }?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Ignore')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Accept'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _scheduledRideLoadingIds.add(ride.id!));
+    try {
+      final result = await ScheduledRideService.assign(ride.id!, widget.token);
+      if (mounted && result != null) {
+        setState(() {
+          _pendingScheduledRides.removeWhere((r) => r.id == ride.id);
+          _driverScheduledRides.add(result);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Scheduled ride accepted — ${ride.pickupAddress}'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _scheduledRideLoadingIds.remove(ride.id!));
+    }
+  }
+
+  Future<void> _unassignScheduledRide(ScheduledRide ride) async {
+    if (ride.id == null) return;
+    if (_scheduledRideLoadingIds.contains(ride.id)) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Scheduled Ride'),
+        content: const Text('Release this ride so other drivers can accept it?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Release', style: TextStyle(color: AppColors.textOnPrimary)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _scheduledRideLoadingIds.add(ride.id!));
+    try {
+      final result = await ScheduledRideService.unassign(ride.id!, widget.token);
+      if (mounted && result != null) {
+        setState(() {
+          _driverScheduledRides.removeWhere((r) => r.id == ride.id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Scheduled ride released'),
+            backgroundColor: AppColors.warning,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _scheduledRideLoadingIds.remove(ride.id!));
+    }
+  }
+
+  Future<void> _markArrivedForScheduledRide(ScheduledRide ride) async {
+    if (ride.id == null) return;
+    if (_scheduledRideLoadingIds.contains(ride.id)) return;
+    setState(() => _scheduledRideLoadingIds.add(ride.id!));
+    try {
+      final result = await ScheduledRideService.markArrived(ride.id!, widget.token);
+      if (mounted && result != null) {
+        setState(() {
+          final idx = _driverScheduledRides.indexWhere((r) => r.id == ride.id);
+          if (idx >= 0) _driverScheduledRides[idx] = result;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Marked as arrived — ask rider for pickup code'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _scheduledRideLoadingIds.remove(ride.id!));
+    }
+  }
+
+  void _showPickupCodeDialog(ScheduledRide ride) {
+    final codeController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Enter Pickup Code'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Ask the rider for the 6-digit pickup code'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: codeController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 24, letterSpacing: 6, fontWeight: FontWeight.w700),
+              decoration: const InputDecoration(
+                counterText: '',
+                hintText: '000000',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              final code = codeController.text.trim();
+              if (code.length != 6) return;
+              Navigator.pop(ctx);
+              await _verifyAndStartRide(ride, code);
+            },
+            child: const Text('Verify & Start'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _verifyAndStartRide(ScheduledRide ride, String code) async {
+    if (ride.id == null) return;
+    if (_scheduledRideLoadingIds.contains(ride.id)) return;
+    setState(() => _scheduledRideLoadingIds.add(ride.id!));
+    try {
+      final valid = await ScheduledRideService.verifyCode(ride.id!, code, widget.token);
+      if (!mounted) return;
+      if (!valid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid code — please try again'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      final result = await ScheduledRideService.start(ride.id!, widget.token);
+      if (mounted && result != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ride started — navigating to trip'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.pushNamed(context, '/driver-navigation', arguments: {
+          'rideId': ride.id,
+          'pickupAddress': ride.pickupAddress,
+          'pickupLat': ride.pickupLatitude,
+          'pickupLng': ride.pickupLongitude,
+          'dropoffAddress': ride.dropoffAddress,
+          'dropoffLat': ride.dropoffLatitude,
+          'dropoffLng': ride.dropoffLongitude,
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _scheduledRideLoadingIds.remove(ride.id!));
+    }
   }
 
   Widget _buildAddressRow(IconData icon, Color color, String address) {
@@ -1338,6 +1952,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _chatMessagesSub?.cancel();
     _alertTimeoutTimer?.cancel();
     _driverAnimTimer?.cancel();
+    _scheduledRidePollTimer?.cancel();
     try { _ringtonePlayer.stop(); } catch (_) {}
     super.dispose();
   }

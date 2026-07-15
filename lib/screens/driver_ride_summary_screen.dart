@@ -6,6 +6,8 @@ import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../services/recorded_screen_mixin.dart';
+import '../services/event_recorder_service.dart';
 
 class DriverRideSummaryScreen extends StatefulWidget {
   final int rideId;
@@ -20,7 +22,7 @@ class DriverRideSummaryScreen extends StatefulWidget {
       _DriverRideSummaryScreenState();
 }
 
-class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
+class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with RecordedScreenMixin<DriverRideSummaryScreen> {
   Ride? _ride;
   bool _isLoading = true;
   int _rating = 0;
@@ -31,6 +33,11 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
   @override
   void initState() {
     super.initState();
+    recordEvent(
+      eventName: 'EARNINGS_VIEWED',
+      category: 'FRONTEND',
+      summary: 'Driver viewed earnings summary',
+    );
     _loadRideDetails();
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('💰 EARNINGS SUMMARY');
@@ -82,6 +89,11 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
       );
 
       addDebugMessage('✅ Rating submitted');
+      recordEvent(
+        eventName: 'RATING_SUBMITTED',
+        category: 'FRONTEND',
+        summary: 'Driver submitted rating for rider',
+      );
       if (mounted) {
         setState(() => _ratingSubmitted = true);
       }
@@ -256,6 +268,11 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> {
             PremiumButton(
               label: 'Back to Home',
               onPressed: () {
+                recordEvent(
+                  eventName: 'BACK_TO_HOME',
+                  category: 'FRONTEND',
+                  summary: 'Driver navigated back to home',
+                );
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   '/driver-home',

@@ -7,6 +7,7 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../services/recorded_screen_mixin.dart';
 
 class OtpScreen extends StatefulWidget {
   final String email;
@@ -30,7 +31,7 @@ class OtpScreen extends StatefulWidget {
   State<OtpScreen> createState() => _OtpScreenState();
 }
 
-class _OtpScreenState extends State<OtpScreen> {
+class _OtpScreenState extends State<OtpScreen> with RecordedScreenMixin<OtpScreen> {
   final _otpController = TextEditingController();
   bool _isLoading = false;
   int _remainingSeconds = 60;

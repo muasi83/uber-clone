@@ -373,9 +373,12 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
             top: 0,
             left: 0,
             right: 0,
-            child: AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
+            child: SafeArea(
+              top: true,
+              bottom: false,
+              child: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
               leading: IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),
@@ -423,6 +426,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                 ),
               ),
               centerTitle: true,
+              ),
             ),
           ),
           

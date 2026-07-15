@@ -20,6 +20,7 @@ import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../utils/bearing_utils.dart';
+import '../services/recorded_screen_mixin.dart';
 
 class DriverNavigationToRiderScreen extends StatefulWidget {
   final int rideId;
@@ -47,7 +48,7 @@ class DriverNavigationToRiderScreen extends StatefulWidget {
 }
 
 class _DriverNavigationToRiderScreenState
-    extends State<DriverNavigationToRiderScreen> {
+    extends State<DriverNavigationToRiderScreen> with RecordedScreenMixin<DriverNavigationToRiderScreen> {
   GoogleMapController? mapController;
   LatLng? _driverLocation;
   late final LatLng _pickupLocation;
@@ -71,6 +72,7 @@ class _DriverNavigationToRiderScreenState
   @override
   void initState() {
     super.initState();
+    recordEvent(eventName: 'NAVIGATION_STARTED');
     _loadMapStyle();
 
     _pickupLocation = LatLng(widget.pickupLat, widget.pickupLng);
@@ -324,6 +326,7 @@ class _DriverNavigationToRiderScreenState
   }
 
   Future<void> _notifyArrival() async {
+    recordEvent(eventName: 'DRIVER_ARRIVED');
     try {
       _stopLocationStream();
       setState(() => _isArriving = true);

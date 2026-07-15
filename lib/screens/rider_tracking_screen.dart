@@ -17,6 +17,8 @@ import '../utils/bearing_utils.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
+import '../services/recorded_screen_mixin.dart';
+import '../services/event_recorder_service.dart';
 
 class RiderTrackingScreen extends StatefulWidget {
   final int rideId;
@@ -33,7 +35,7 @@ class RiderTrackingScreen extends StatefulWidget {
 }
 
 class _RiderTrackingScreenState extends State<RiderTrackingScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, RecordedScreenMixin<RiderTrackingScreen> {
   GoogleMapController? mapController;
   LatLng? _driverLocation;
   LatLng? _pickupLocation;
@@ -60,6 +62,11 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   @override
   void initState() {
     super.initState();
+    recordEvent(
+      eventName: 'SCREEN_OPENED',
+      category: 'FRONTEND',
+      summary: 'RiderTrackingScreen opened',
+    );
     _loadMapStyle();
     _pulseController = AnimationController(
       vsync: this,
@@ -250,6 +257,11 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         } else if (type == 'ride_started') {
           if (_rideStarting) return;
           _rideStarting = true;
+          recordEvent(
+            eventName: 'RIDE_STARTED',
+            category: 'FRONTEND',
+            summary: 'Ride started event received',
+          );
 
           addDebugMessage('Ride started — navigating to active ride');
           final payload = event['payload'] as Map<String, dynamic>? ?? {};
@@ -267,6 +279,11 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
           );
         } else if (type == 'driver_arrived') {
           setState(() => _driverArrived = true);
+          recordEvent(
+            eventName: 'DRIVER_ARRIVED',
+            category: 'FRONTEND',
+            summary: 'Driver arrived at pickup',
+          );
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -278,6 +295,11 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
 
           addDebugMessage('Driver arrived notification');
         } else if (type == 'ride_cancelled') {
+          recordEvent(
+            eventName: 'RIDE_CANCELLED',
+            category: 'FRONTEND',
+            summary: 'Ride cancelled event received',
+          );
           addDebugMessage('❌ Ride cancelled by driver');
           ChatScreen.clearAllCache();
           if (mounted) {

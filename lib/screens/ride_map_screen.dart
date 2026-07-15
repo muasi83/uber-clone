@@ -410,7 +410,10 @@ int _calculateDuration(double distanceKm) {
                   top: 0,
                   left: 0,
                   right: 0,
-                  child: AppBar(
+                  child: SafeArea(
+                    top: true,
+                    bottom: false,
+                    child: AppBar(
                     backgroundColor: Colors.transparent,
                     elevation: 0,
                     leading: IconButton(
@@ -460,6 +463,7 @@ int _calculateDuration(double distanceKm) {
                       ),
                     ),
                     centerTitle: true,
+                    ),
                   ),
                 ),
                 

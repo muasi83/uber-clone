@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import '../services/websocket_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
+import '../services/event_recorder_service.dart';
+import '../services/ui_event_recorder.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -42,11 +45,21 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
   @override
   void initState() {
     super.initState();
+    UiEventRecorder.setCurrentRideId(widget.rideId);
+    UiEventRecorder.setCurrentScreen('RiderSearchingDriver');
     _setupAnimations();
     _ensureWebSocketConnected();
     _setupWebSocketListeners();
     _startSearchTimeout();
     _startPolling();
+
+    EventRecorderService.recordEvent(
+      rideId: widget.rideId,
+      eventName: 'DRIVER_SEARCH_STARTED',
+      category: 'BUSINESS',
+      summary: 'Searching for nearby drivers',
+      screenName: 'RiderSearchingDriver',
+    );
 
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('🔍 SEARCHING FOR DRIVER');
@@ -156,6 +169,18 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
     addDebugMessage('✅ RIDE ACCEPTED EVENT');
     addDebugMessage('Driver: ${event['payload']?['driverName'] ?? 'Unknown'}');
 
+    EventRecorderService.recordEvent(
+      rideId: widget.rideId,
+      eventName: 'DRIVER_FOUND',
+      category: 'BUSINESS',
+      summary: 'Driver ${event['payload']?['driverName'] ?? 'Unknown'} accepted the ride',
+      screenName: 'RiderSearchingDriver',
+      extraDetails: {
+        'driverId': event['payload']?['driverId'],
+        'driverName': event['payload']?['driverName'],
+      },
+    );
+
     if (mounted) {
       setState(() {
         _driverFound = true;
@@ -165,12 +190,11 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       _pollTimer?.cancel();
       _pulseController.stop();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('🎉 Driver Found!'),
-          backgroundColor: AppColors.success,
-          duration: Duration(seconds: 2),
-        ),
+      UiEventRecorder.showSnackBar(
+        context: context,
+        message: '🎉 Driver Found!',
+        type: 'success',
+        triggerReason: 'ride_accepted_event',
       );
 
       Future.delayed(const Duration(seconds: 2), () {
@@ -194,10 +218,21 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
     _acceptanceTimer?.cancel();
     _pulseController.stop();
 
+    EventRecorderService.recordEvent(
+      rideId: widget.rideId,
+      eventName: 'RIDE_CANCELLED',
+      category: 'BUSINESS',
+      summary: 'Ride cancelled: ${event['reason'] ?? 'Unknown reason'}',
+      screenName: 'RiderSearchingDriver',
+    );
+
     if (mounted) {
-      showDialog(
+      UiEventRecorder.showDialog(
         context: context,
-        barrierDismissible: false,
+        dialogType: 'RideCancelled',
+        dialogText: event['reason'] ?? 'Your ride was cancelled',
+        triggerReason: 'ride_cancelled_event',
+        buttons: ['Back to Home'],
         builder: (context) => AlertDialog(
           icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 48),
           title: const Text('Ride Cancelled'),
@@ -205,12 +240,12 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
+                  Navigator.pop(context);
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   '/rider-home',
                   (route) => false,
-                );
+    );
               },
               child: const Text('Back to Home'),
             ),
@@ -225,10 +260,21 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
 
     setState(() => _showTimeoutDialog = true);
 
+    EventRecorderService.recordEvent(
+      rideId: widget.rideId,
+      eventName: 'SEARCH_TIMEOUT',
+      category: 'BUSINESS',
+      summary: 'No driver found after 60 seconds timeout',
+      screenName: 'RiderSearchingDriver',
+    );
+
     if (mounted) {
-      showDialog(
+      UiEventRecorder.showDialog(
         context: context,
-        barrierDismissible: false,
+        dialogType: 'SearchTimeout',
+        dialogText: 'No drivers available nearby',
+        triggerReason: '60_second_search_timeout',
+        buttons: ['Cancel', 'Continue'],
         builder: (context) => AlertDialog(
           icon: const Icon(Icons.access_time, color: AppColors.warning, size: 48),
           title: const Text('No Drivers Available'),
@@ -238,7 +284,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(context, 'cancel');
                 _cancelSearch();
               },
               child: const Text(
@@ -248,7 +294,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(context, 'continue');
                 _continueSearch();
               },
               style: ElevatedButton.styleFrom(
@@ -265,6 +311,14 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
   Future<void> _continueSearch() async {
     try {
       addDebugMessage('🔄 Continuing search with expanded radius...');
+
+      EventRecorderService.recordEvent(
+        rideId: widget.rideId,
+        eventName: 'DRIVER_SEARCH_EXPANDED',
+        category: 'BUSINESS',
+        summary: 'Rider chose to continue searching with expanded radius',
+        screenName: 'RiderSearchingDriver',
+      );
 
       final token = StorageService.getToken();
       if (token == null) return;
@@ -352,8 +406,10 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _showCancelSearchDialog();
       },
-      child: Scaffold(
-      body: Container(
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light,
+        child: Scaffold(
+        body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
@@ -362,7 +418,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
             : _buildSearchingContent(progressString),
       ),
     ),
-    );
+    ));
   }
 
   Widget _buildSearchingContent(String progressString) {

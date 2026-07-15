@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -7,6 +8,8 @@ import 'dart:io';
 import 'package:country_code_picker/country_code_picker.dart';
 import '../services/storage_service.dart';
 import '../services/firebase_service.dart';
+import '../services/recorded_screen_mixin.dart';
+import '../services/event_recorder_service.dart';
 import '../screens/debug_screen.dart';
 import '../screens/forgot_password_screen.dart';
 import '../theme/app_colors.dart';
@@ -22,7 +25,7 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, RecordedScreenMixin<AuthScreen> {
   bool _isLogin = true;
   bool _isLoading = false;
   String _selectedRole = 'RIDER';
@@ -54,6 +57,11 @@ class _AuthScreenState extends State<AuthScreen>
       curve: Curves.easeOutCubic,
     ));
     _animController.forward();
+    recordEvent(
+      eventName: 'SCREEN_OPENED',
+      category: 'NAVIGATION',
+      summary: 'Auth screen opened',
+    );
   }
 
   Future<void> _register() async {
@@ -113,6 +121,12 @@ class _AuthScreenState extends State<AuthScreen>
         await StorageService.saveRole(data['role'] ?? 'RIDER');
         await FirebaseService.sendTokenToServer();
 
+        recordEvent(
+          eventName: 'USER_REGISTERED',
+          category: 'BUSINESS',
+          summary: 'User registered successfully',
+        );
+
         if (mounted) {
           final role = data['role'] ?? 'RIDER';
 
@@ -152,6 +166,12 @@ class _AuthScreenState extends State<AuthScreen>
 
       setState(() => _isLoading = true);
 
+      recordEvent(
+        eventName: 'LOGIN_ATTEMPT',
+        category: 'BUSINESS',
+        summary: 'User attempted login',
+      );
+
       final url = '${StorageService.getServerUrl()}/api/auth/login';
 
       final response = await http
@@ -177,6 +197,12 @@ class _AuthScreenState extends State<AuthScreen>
         await StorageService.saveRole(data['role'] ?? 'RIDER');
         await FirebaseService.sendTokenToServer();
 
+        recordEvent(
+          eventName: 'LOGIN_SUCCESS',
+          category: 'BUSINESS',
+          summary: 'User logged in successfully',
+        );
+
         if (mounted) {
           final role = data['role'] ?? 'RIDER';
 
@@ -194,13 +220,38 @@ class _AuthScreenState extends State<AuthScreen>
         }
       } else {
         final error = jsonDecode(response.body);
-        _showError(error['message'] ?? 'Login failed');
+        final errorMsg = error['message'] ?? 'Login failed';
+        recordEvent(
+          eventName: 'LOGIN_FAILED',
+          category: 'BUSINESS',
+          severity: 'ERROR',
+          summary: 'Login failed: $errorMsg',
+        );
+        _showError(errorMsg);
       }
     } on TimeoutException {
+      recordEvent(
+        eventName: 'LOGIN_FAILED',
+        category: 'BUSINESS',
+        severity: 'ERROR',
+        summary: 'Login failed: Request timed out',
+      );
       _showError('Request timed out. Please try again.');
     } on SocketException {
+      recordEvent(
+        eventName: 'LOGIN_FAILED',
+        category: 'BUSINESS',
+        severity: 'ERROR',
+        summary: 'Login failed: Connection error',
+      );
       _showError('Connection error. Check your internet.');
     } catch (e) {
+      recordEvent(
+        eventName: 'LOGIN_FAILED',
+        category: 'BUSINESS',
+        severity: 'ERROR',
+        summary: 'Login failed: $e',
+      );
       _showError('An unexpected error occurred');
     } finally {
       setState(() => _isLoading = false);
@@ -209,6 +260,12 @@ class _AuthScreenState extends State<AuthScreen>
 
   void _showError(String message) {
     if (!mounted) return;
+    recordEvent(
+      eventName: 'ERROR_SNACKBAR',
+      category: 'UI',
+      severity: 'ERROR',
+      summary: message,
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -224,11 +281,13 @@ class _AuthScreenState extends State<AuthScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            GestureDetector(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              GestureDetector(
               onLongPress: () {
                 Navigator.push(
                   context,
@@ -309,11 +368,11 @@ class _AuthScreenState extends State<AuthScreen>
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 250),
                             transitionBuilder: (child, animation) {
-                              return FadeTransition(
+      return FadeTransition(
                                 opacity: animation,
                                 child: child,
-                              );
-                            },
+    );
+                              },
                             child: _isLogin
                                 ? _buildLoginForm()
                                 : _buildRegisterForm(),
@@ -342,7 +401,7 @@ class _AuthScreenState extends State<AuthScreen>
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildPillToggle() {
@@ -796,6 +855,11 @@ class _AuthScreenState extends State<AuthScreen>
                         await StorageService.setServerUrl(urlController.text);
                         if (!context.mounted) return;
                         Navigator.pop(context);
+                        recordEvent(
+                          eventName: 'SERVER_URL_UPDATED',
+                          category: 'UI',
+                          summary: 'Server URL updated successfully',
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Server URL updated'),

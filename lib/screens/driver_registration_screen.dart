@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_text_field.dart';
+import '../services/recorded_screen_mixin.dart';
 
 class DriverRegistrationScreen extends StatefulWidget {
   final int userId;
@@ -24,7 +25,7 @@ class DriverRegistrationScreen extends StatefulWidget {
       _DriverRegistrationScreenState();
 }
 
-class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
+class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> with RecordedScreenMixin<DriverRegistrationScreen> {
   final _licenseController = TextEditingController();
   final _vehicleNumberController = TextEditingController();
   final _vehicleModelController = TextEditingController();
@@ -35,6 +36,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   @override
   void initState() {
     super.initState();
+    recordEvent(eventName: 'DRIVER_REGISTRATION_STARTED');
     _checkExistingProfile();
   }
 
@@ -79,6 +81,7 @@ Future<void> _checkExistingProfile() async {
     return;
   }
 
+  recordEvent(eventName: 'DRIVER_REGISTRATION_SUBMITTED');
   setState(() => _isLoading = true);
   try {
     addDebugMessage('═══════════════════════════════════════');

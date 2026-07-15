@@ -405,18 +405,22 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
             top: 0,
             left: 0,
             right: 0,
-            child: AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-                onPressed: () => Navigator.pop(context),
+            child: SafeArea(
+              top: true,
+              bottom: false,
+              child: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                title: const Text(
+                  'Set Pickup Location',
+                  style: TextStyle(color: AppColors.primary),
+                ),
+                centerTitle: true,
               ),
-              title: const Text(
-                'Set Pickup Location',
-                style: TextStyle(color: AppColors.primary),
-              ),
-              centerTitle: true,
             ),
           ),
           Center(

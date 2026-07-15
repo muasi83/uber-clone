@@ -7,6 +7,7 @@ import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_text_field.dart';
 import '../widgets/premium_card.dart';
+import '../services/recorded_screen_mixin.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String username;
@@ -24,13 +25,14 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixin<SettingsScreen> {
   late TextEditingController _urlController;
   bool _isChanged = false;
 
   @override
   void initState() {
     super.initState();
+    recordEvent(eventName: 'SETTINGS_OPENED');
     _urlController = TextEditingController(
       text: StorageService.getServerUrl(),
     );
@@ -52,6 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     await StorageService.setServerUrl(_urlController.text);
+    recordEvent(eventName: 'SERVER_URL_UPDATED');
     setState(() => _isChanged = false);
 
     if (mounted) {

@@ -21,6 +21,8 @@ import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../utils/bearing_utils.dart';
+import '../services/recorded_screen_mixin.dart';
+import '../services/event_recorder_service.dart';
 
 class DriverActiveRideScreen extends StatefulWidget {
   final int rideId;
@@ -41,7 +43,7 @@ class DriverActiveRideScreen extends StatefulWidget {
       _DriverActiveRideScreenState();
 }
 
-class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
+class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with RecordedScreenMixin<DriverActiveRideScreen> {
   GoogleMapController? mapController;
   LatLng? _driverLocation;
   late final LatLng _destinationLocation;
@@ -73,6 +75,11 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
   @override
   void initState() {
     super.initState();
+    recordEvent(
+      eventName: 'SCREEN_OPENED',
+      category: 'FRONTEND',
+      summary: 'DriverActiveRideScreen opened',
+    );
     _loadMapStyle();
 
     _destinationLocation = LatLng(widget.dropoffLat, widget.dropoffLng);
@@ -312,6 +319,11 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       }
 
       addDebugMessage('✅ Ride started');
+      recordEvent(
+        eventName: 'DRIVER_STARTED_RIDE',
+        category: 'FRONTEND',
+        summary: 'Driver started the ride',
+      );
 
       WebSocketService.sendRideMessage('ride_started', {
         'rideId': widget.rideId,
@@ -322,11 +334,10 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ride started!'),
-            backgroundColor: AppColors.success,
-          ),
+        showRecordedSnackBar(
+          context: context,
+          message: 'Ride started!',
+          type: 'success',
         );
       }
     } catch (e) {
@@ -469,6 +480,11 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       _stopLocationStream();
 
       addDebugMessage('✅ Ride completed');
+      recordEvent(
+        eventName: 'DRIVER_COMPLETED_RIDE',
+        category: 'FRONTEND',
+        summary: 'Driver completed the ride',
+      );
 
       ChatScreen.clearAllCache();
 
@@ -481,8 +497,10 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
       addDebugMessage('❌ Error: $e');
       if (mounted) {
         setState(() => _isCompleting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+        showRecordedSnackBar(
+          context: context,
+          message: 'Error: $e',
+          type: 'error',
         );
       }
     }
@@ -504,15 +522,19 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
           arguments: {'rideId': widget.rideId},
         );
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('Failed to confirm cash receipt'), backgroundColor: AppColors.error),
+        showRecordedSnackBar(
+          context: context,
+          message: 'Failed to confirm cash receipt',
+          type: 'error',
         );
       }
     } catch (e) {
       addDebugMessage('❌ Cash received error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+        showRecordedSnackBar(
+          context: context,
+          message: 'Error: $e',
+          type: 'error',
         );
       }
     } finally {
@@ -536,15 +558,19 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
           arguments: {'rideId': widget.rideId},
         );
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('Failed to mark as unpaid'), backgroundColor: AppColors.error),
+        showRecordedSnackBar(
+          context: context,
+          message: 'Failed to mark as unpaid',
+          type: 'error',
         );
       }
     } catch (e) {
       addDebugMessage('❌ Cash unpaid error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+        showRecordedSnackBar(
+          context: context,
+          message: 'Error: $e',
+          type: 'error',
         );
       }
     } finally {
@@ -831,21 +857,27 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         final token = StorageService.getToken();
         if (token == null) return;
         await RideService.cancelRide(widget.rideId, token, reason: reason);
+        recordEvent(
+          eventName: 'DRIVER_CANCELLED_RIDE',
+          category: 'FRONTEND',
+          summary: 'Driver cancelled the ride',
+        );
         ChatScreen.clearAllCache();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ride cancelled'),
-              backgroundColor: AppColors.success,
-            ),
-          );
+        showRecordedSnackBar(
+          context: context,
+          message: 'Ride cancelled',
+          type: 'success',
+        );
           Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
         }
       } catch (e) {
         addDebugMessage('❌ Error cancelling ride: $e');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          showRecordedSnackBar(
+            context: context,
+            message: 'Error: $e',
+            type: 'error',
           );
         }
       }

@@ -3,6 +3,7 @@ import '../services/storage_service.dart';
 import '../services/admin_drivers_service.dart';
 import 'admin_driver_details_screen.dart';
 import '../theme/app_colors.dart';
+import '../services/recorded_screen_mixin.dart';
 
 class AdminDriverListScreen extends StatefulWidget {
   const AdminDriverListScreen({super.key});
@@ -11,7 +12,7 @@ class AdminDriverListScreen extends StatefulWidget {
   State<AdminDriverListScreen> createState() => _AdminDriverListScreenState();
 }
 
-class _AdminDriverListScreenState extends State<AdminDriverListScreen> {
+class _AdminDriverListScreenState extends State<AdminDriverListScreen> with RecordedScreenMixin<AdminDriverListScreen> {
   List<Map<String, dynamic>>? _drivers;
   bool _loading = true;
   String? _token;
@@ -21,6 +22,7 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> {
   @override
   void initState() {
     super.initState();
+    recordEvent(eventName: 'ADMIN_SCREEN_OPENED');
     _token = StorageService.getToken();
     _loadDrivers();
   }

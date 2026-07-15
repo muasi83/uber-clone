@@ -17,6 +17,7 @@ class StorageService {
 
   static late SharedPreferences _prefs;
   static bool _initialized = false;
+  static bool _warnedNotInitialized = false;
 
   // In-memory cache for sensitive values loaded from FlutterSecureStorage
   static String? _cachedToken;
@@ -94,10 +95,17 @@ class StorageService {
 
   static bool isInitialized() => _initialized;
 
+  static void _warnOnce() {
+    if (!_warnedNotInitialized) {
+      _warnedNotInitialized = true;
+      addDebugMessage('⚠️ StorageService not initialized — further warnings suppressed');
+    }
+  }
+
   static String getServerUrl() {
     try {
       if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized, using default URL');
+        _warnOnce();
         return _defaultServerUrl;
       }
       return _prefs.getString(_serverUrlKey) ?? _defaultServerUrl;
@@ -110,7 +118,7 @@ class StorageService {
   static Future<void> setServerUrl(String url) async {
     try {
       if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
+        _warnOnce();
         return;
       }
       await _prefs.setString(_serverUrlKey, url);
@@ -123,7 +131,7 @@ class StorageService {
   static Future<void> saveToken(String token) async {
     try {
       if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
+        _warnOnce();
         return;
       }
       await _secure.write(key: _tokenKey, value: token);
@@ -136,7 +144,7 @@ class StorageService {
 
   static String? getToken() {
     if (!_initialized) {
-      addDebugMessage('⚠️ StorageService not initialized');
+      _warnOnce();
       return null;
     }
     return _cachedToken;
@@ -145,7 +153,7 @@ class StorageService {
   static Future<void> saveUserId(int userId) async {
     try {
       if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
+        _warnOnce();
         return;
       }
       await _secure.write(key: _userIdKey, value: userId.toString());
@@ -158,7 +166,7 @@ class StorageService {
 
   static int? getUserId() {
     if (!_initialized) {
-      addDebugMessage('⚠️ StorageService not initialized');
+      _warnOnce();
       return null;
     }
     return _cachedUserId;
@@ -167,7 +175,7 @@ class StorageService {
   static Future<void> clearToken() async {
     try {
       if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
+        _warnOnce();
         return;
       }
       await _secure.delete(key: _tokenKey);
@@ -181,7 +189,7 @@ class StorageService {
   static Future<void> clearUserId() async {
     try {
       if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
+        _warnOnce();
         return;
       }
       await _secure.delete(key: _userIdKey);
@@ -195,7 +203,7 @@ class StorageService {
   static Future<void> saveUsername(String username) async {
     try {
       if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
+        _warnOnce();
         return;
       }
       await _secure.write(key: _usernameKey, value: username);
@@ -208,7 +216,7 @@ class StorageService {
 
   static String? getUsername() {
     if (!_initialized) {
-      addDebugMessage('⚠️ StorageService not initialized');
+      _warnOnce();
       return null;
     }
     return _cachedUsername;
@@ -217,7 +225,7 @@ class StorageService {
   static Future<void> saveRole(String role) async {
     try {
       if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
+        _warnOnce();
         return;
       }
       await _secure.write(key: _roleKey, value: role);
@@ -231,7 +239,7 @@ class StorageService {
   static String? getRole() {
     try {
       if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
+        _warnOnce();
         return null;
       }
       addDebugMessage('📋 Retrieved role: $_cachedRole');
@@ -245,7 +253,7 @@ class StorageService {
   static Future<void> clearAllData() async {
     try {
       if (!_initialized) {
-        addDebugMessage('⚠️ StorageService not initialized');
+        _warnOnce();
         return;
       }
       final savedUrl = getServerUrl();

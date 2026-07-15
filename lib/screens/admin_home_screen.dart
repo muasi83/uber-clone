@@ -6,6 +6,7 @@ import '../widgets/status_badge.dart';
 import '../widgets/shimmer_loading.dart';
 import 'admin_trip_details_screen.dart';
 import '../theme/app_colors.dart';
+import '../services/recorded_screen_mixin.dart';
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
 
@@ -13,7 +14,7 @@ class AdminHomeScreen extends StatefulWidget {
   State<AdminHomeScreen> createState() => _AdminHomeScreenState();
 }
 
-class _AdminHomeScreenState extends State<AdminHomeScreen> {
+class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMixin<AdminHomeScreen> {
   final _scrollController = ScrollController();
   final _rideIdController = TextEditingController();
   final _riderNameController = TextEditingController();
@@ -53,6 +54,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   @override
   void initState() {
     super.initState();
+    recordEvent(eventName: 'ADMIN_SCREEN_OPENED');
     _token = StorageService.getToken();
     _scrollController.addListener(_onScroll);
     _loadTrips();

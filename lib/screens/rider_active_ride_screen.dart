@@ -18,6 +18,8 @@ import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../widgets/cancel_ride_dialog.dart';
 import '../widgets/payment_dialog.dart';
+import '../services/recorded_screen_mixin.dart';
+import '../services/event_recorder_service.dart';
 
 class RiderActiveRideScreen extends StatefulWidget {
   final int rideId;
@@ -41,7 +43,7 @@ class RiderActiveRideScreen extends StatefulWidget {
   State<RiderActiveRideScreen> createState() => _RiderActiveRideScreenState();
 }
 
-class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
+class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with RecordedScreenMixin<RiderActiveRideScreen> {
   GoogleMapController? mapController;
   LatLng? _driverLocation;
   LatLng? _riderLocation;
@@ -71,6 +73,11 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   @override
   void initState() {
     super.initState();
+    recordEvent(
+      eventName: 'SCREEN_OPENED',
+      category: 'FRONTEND',
+      summary: 'RiderActiveRideScreen opened',
+    );
     _loadMapStyle();
     _initCarIcon();
     _initYellowPin();
@@ -157,6 +164,11 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
       _rideEventsSub = WebSocketService.rideEvents.listen((event) {
         if (!mounted) return;
         if (event['type'] == 'ride_completed') {
+          recordEvent(
+            eventName: 'RIDE_COMPLETED',
+            category: 'FRONTEND',
+            summary: 'Ride completed by driver',
+          );
           if (_rideCompleting) return;
           _rideCompleting = true;
           _statusPollTimer?.cancel();
@@ -195,6 +207,11 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
             );
           }
         } else if (event['type'] == 'ride_cancelled') {
+          recordEvent(
+            eventName: 'RIDE_CANCELLED',
+            category: 'FRONTEND',
+            summary: 'Ride cancelled via WebSocket',
+          );
           _statusPollTimer?.cancel();
           ChatScreen.clearAllCache();
           Navigator.pushNamedAndRemoveUntil(
@@ -220,8 +237,10 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
     _paymentAmount = (totalFare as num?)?.toDouble() ?? 0.0;
 
     if (paymentMethod == 'CASH') {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showRecordedDialog<bool>(
         context: context,
+        dialogType: 'cash_payment',
+        dialogText: 'Cash Payment confirmation',
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -319,8 +338,10 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
 
       if (!mounted) return;
 
-      final retry = await showDialog<bool>(
+      final retry = await showRecordedDialog<bool>(
         context: context,
+        dialogType: 'payment_retry',
+        dialogText: 'Payment Failed retry dialog',
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -406,27 +427,37 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
 
         if (ride.status == 'CANCELLED') {
           if (_rideCompleting) return;
-          _rideCompleting = true;
-          _statusPollTimer?.cancel();
-          ChatScreen.clearAllCache();
-          if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/rider-home',
-              (route) => false,
-            );
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(ride.cancellationReason ?? 'The ride was cancelled'),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-          return;
-        }
+      recordEvent(
+        eventName: 'RIDE_CANCELLED',
+        category: 'FRONTEND',
+        summary: 'Poll detected ride cancelled',
+      );
+      _rideCompleting = true;
+      _statusPollTimer?.cancel();
+      ChatScreen.clearAllCache();
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/rider-home',
+          (route) => false,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ride.cancellationReason ?? 'The ride was cancelled'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
 
-        if (ride.status == 'COMPLETED') {
+    if (ride.status == 'COMPLETED') {
+      recordEvent(
+        eventName: 'RIDE_COMPLETED',
+        category: 'FRONTEND',
+        summary: 'Poll detected ride completed',
+      );
           if (_paymentInProgress) return;
           _rideCompleting = true;
           _statusPollTimer?.cancel();
@@ -898,8 +929,10 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> {
   }
 
   Future<void> _showCancelRideDialog() async {
-    await showDialog(
+    await showRecordedDialog(
       context: context,
+      dialogType: 'cannot_cancel',
+      dialogText: 'Cannot cancel ride dialog',
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
