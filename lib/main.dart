@@ -310,6 +310,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           final dLat = (args['dropoffLat'] as num?)?.toDouble();
           final dLng = (args['dropoffLng'] as num?)?.toDouble();
           final dropoff = args['dropoffAddress'] as String?;
+          final driverLat = (args['driverLat'] as num?)?.toDouble();
+          final driverLng = (args['driverLng'] as num?)?.toDouble();
           if (rideId == null || pLat == null || pLng == null ||
               dLat == null || dLng == null || dropoff == null) {
             return _routeError(context, 'Invalid /rider-active-ride arguments');
@@ -321,6 +323,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             dropoffLat: dLat,
             dropoffLng: dLng,
             dropoffAddress: dropoff,
+            initialDriverLat: driverLat,
+            initialDriverLng: driverLng,
           );
         },
 

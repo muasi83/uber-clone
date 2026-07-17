@@ -3,8 +3,6 @@ import '../models/ride_model.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
-import '../screens/debug_screen.dart';
 import 'package:intl/intl.dart';
 
 class TripHistoryScreen extends StatefulWidget {

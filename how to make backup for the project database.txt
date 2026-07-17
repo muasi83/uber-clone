@@ -1,0 +1,1 @@
+$env:PGPASSWORD = "Mustafa@Assi83"; pg_dump -h localhost -p 5432 -U postgres -d chat_db -F p -f "C:\Users\User\Desktop\Flutter\Chat\chat_app\chat_db_backup_$(Get-Date -Format 'yyyyMMdd_HHmmss').sql"

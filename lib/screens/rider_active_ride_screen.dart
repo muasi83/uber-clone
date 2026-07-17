@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/directions_service.dart';
 import '../services/ride_service.dart';
+import '../services/driver_service.dart';
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../screens/debug_screen.dart';
@@ -28,6 +29,8 @@ class RiderActiveRideScreen extends StatefulWidget {
   final double dropoffLat;
   final double dropoffLng;
   final String dropoffAddress;
+  final double? initialDriverLat;
+  final double? initialDriverLng;
 
   const RiderActiveRideScreen({
     super.key,
@@ -37,6 +40,8 @@ class RiderActiveRideScreen extends StatefulWidget {
     required this.dropoffLat,
     required this.dropoffLng,
     required this.dropoffAddress,
+    this.initialDriverLat,
+    this.initialDriverLng,
   });
 
   @override
@@ -69,10 +74,14 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
   bool _paymentPollInProgress = false;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
   StreamSubscription<Map<String, dynamic>>? _driverLocationSub;
+  Timer? _driverTimeout;
 
   @override
   void initState() {
     super.initState();
+    if (widget.initialDriverLat != null && widget.initialDriverLng != null) {
+      _driverLocation = LatLng(widget.initialDriverLat!, widget.initialDriverLng!);
+    }
     recordEvent(
       eventName: 'SCREEN_OPENED',
       category: 'FRONTEND',
@@ -87,6 +96,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
     _updateRoute();
     _fetchDriverInfo();
     _startStatusPolling();
+    _driverTimeout = Timer(const Duration(seconds: 3), _fetchDriverCurrentLocation);
 
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('🚗 ACTIVE RIDE');
@@ -135,6 +145,8 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
     try {
       _driverLocationSub = WebSocketService.driverLocationEvents.listen((event) {
         if (!mounted) return;
+        _driverTimeout?.cancel();
+        _driverTimeout = null;
         final payload = event['payload'] ?? event;
         final lat = (payload['latitude'] ?? payload['lat']) as double?;
         final lng = (payload['longitude'] ?? payload['lng']) as double?;
@@ -488,6 +500,37 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         addDebugMessage('⚠️ Status poll error: $e');
       }
     });
+  }
+
+  Future<void> _fetchDriverCurrentLocation() async {
+    if (!mounted || _driverLocation != null) return;
+    try {
+      final token = StorageService.getToken();
+      if (token == null) return;
+      addDebugMessage('Fetching driver location fallback...');
+      final drivers = await DriverService.getNearbyDrivers(
+        latitude: widget.pickupLat,
+        longitude: widget.pickupLng,
+        radiusKm: 5.0,
+      );
+      if (!mounted || _driverLocation != null) return;
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride == null || ride.driver == null || !mounted || _driverLocation != null) return;
+      final driverId = ride.driver!.id;
+      for (final d in drivers) {
+        if (d.user.id == driverId && d.currentLatitude != null && d.currentLongitude != null) {
+          setState(() {
+            _driverLocation = LatLng(d.currentLatitude!, d.currentLongitude!);
+          });
+          _updateMarkers();
+          _updateRoute();
+          addDebugMessage('✅ Driver location from fallback API');
+          return;
+        }
+      }
+    } catch (e) {
+      addDebugMessage('⚠️ Fallback driver location error: $e');
+    }
   }
 
   Future<void> _fetchDriverInfo() async {
@@ -962,6 +1005,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
     _driverAnimTimer?.cancel();
     _statusPollTimer?.cancel();
     _paymentPollTimer?.cancel();
+    _driverTimeout?.cancel();
     _rideEventsSub?.cancel();
     _driverLocationSub?.cancel();
     mapController?.dispose();

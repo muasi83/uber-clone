@@ -48,6 +48,8 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   BitmapDescriptor _carIcon = BitmapDescriptor.defaultMarker;
   BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
   String? _mapStyle;
+  bool _userInteracted = false;
+  int _suppressCameraMove = 0;
 
   Timer? _driverAnimTimer;
   LatLng? _animatedDriverPos;
@@ -142,6 +144,8 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
               'dropoffLat': ride.dropoffLatitude,
               'dropoffLng': ride.dropoffLongitude,
               'dropoffAddress': ride.dropoffAddress,
+              'driverLat': _driverLocation?.latitude,
+              'driverLng': _driverLocation?.longitude,
             },
           );
         }
@@ -275,6 +279,8 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
               'dropoffLat': payload['dropoffLatitude'] ?? widget.driverData['dropoffLatitude'] ?? 0,
               'dropoffLng': payload['dropoffLongitude'] ?? widget.driverData['dropoffLongitude'] ?? 0,
               'dropoffAddress': payload['dropoffAddress'] ?? widget.driverData['dropoffAddress'] ?? '',
+              'driverLat': _driverLocation?.latitude,
+              'driverLng': _driverLocation?.longitude,
             },
           );
         } else if (type == 'driver_arrived') {
@@ -381,7 +387,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         _driverHeading = _bearingBetween(prev, _driverLocation!);
       }
       _startDriverMarkerAnimation(newLoc);
-      _fitBounds();
+      if (!_userInteracted) _fitBounds();
       _updateRoute();
     }
   }
@@ -488,6 +494,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   void _fitBounds() {
     if (_driverLocation == null || _pickupLocation == null) return;
 
+    _suppressCameraMove++;
     final bounds = LatLngBounds(
       southwest: LatLng(
         _driverLocation!.latitude < _pickupLocation!.latitude
@@ -509,7 +516,11 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
 
     mapController?.animateCamera(
       CameraUpdate.newLatLngBounds(bounds, 100),
-    );
+    ).then((_) {
+      _suppressCameraMove--;
+    }).catchError((_) {
+      _suppressCameraMove--;
+    });
   }
 
   double _bearingBetween(LatLng from, LatLng to) {
@@ -607,6 +618,11 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         children: [
           GoogleMap(
             onMapCreated: _onMapCreated,
+            onCameraMove: (_) {
+              if (_suppressCameraMove == 0) {
+                _userInteracted = true;
+              }
+            },
             initialCameraPosition: CameraPosition(
               target: (_driverLocation != null && _driverLocation!.latitude != 0)
                   ? _driverLocation!
@@ -621,6 +637,23 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
             padding: const EdgeInsets.only(bottom: 220),
             style: _mapStyle,
           ),
+
+          if (_userInteracted)
+            Positioned(
+              right: 16,
+              bottom: 240,
+              child: FloatingActionButton.small(
+                heroTag: 'recenter',
+                onPressed: () {
+                  setState(() {
+                    _userInteracted = false;
+                    _fitBounds();
+                  });
+                },
+                backgroundColor: AppColors.surface,
+                child: const Icon(Icons.my_location, color: AppColors.primary),
+              ),
+            ),
 
           Positioned(
             bottom: 0,
