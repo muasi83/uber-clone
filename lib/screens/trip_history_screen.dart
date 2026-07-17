@@ -4,6 +4,7 @@ import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_colors.dart';
 import 'package:intl/intl.dart';
+import '../utils/address_utils.dart';
 
 class TripHistoryScreen extends StatefulWidget {
   const TripHistoryScreen({super.key});
@@ -187,11 +188,20 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                 const Icon(Icons.trip_origin, size: 14, color: AppColors.pickupMarker),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    ride.pickupAddress,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ride.pickupAddress,
+                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        formatLatLng(ride.pickupLatitude, ride.pickupLongitude),
+                        style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -202,11 +212,20 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                 const Icon(Icons.location_on, size: 14, color: AppColors.error),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    ride.dropoffAddress,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ride.dropoffAddress,
+                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        formatLatLng(ride.dropoffLatitude, ride.dropoffLongitude),
+                        style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                      ),
+                    ],
                   ),
                 ),
               ],

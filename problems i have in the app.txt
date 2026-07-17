@@ -7,6 +7,7 @@ opencode -s ses_0afa6dc3effe0M2c776eQNKgBK
 
 opencode -s ses_09630c892ffeNWH3fgKqrVNK8s
 opencode -s ses_09630c892ffeNWH3fgKqrVNK8s
+opencode -s ses_09630c892ffeNWH3fgKqrVNK8s
 
 
 start of two problems  
@@ -133,3 +134,36 @@ How to Fix (Without Changing Code Now)
 The ngrok factor makes all of these worse (latency), but the root cause is the missing initial data, not the tunnel itself.
 
 End
+
+
+17-07-2026
+# Todos
+[ ] Fix auto-zoom on RiderTrackingScreen — add _userInteracted flag
+[ ] Fix missing driver marker on RiderActiveRideScreen — pass driver location from RiderTrackingScreen
+[ ] Fix WebSocket reconnection — add fallback API fetch for driver location
+[ ] Verify changes with lint/typecheck
+cancel button of the last page is removed 
+
+# Todos
+[✓] Backend: Add currentLatitude/currentLongitude to RideController.buildRideResponse()
+[✓] Flutter: Add driverLatitude/driverLongitude to Ride model
+[✓] Flutter: Rewrite _fetchDriverCurrentLocation() to use getRideDetails()
+[✓] Run flutter analyze to verify no regressions
+Zero errors in flutter analyze. All 175 issues are pre-existing info/warnings (style, unused imports from other files, etc.) — none related to my changes.
+Summary of Changes
+Backend (RideController.java:273-274)
+Added currentLatitude and currentLongitude to the driver info in buildRideResponse(). Now every ride API response includes the driver's current position.
+Flutter — ride_model.dart
+- Added driverLatitude / driverLongitude (double?) fields
+- Parsed from json['driver']['currentLatitude'] / json['driver']['currentLongitude']
+- Serialized in toJson()
+Flutter — rider_active_ride_screen.dart
+- Replaced _fetchDriverCurrentLocation() — now calls getRideDetails() and reads ride.driverLatitude/ride.driverLongitude directly
+- Removed the broken getNearbyDrivers() matching loop
+- Removed unused driver_service.dart import
+How It Works Now
+3-second fallback fires
+  → getRideDetails(rideId)
+    → Backend returns ride JSON with driver.currentLatitude/currentLongitude
+      → _driverLocation set immediately → marker appears
+No radius guessing, no online-state dependency, no matching loop. If the driver has a location saved in their profile, it's returned and the marker appears.

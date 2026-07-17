@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../services/storage_service.dart';
 import '../services/admin_drivers_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/address_utils.dart';
 import '../services/recorded_screen_mixin.dart';
 
 class AdminDriverDetailsScreen extends StatefulWidget {
@@ -418,12 +419,24 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
                   ),
+                  Text(
+                    formatLatLng(
+                        (ride['pickupLatitude'] as num?)?.toDouble() ?? 0,
+                        (ride['pickupLongitude'] as num?)?.toDouble() ?? 0),
+                    style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                  ),
                   const SizedBox(height: 1),
                   Text(
                     ride['dropoffAddress'] as String? ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                  ),
+                  Text(
+                    formatLatLng(
+                        (ride['dropoffLatitude'] as num?)?.toDouble() ?? 0,
+                        (ride['dropoffLongitude'] as num?)?.toDouble() ?? 0),
+                    style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
                   ),
                 ],
               ),

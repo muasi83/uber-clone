@@ -6,6 +6,7 @@ import '../services/ui_event_recorder.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/shimmer_loading.dart';
 import '../theme/app_colors.dart';
+import '../utils/address_utils.dart';
 import 'trip_behaviour_screen.dart';
 import 'trip_replay_screen.dart';
 
@@ -527,8 +528,14 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
             _infoRow(Icons.route, 'Type', detail['rideType'] as String? ?? ''),
             _infoRow(Icons.location_on, 'Pickup',
                 detail['pickupAddress'] as String? ?? ''),
+            _infoRow(Icons.map, 'Pickup Coord',
+                formatLatLng((detail['pickupLatitude'] as num?)?.toDouble() ?? 0,
+                    (detail['pickupLongitude'] as num?)?.toDouble() ?? 0)),
             _infoRow(Icons.flag, 'Dropoff',
                 detail['dropoffAddress'] as String? ?? ''),
+            _infoRow(Icons.map, 'Dropoff Coord',
+                formatLatLng((detail['dropoffLatitude'] as num?)?.toDouble() ?? 0,
+                    (detail['dropoffLongitude'] as num?)?.toDouble() ?? 0)),
             if (detail['estimatedDistance'] != null)
               _infoRow(Icons.straighten, 'Distance',
                   '${(detail['estimatedDistance'] as num).toStringAsFixed(2)} km'),

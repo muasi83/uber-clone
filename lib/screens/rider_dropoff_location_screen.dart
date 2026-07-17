@@ -12,6 +12,7 @@ import '../services/driver_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../utils/bearing_utils.dart';
+import '../utils/address_utils.dart';
 import '../models/ride_model.dart';
 import '../screens/debug_screen.dart';
 import '../screens/rider_searching_driver_screen.dart';
@@ -240,8 +241,8 @@ class _RiderDropoffLocationScreenState
         if (!_loggedGeocodingErrorOnce) {
           _loggedGeocodingErrorOnce = true;
           if (kDebugMode) {
-            debugPrint(
-              '⚠️ Reverse geocoding failed once (dropoff). Using Lat/Lng fallback. Error: $e',
+              debugPrint(
+                '⚠️ Reverse geocoding failed once (dropoff). Using Lat/Lng fallback. Error: $e',
             );
           }
         }
@@ -893,12 +894,24 @@ class _RiderDropoffLocationScreenState
                         ),
                         AppSpacing.hGapMd,
                         Expanded(
-                          child: Text(
-                            widget.pickupAddress,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.pickupAddress,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 12),
+                              ),
+                              Text(
+                                formatLatLng(
+                                    widget.pickupLat, widget.pickupLng),
+                                style: const TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.textTertiary),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -922,14 +935,29 @@ class _RiderDropoffLocationScreenState
                         ),
                         AppSpacing.hGapMd,
                         Expanded(
-                          child: Text(
-                            _dropoffAddress.isEmpty
-                                ? 'Move map to set dropoff'
-                                : _dropoffAddress,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _dropoffAddress.isEmpty
+                                    ? 'Move map to set dropoff'
+                                    : _dropoffAddress,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12),
+                              ),
+                              if (_dropoffLocation != null &&
+                                  _dropoffAddress.isNotEmpty)
+                                Text(
+                                  formatLatLng(_dropoffLocation!.latitude,
+                                      _dropoffLocation!.longitude),
+                                  style: const TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.textTertiary),
+                                ),
+                            ],
                           ),
                         ),
                         if (_isLoadingAddress)
@@ -983,6 +1011,13 @@ class _RiderDropoffLocationScreenState
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13)),
+                              Text(
+                                formatLatLng(
+                                    widget.pickupLat, widget.pickupLng),
+                                style: const TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.textTertiary),
+                              ),
                             ],
                           ),
                         ),
@@ -1004,15 +1039,25 @@ class _RiderDropoffLocationScreenState
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
                               const SizedBox(height: 2),
-                                                            Text(
+                              Text(
                                 _dropoffAddress.isEmpty
                                     ? 'Dropoff location'
                                     : _dropoffAddress,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 13),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13),
                               ),
+                              if (_dropoffLocation != null &&
+                                  _dropoffAddress.isNotEmpty)
+                                Text(
+                                  formatLatLng(_dropoffLocation!.latitude,
+                                      _dropoffLocation!.longitude),
+                                  style: const TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.textTertiary),
+                                ),
                             ],
                           ),
 
@@ -1123,10 +1168,19 @@ class _RiderDropoffLocationScreenState
                   const Icon(Icons.trip_origin, color: AppColors.pickupMarker, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(widget.pickupAddress,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.pickupAddress,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text(
+                          formatLatLng(widget.pickupLat, widget.pickupLng),
+                          style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -1149,13 +1203,23 @@ class _RiderDropoffLocationScreenState
                   const Icon(Icons.location_on, color: AppColors.dropoffMarker, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      _dropoffAddress.isEmpty
-                          ? 'Dropoff location'
-                          : _dropoffAddress,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _dropoffAddress.isEmpty
+                              ? 'Dropoff location'
+                              : _dropoffAddress,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        if (_dropoffLocation != null && _dropoffAddress.isNotEmpty)
+                          Text(
+                            formatLatLng(_dropoffLocation!.latitude, _dropoffLocation!.longitude),
+                            style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                          ),
+                      ],
                     ),
                   ),
                 ],

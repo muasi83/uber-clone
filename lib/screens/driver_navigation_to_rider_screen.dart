@@ -20,6 +20,7 @@ import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../utils/bearing_utils.dart';
+import '../utils/address_utils.dart';
 import '../services/recorded_screen_mixin.dart';
 
 class DriverNavigationToRiderScreen extends StatefulWidget {
@@ -625,6 +626,12 @@ class _DriverNavigationToRiderScreenState
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              formatLatLng(widget.pickupLat, widget.pickupLng),
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  color: AppColors.textTertiary),
                             ),
                           ],
                         ),

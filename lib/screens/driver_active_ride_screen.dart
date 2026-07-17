@@ -15,12 +15,12 @@ import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
-import '../widgets/cancel_ride_dialog.dart';
 import '../widgets/received_payment_dialog.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../utils/bearing_utils.dart';
+import '../utils/address_utils.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../services/event_recorder_service.dart';
 
@@ -430,6 +430,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
   void _startPaymentPolling() {
     _paymentPollTimer = Timer.periodic(const Duration(seconds: 15), (_) async {
       if (!mounted || !_awaitingPayment) {
+        addDebugMessage('Payment poll cancelled. mounted=$mounted awaiting=$_awaitingPayment');
         _paymentPollTimer?.cancel();
         return;
       }
@@ -474,7 +475,10 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
 
       final token = StorageService.getToken();
       if (token != null) {
-        await RideService.completeRide(widget.rideId, token);
+        final ride = await RideService.completeRide(widget.rideId, token);
+        if (ride != null && ride.paymentMethod != null) {
+          _paymentMethod = ride.paymentMethod!;
+        }
       }
 
       _stopLocationStream();
@@ -592,6 +596,9 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
 
   @override
   Widget build(BuildContext context) {
+    if (_rideStarted && _awaitingPayment) {
+      addDebugMessage('Payment UI: method=$_paymentMethod awaiting=$_awaitingPayment');
+    }
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -697,6 +704,13 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              formatLatLng(
+                                  widget.dropoffLat, widget.dropoffLng),
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  color: AppColors.textTertiary),
                             ),
                           ],
                         ),
@@ -829,13 +843,6 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  PremiumButton(
-                    label: 'Cancel Ride',
-                    onPressed: _showCancelRideDialog,
-                    variant: ButtonVariant.danger,
-                    icon: Icons.close,
-                  ),
                 ],
               ),
             ),
@@ -847,41 +854,6 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
 
   Future<void> _loadMapStyle() async {
     _mapStyle = await MapStyleLoader.load();
-  }
-
-  Future<void> _showCancelRideDialog() async {
-    final result = await showCancelRideDialog(context);
-    if (result != null && result.confirmed && mounted) {
-      final reason = result.reason;
-      try {
-        final token = StorageService.getToken();
-        if (token == null) return;
-        await RideService.cancelRide(widget.rideId, token, reason: reason);
-        recordEvent(
-          eventName: 'DRIVER_CANCELLED_RIDE',
-          category: 'FRONTEND',
-          summary: 'Driver cancelled the ride',
-        );
-        ChatScreen.clearAllCache();
-        if (mounted) {
-        showRecordedSnackBar(
-          context: context,
-          message: 'Ride cancelled',
-          type: 'success',
-        );
-          Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
-        }
-      } catch (e) {
-        addDebugMessage('❌ Error cancelling ride: $e');
-        if (mounted) {
-          showRecordedSnackBar(
-            context: context,
-            message: 'Error: $e',
-            type: 'error',
-          );
-        }
-      }
-    }
   }
 
   Future<void> _openGoogleMapsToDestination() async {

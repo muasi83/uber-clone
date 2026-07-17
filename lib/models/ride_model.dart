@@ -27,6 +27,9 @@ class Ride {
   final String? cancellationReason;
   final double? searchRadiusKm;
   final String? selectedRideType;
+  final String? paymentMethod;
+  final double? driverLatitude;
+  final double? driverLongitude;
 
   Ride({
     this.id,
@@ -54,6 +57,9 @@ class Ride {
     this.cancellationReason,
     this.searchRadiusKm,
     this.selectedRideType,
+    this.paymentMethod,
+    this.driverLatitude,
+    this.driverLongitude,
   });
 
   factory Ride.fromJson(Map<String, dynamic> json) {
@@ -90,6 +96,12 @@ class Ride {
         driverAverageRating: json['driver'] is Map<String, dynamic>
             ? (json['driver']['averageRating'] as num?)?.toDouble()
             : null,
+        driverLatitude: json['driver'] is Map<String, dynamic>
+            ? (json['driver']['currentLatitude'] as num?)?.toDouble()
+            : null,
+        driverLongitude: json['driver'] is Map<String, dynamic>
+            ? (json['driver']['currentLongitude'] as num?)?.toDouble()
+            : null,
         pickupLatitude: toDouble(json['pickupLatitude']) ?? 0.0,
         pickupLongitude: toDouble(json['pickupLongitude']) ?? 0.0,
         pickupAddress: json['pickupAddress'] as String? ?? 'Unknown',
@@ -125,6 +137,7 @@ class Ride {
             ? (json['searchRadiusKm'] as num).toDouble()
             : null,
         selectedRideType: json['selectedRideType'] as String?,
+        paymentMethod: json['paymentMethod'] as String?,
       );
     } catch (e) {
       print('❌ Error parsing Ride: $e');
@@ -159,6 +172,9 @@ class Ride {
     'cancellationReason': cancellationReason,
     'searchRadiusKm': searchRadiusKm,
     'selectedRideType': selectedRideType,
+    'paymentMethod': paymentMethod,
+    'driverLatitude': driverLatitude,
+    'driverLongitude': driverLongitude,
   };
 
 }

@@ -17,6 +17,7 @@ import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/marker_factory.dart';
+import '../utils/address_utils.dart';
 
 class RiderPickupLocationScreen extends StatefulWidget {
   final double initialLat;
@@ -485,19 +486,33 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
                         ),
                         AppSpacing.hGapMd,
                         Expanded(
-                          child: Text(
-                            _pickupAddress.isEmpty
-                                ? 'Tap map to set pickup'
-                                : _pickupAddress,
-                            style: TextStyle(
-                              fontSize: _pickupAddress.isEmpty ? 15 : 18,
-                              fontWeight: FontWeight.bold,
-                              color: _pickupAddress.isEmpty
-                                  ? AppColors.textTertiary
-                                  : AppColors.textPrimary,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _pickupAddress.isEmpty
+                                    ? 'Tap map to set pickup'
+                                    : _pickupAddress,
+                                style: TextStyle(
+                                  fontSize: _pickupAddress.isEmpty ? 15 : 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: _pickupAddress.isEmpty
+                                      ? AppColors.textTertiary
+                                      : AppColors.textPrimary,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (_pickupLocation != null && _pickupAddress.isNotEmpty)
+                                Text(
+                                  formatLatLng(
+                                      _pickupLocation!.latitude,
+                                      _pickupLocation!.longitude),
+                                  style: const TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.textTertiary),
+                                ),
+                            ],
                           ),
                         ),
                       ],

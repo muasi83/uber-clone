@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../models/scheduled_ride.dart';
 import '../services/scheduled_ride_service.dart';
 import '../services/storage_service.dart';
+import '../utils/address_utils.dart';
 
 class ScheduledRideDetailScreen extends StatefulWidget {
   final ScheduledRide ride;
@@ -200,6 +201,10 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
             ),
             const SizedBox(height: 4),
             Text(ride.pickupAddress, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+            Text(
+              formatLatLng(ride.pickupLatitude, ride.pickupLongitude),
+              style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -210,6 +215,10 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
             ),
             const SizedBox(height: 4),
             Text(ride.dropoffAddress, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+            Text(
+              formatLatLng(ride.dropoffLatitude, ride.dropoffLongitude),
+              style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+            ),
           ],
         ),
       ),

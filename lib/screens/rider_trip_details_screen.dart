@@ -9,6 +9,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
+import '../utils/address_utils.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_card.dart';
 
@@ -392,6 +393,10 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
+                              Text(
+                                formatLatLng(widget.pickupLat, widget.pickupLng),
+                                style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                              ),
                             ],
                           ),
                         ),
@@ -453,6 +458,10 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                formatLatLng(widget.dropoffLat, widget.dropoffLng),
+                                style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
                               ),
                             ],
                           ),

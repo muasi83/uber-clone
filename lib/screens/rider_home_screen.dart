@@ -15,6 +15,7 @@ import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/bearing_utils.dart';
+import '../utils/address_utils.dart';
 import '../widgets/bottom_sheet_handle.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
@@ -531,9 +532,20 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
             borderRadius: BorderRadius.circular(16),
           ),
           title: const Text('Active Ride Found'),
-          content: Text(
-            'You have a ride from ${activeRide.pickupAddress} to ${activeRide.dropoffAddress} '
-            'that was never completed. Cancel it to request a new ride?',
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You have a ride from ${activeRide.pickupAddress} to ${activeRide.dropoffAddress} '
+                'that was never completed. Cancel it to request a new ride?',
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '📍 ${formatLatLng(activeRide.pickupLatitude, activeRide.pickupLongitude)} → ${formatLatLng(activeRide.dropoffLatitude, activeRide.dropoffLongitude)}',
+                style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -1282,19 +1294,32 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                   ),
+                  Text(
+                    formatLatLng(ride.pickupLatitude, ride.pickupLongitude),
+                    style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                  ),
                   const SizedBox(height: 1),
                   Row(
                     children: [
                       Icon(Icons.arrow_forward, size: 11, color: AppColors.textTertiary),
                       const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          ride.dropoffAddress.length > 25
-                              ? '${ride.dropoffAddress.substring(0, 25)}…'
-                              : ride.dropoffAddress,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              ride.dropoffAddress.length > 25
+                                  ? '${ride.dropoffAddress.substring(0, 25)}…'
+                                  : ride.dropoffAddress,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                            ),
+                            Text(
+                              formatLatLng(ride.dropoffLatitude, ride.dropoffLongitude),
+                              style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                            ),
+                          ],
                         ),
                       ),
                     ],

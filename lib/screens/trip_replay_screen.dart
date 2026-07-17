@@ -5,6 +5,7 @@ import '../models/trip_events.dart';
 import '../services/trip_behaviour_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/address_utils.dart';
 
 class TripReplayScreen extends StatefulWidget {
   final int rideId;
@@ -473,7 +474,11 @@ class TripReplayScreenState extends State<TripReplayScreen> {
                 if (current.networkInfo != null) _detRow('Network', current.networkInfo!),
                 if (_data != null) _detRow('Trip Type', '${_data!.rideType ?? ""}'),
                 if (_data != null) _detRow('Pickup', _data!.pickupAddress ?? ''),
+                if (_data != null && _data!.pickupLat != null && _data!.pickupLng != null)
+                  _detRow('Pickup Coord', formatLatLng(_data!.pickupLat!, _data!.pickupLng!)),
                 if (_data != null) _detRow('Dropoff', _data!.dropoffAddress ?? ''),
+                if (_data != null && _data!.dropoffLat != null && _data!.dropoffLng != null)
+                  _detRow('Dropoff Coord', formatLatLng(_data!.dropoffLat!, _data!.dropoffLng!)),
               ],
             ),
           ),

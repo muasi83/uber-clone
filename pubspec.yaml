@@ -2,7 +2,7 @@ name: chat_app
 description: "A professional Uber clone with real-time ride matching, location tracking, and WebSocket support."
 publish_to: 'none'
 
-version: 1.0.1+2
+version: 1.0.1+3
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

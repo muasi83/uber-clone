@@ -5,7 +5,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/directions_service.dart';
 import '../services/ride_service.dart';
-import '../services/driver_service.dart';
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../screens/debug_screen.dart';
@@ -17,6 +16,7 @@ import '../utils/marker_utils.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
+import '../utils/address_utils.dart';
 import '../widgets/cancel_ride_dialog.dart';
 import '../widgets/payment_dialog.dart';
 import '../services/recorded_screen_mixin.dart';
@@ -508,25 +508,15 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
       final token = StorageService.getToken();
       if (token == null) return;
       addDebugMessage('Fetching driver location fallback...');
-      final drivers = await DriverService.getNearbyDrivers(
-        latitude: widget.pickupLat,
-        longitude: widget.pickupLng,
-        radiusKm: 5.0,
-      );
-      if (!mounted || _driverLocation != null) return;
       final ride = await RideService.getRideDetails(widget.rideId, token);
-      if (ride == null || ride.driver == null || !mounted || _driverLocation != null) return;
-      final driverId = ride.driver!.id;
-      for (final d in drivers) {
-        if (d.user.id == driverId && d.currentLatitude != null && d.currentLongitude != null) {
-          setState(() {
-            _driverLocation = LatLng(d.currentLatitude!, d.currentLongitude!);
-          });
-          _updateMarkers();
-          _updateRoute();
-          addDebugMessage('✅ Driver location from fallback API');
-          return;
-        }
+      if (ride == null || !mounted || _driverLocation != null) return;
+      if (ride.driverLatitude != null && ride.driverLongitude != null) {
+        setState(() {
+          _driverLocation = LatLng(ride.driverLatitude!, ride.driverLongitude!);
+        });
+        _updateMarkers();
+        _updateRoute();
+        addDebugMessage('✅ Driver location from ride details API');
       }
     } catch (e) {
       addDebugMessage('⚠️ Fallback driver location error: $e');
@@ -872,6 +862,13 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              formatLatLng(
+                                  widget.dropoffLat, widget.dropoffLng),
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  color: AppColors.textTertiary),
                             ),
                           ],
                         ),

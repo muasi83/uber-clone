@@ -23,6 +23,7 @@ import '../screens/trip_history_screen.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
+import '../utils/address_utils.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../services/event_recorder_service.dart';
 import '../models/scheduled_ride.dart';
@@ -902,24 +903,46 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            _currentRide!.pickupAddress,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _currentRide!.pickupAddress,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                formatLatLng(_currentRide!.pickupLatitude,
+                    _currentRide!.pickupLongitude),
+                style: const TextStyle(
+                    fontSize: 10, color: AppColors.textTertiary),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
-          Text(
-            _currentRide!.dropoffAddress,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _currentRide!.dropoffAddress,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                formatLatLng(_currentRide!.dropoffLatitude,
+                    _currentRide!.dropoffLongitude),
+                style: const TextStyle(
+                    fontSize: 10, color: AppColors.textTertiary),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Row(
@@ -1192,9 +1215,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
             ],
           ),
           const SizedBox(height: 8),
-          _buildAddressRow(Icons.circle, AppColors.success, ride.pickupAddress),
+          _buildAddressRow(Icons.circle, AppColors.success, ride.pickupAddress,
+              lat: ride.pickupLatitude, lng: ride.pickupLongitude),
           const SizedBox(height: 4),
-          _buildAddressRow(Icons.location_on, AppColors.error, ride.dropoffAddress),
+          _buildAddressRow(Icons.location_on, AppColors.error, ride.dropoffAddress,
+              lat: ride.dropoffLatitude, lng: ride.dropoffLongitude),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -1281,9 +1306,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
             ],
           ),
           const SizedBox(height: 8),
-          _buildAddressRow(Icons.circle, AppColors.success, ride.pickupAddress),
+          _buildAddressRow(Icons.circle, AppColors.success, ride.pickupAddress,
+              lat: ride.pickupLatitude, lng: ride.pickupLongitude),
           const SizedBox(height: 4),
-          _buildAddressRow(Icons.location_on, AppColors.error, ride.dropoffAddress),
+          _buildAddressRow(Icons.location_on, AppColors.error, ride.dropoffAddress,
+              lat: ride.dropoffLatitude, lng: ride.dropoffLongitude),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -1381,9 +1408,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
             ],
           ),
           const SizedBox(height: 8),
-          _buildAddressRow(Icons.circle, AppColors.success, ride.pickupAddress),
+          _buildAddressRow(Icons.circle, AppColors.success, ride.pickupAddress,
+              lat: ride.pickupLatitude, lng: ride.pickupLongitude),
           const SizedBox(height: 4),
-          _buildAddressRow(Icons.location_on, AppColors.error, ride.dropoffAddress),
+          _buildAddressRow(Icons.location_on, AppColors.error, ride.dropoffAddress,
+              lat: ride.dropoffLatitude, lng: ride.dropoffLongitude),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -1647,17 +1676,28 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
     }
   }
 
-  Widget _buildAddressRow(IconData icon, Color color, String address) {
+  Widget _buildAddressRow(IconData icon, Color color, String address,
+      {double? lat, double? lng}) {
     return Row(
       children: [
         Icon(icon, size: 12, color: color),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            address,
-            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                address,
+                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (lat != null && lng != null)
+                Text(
+                  formatLatLng(lat, lng),
+                  style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                ),
+            ],
           ),
         ),
       ],

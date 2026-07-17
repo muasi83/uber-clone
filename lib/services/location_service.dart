@@ -143,9 +143,16 @@ class LocationService {
         final backendUrl = '$serverUrl/api/routes/geocode?lat=$latitude&lng=$longitude';
         addDebugMessage('📍 Geocoding via backend: $backendUrl');
         try {
+          final token = StorageService.getToken();
+          final headers = <String, String>{
+            'ngrok-skip-browser-warning': 'true',
+          };
+          if (token != null && token.trim().isNotEmpty) {
+            headers['Authorization'] = 'Bearer $token';
+          }
           final backendRes = await http
-              .get(Uri.parse(backendUrl))
-              .timeout(const Duration(seconds: 5));
+              .get(Uri.parse(backendUrl), headers: headers)
+              .timeout(const Duration(seconds: 10));
           if (backendRes.statusCode == 200) {
             final json = jsonDecode(backendRes.body) as Map<String, dynamic>;
             final result = _formatGeocodeResponse(json);

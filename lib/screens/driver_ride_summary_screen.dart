@@ -8,6 +8,7 @@ import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../services/event_recorder_service.dart';
+import '../utils/address_utils.dart';
 
 class DriverRideSummaryScreen extends StatefulWidget {
   final int rideId;
@@ -330,6 +331,11 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
                     color: AppColors.textPrimary,
                   ),
                 ),
+                Text(
+                  formatLatLng(
+                      _ride?.pickupLatitude ?? 0, _ride?.pickupLongitude ?? 0),
+                  style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   dropoff,
@@ -337,6 +343,11 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
                     fontSize: 13,
                     color: AppColors.textSecondary,
                   ),
+                ),
+                Text(
+                  formatLatLng(
+                      _ride?.dropoffLatitude ?? 0, _ride?.dropoffLongitude ?? 0),
+                  style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
                 ),
               ],
             ),
