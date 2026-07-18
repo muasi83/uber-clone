@@ -75,6 +75,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
   StreamSubscription<Map<String, dynamic>>? _driverLocationSub;
   Timer? _driverTimeout;
+  Timer? _routeDebounceTimer;
 
   @override
   void initState() {
@@ -169,7 +170,8 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
               'to(${_driverLocation!.latitude.toStringAsFixed(5)},${_driverLocation!.longitude.toStringAsFixed(5)})'
             );
 
-          _updateRoute();
+          _routeDebounceTimer?.cancel();
+          _routeDebounceTimer = Timer(const Duration(milliseconds: 1500), _updateRoute);
         }
       });
 
@@ -1003,6 +1005,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
     _statusPollTimer?.cancel();
     _paymentPollTimer?.cancel();
     _driverTimeout?.cancel();
+    _routeDebounceTimer?.cancel();
     _rideEventsSub?.cancel();
     _driverLocationSub?.cancel();
     mapController?.dispose();
