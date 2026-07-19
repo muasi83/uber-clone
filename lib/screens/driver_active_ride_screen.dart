@@ -14,7 +14,7 @@ import '../screens/debug_screen.dart';
 import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import '../widgets/premium_button.dart';
+import '../widgets/swipe_button.dart';
 import '../widgets/received_payment_dialog.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
@@ -777,24 +777,25 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                                       ),
                                     ),
                                     const SizedBox(height: 16),
-                                    Row(
+                                    Column(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Expanded(
-                                          child: PremiumButton(
-                                            label: _cashActionInProgress ? 'Processing...' : 'Cash Received',
-                                            icon: Icons.check_circle,
-                                            onPressed: _cashActionInProgress ? null : _onCashReceived,
-                                            variant: ButtonVariant.success,
-                                          ),
+                                        SwipeButton(
+                                          label: 'Cash Received',
+                                          processingLabel: 'Processing...',
+                                          icon: Icons.check_circle,
+                                          onConfirmed: _onCashReceived,
+                                          isDisabled: _cashActionInProgress,
+                                          backgroundColor: AppColors.success,
                                         ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: PremiumButton(
-                                            label: _cashActionInProgress ? 'Processing...' : 'Did Not Pay',
-                                            icon: Icons.cancel,
-                                            onPressed: _cashActionInProgress ? null : _onCashUnpaid,
-                                            variant: ButtonVariant.danger,
-                                          ),
+                                        const SizedBox(height: 12),
+                                        SwipeButton(
+                                          label: 'Did Not Pay',
+                                          processingLabel: 'Processing...',
+                                          icon: Icons.cancel,
+                                          onConfirmed: _onCashUnpaid,
+                                          isDisabled: _cashActionInProgress,
+                                          backgroundColor: AppColors.error,
                                         ),
                                       ],
                                     ),
@@ -814,17 +815,21 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                                     ],
                                   ),
                                 )
-                          : PremiumButton(
-                              label: _isCompleting ? 'Completing...' : 'Complete Ride',
-                              icon: _isCompleting ? Icons.hourglass_empty : Icons.flag,
-                              onPressed: _isCompleting ? null : _completeRide,
-                              variant: ButtonVariant.danger,
+                          : SwipeButton(
+                              key: const ValueKey('complete_ride'),
+                              label: 'Complete Ride',
+                              processingLabel: 'Completing...',
+                              icon: Icons.flag,
+                              onConfirmed: _completeRide,
+                              isDisabled: _isCompleting,
+                              backgroundColor: AppColors.error,
                             )
-                      : PremiumButton(
+                      : SwipeButton(
+                          key: const ValueKey('start_ride'),
                           label: 'Start Ride',
                           icon: Icons.play_arrow,
-                          onPressed: _startRide,
-                          variant: ButtonVariant.success,
+                          onConfirmed: _startRide,
+                          backgroundColor: AppColors.success,
                         ),
                   const SizedBox(height: AppSpacing.md),
                   SizedBox(

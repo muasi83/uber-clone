@@ -217,7 +217,22 @@ class _RideMapScreenState extends State<RideMapScreen> {
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     final distance = R * c;
     
-    double ratePerKm = rideType == 'ECONOMY' ? 0.20 : 0.35;
+    double ratePerKm;
+    switch (rideType) {
+      case 'LUXURY':
+        ratePerKm = 0.50;
+        break;
+      case 'COMFORT':
+        ratePerKm = 0.35;
+        break;
+      case 'WOMEN_DRIVER':
+        ratePerKm = 0.25;
+        break;
+      case 'ECONOMY':
+      default:
+        ratePerKm = 0.20;
+        break;
+    }
     double fare = (distance * ratePerKm * 100).roundToDouble() / 100;
     
     setState(() {
@@ -680,6 +695,10 @@ int _calculateDuration(double distanceKm) {
           children: [
             Expanded(
               child: _rideTypeOption('ECONOMY', '\$0.20/km', Icons.directions_car),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _rideTypeOption('WOMEN_DRIVER', '\$0.25/km', Icons.face),
             ),
             const SizedBox(width: 8),
             Expanded(

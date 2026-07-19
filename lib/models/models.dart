@@ -1,3 +1,5 @@
+enum Gender { male, female, preferNotToSay }
+
 class User {
   final int? id;
   final String? username;
@@ -11,6 +13,7 @@ class User {
   final String? phoneNumber;
   final String? normalizedPhone;
   final bool phoneVerified;
+  final String? gender;
   final DateTime createdAt;
 
   User({
@@ -26,6 +29,7 @@ class User {
     this.phoneNumber,
     this.normalizedPhone,
     this.phoneVerified = false,
+    this.gender,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -48,6 +52,7 @@ factory User.fromJson(Map<String, dynamic> json) => User(
   phoneVerified: json['phoneVerified'] is bool
       ? json['phoneVerified'] as bool
       : (json['phoneVerified'] as int?) == 1,
+  gender: json['gender'] as String?,
   createdAt: json['createdAt'] != null
       ? DateTime.parse(json['createdAt'] as String)
       : DateTime.now(),
@@ -65,6 +70,7 @@ factory User.fromJson(Map<String, dynamic> json) => User(
         'phoneNumber': phoneNumber,
         'normalizedPhone': normalizedPhone,
         'phoneVerified': phoneVerified ? 1 : 0,
+        'gender': gender,
         'createdAt': createdAt.toIso8601String(),
       };
 }

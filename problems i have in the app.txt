@@ -167,3 +167,28 @@ How It Works Now
     → Backend returns ride JSON with driver.currentLatitude/currentLongitude
       → _driverLocation set immediately → marker appears
 No radius guessing, no online-state dependency, no matching loop. If the driver has a location saved in their profile, it's returned and the marker appears.
+
+
+
+1-  Arabic language
+2- driver to see the circle goes from where pick up to the drop off similar to the rider 
+3- driver to see his position and estimated time for the pick up and to be informed how many km away from the rider
+4- custom very high alarm even if the driver is silent or any other stage with vibration 
+5- later if the rider can stay in the map and the search appear like a wave in the same map better to be implement later
+6- add women drivers
+7- add payments
+8- add phone verification all over the world
+9- handle the rating of the driver and rider in the admin,
+10- rate the app in the end 
+11- add referral code for the promotion,
+12- add notification for adim that can be sent to all driver or rider
+13- invoicing by email
+14- if email not verified to be verified later the same for the phone if verfid no need
+15- admin to be able to see also the riders not only drivers
+16- add pages in the web to share the trip for anybody have the link.
+17- add calling between the rider and driver
+18- adding call button.
+19- adding share the trip by whats app view if possible.
+20- add searching in the biggening of the app
+21- adding block to drivers, and riders from admin
+22- adding verified control to admin for the drivers,

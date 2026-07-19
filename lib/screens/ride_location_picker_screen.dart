@@ -234,7 +234,22 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
       );
       
       // Calculate fare based on distance
-      double ratePerKm = _rideType == 'ECONOMY' ? 0.20 : 0.35;
+      double ratePerKm;
+      switch (_rideType) {
+        case 'LUXURY':
+          ratePerKm = 0.50;
+          break;
+        case 'COMFORT':
+          ratePerKm = 0.35;
+          break;
+        case 'WOMEN_DRIVER':
+          ratePerKm = 0.25;
+          break;
+        case 'ECONOMY':
+        default:
+          ratePerKm = 0.20;
+          break;
+      }
       double baseFare = 2.0;
       double fare = baseFare + (distance * ratePerKm);
       fare = (fare * 100).roundToDouble() / 100;
@@ -562,6 +577,10 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                         ),
                         const SizedBox(width: 8),
                         Expanded(
+                          child: _rideTypeChip('WOMEN_DRIVER', '\$0.25/km'),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
                           child: _rideTypeChip('LUXURY', '\$0.35/km'),
                         ),
                       ],
@@ -673,7 +692,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              type == 'ECONOMY' ? Icons.directions_car : Icons.diamond_outlined,
+              type == 'WOMEN_DRIVER' ? Icons.face : (type == 'ECONOMY' ? Icons.directions_car : Icons.diamond_outlined),
               size: 16,
               color: selected ? AppColors.primaryLight : AppColors.textSecondary,
             ),

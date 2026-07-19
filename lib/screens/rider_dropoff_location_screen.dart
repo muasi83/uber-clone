@@ -583,9 +583,42 @@ class _RiderDropoffLocationScreenState
   }
 
   double _calculateFare(String rideType) {
-    const baseFare = 2.0;
-    final ratePerKm = rideType == 'ECONOMY' ? 0.20 : 0.35;
+    double baseFare;
+    double ratePerKm;
+    switch (rideType) {
+      case 'LUXURY':
+        baseFare = 6.0;
+        ratePerKm = 0.50;
+        break;
+      case 'COMFORT':
+        baseFare = 4.0;
+        ratePerKm = 0.35;
+        break;
+      case 'WOMEN_DRIVER':
+        baseFare = 3.0;
+        ratePerKm = 0.25;
+        break;
+      case 'ECONOMY':
+      default:
+        baseFare = 2.0;
+        ratePerKm = 0.20;
+        break;
+    }
     return baseFare + ((_routeDistanceKm ?? 0.0) * ratePerKm);
+  }
+
+  double _getRatePerKm(String rideType) {
+    switch (rideType) {
+      case 'LUXURY':
+        return 0.50;
+      case 'COMFORT':
+        return 0.35;
+      case 'WOMEN_DRIVER':
+        return 0.25;
+      case 'ECONOMY':
+      default:
+        return 0.20;
+    }
   }
 
   void _updateRideType(String rideType) {
@@ -1249,6 +1282,12 @@ class _RiderDropoffLocationScreenState
                 description: 'Premium vehicles, top drivers', rate: '\$0.35/km',
                 isSelected: _selectedRideType == 'LUXURY',
               ),
+              const SizedBox(height: 12),
+              _buildRideTypeCard(
+                type: 'WOMEN_DRIVER', icon: Icons.face,
+                description: 'Ride with a female driver', rate: '\$0.25/km',
+                isSelected: _selectedRideType == 'WOMEN_DRIVER',
+              ),
               const SizedBox(height: 16),
 
               // Payment method
@@ -1296,7 +1335,7 @@ class _RiderDropoffLocationScreenState
                     const SizedBox(height: 12),
                     _priceRow(
                       'Distance (${_routeDistanceKm!.toStringAsFixed(1)} km)',
-                      '\$${(_routeDistanceKm! * (_selectedRideType == 'ECONOMY' ? 0.20 : 0.35)).toStringAsFixed(2)}',
+                      '\$${(_routeDistanceKm! * _getRatePerKm(_selectedRideType)).toStringAsFixed(2)}',
                     ),
                     const Divider(height: 24),
                     _priceRow('Total', '\$${_selectedFare.toStringAsFixed(2)}', isTotal: true),

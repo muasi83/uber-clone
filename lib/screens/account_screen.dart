@@ -243,11 +243,18 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                   ),
                   if (email.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      email,
-                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                    ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Rider',
+                        style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                      ),
+                      if (_user?.gender != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          _genderLabel(_user!.gender!),
+                          style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                        ),
+                      ],
                   ],
                   const SizedBox(height: 4),
                   Row(
@@ -320,5 +327,18 @@ class _AccountScreenState extends State<AccountScreen> {
         onTap: onTap,
       ),
     );
+  }
+
+  String _genderLabel(String gender) {
+    switch (gender) {
+      case 'MALE':
+        return 'Male';
+      case 'FEMALE':
+        return 'Female';
+      case 'PREFER_NOT_TO_SAY':
+        return 'Prefer not to say';
+      default:
+        return '';
+    }
   }
 }

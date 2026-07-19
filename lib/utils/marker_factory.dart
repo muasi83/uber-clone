@@ -18,6 +18,8 @@ class MarkerFactory {
   static Future<BitmapDescriptor> get userLocation => _userMemo();
   static Future<BitmapDescriptor> get stickPickup => _stickPickupMemo();
   static Future<BitmapDescriptor> get stickDropoff => _stickDropoffMemo();
+  static Future<BitmapDescriptor> get stickPickupLabeled => _stickPickupLabeledMemo();
+  static Future<BitmapDescriptor> get stickDropoffLabeled => _stickDropoffLabeledMemo();
 
   // ── Memoized descriptors ─────────────────────────────────────────
   static Future<BitmapDescriptor>? _pickupCached;
@@ -47,6 +49,14 @@ class MarkerFactory {
   static Future<BitmapDescriptor>? _stickDropoffCached;
   static Future<BitmapDescriptor> _stickDropoffMemo() =>
       _stickDropoffCached ??= _createStickPin(AppColors.dropoffMarker);
+
+  static Future<BitmapDescriptor>? _stickPickupLabeledCached;
+  static Future<BitmapDescriptor> _stickPickupLabeledMemo() =>
+      _stickPickupLabeledCached ??= _createTextStickPin(AppColors.pickupMarker, 'FROM');
+
+  static Future<BitmapDescriptor>? _stickDropoffLabeledCached;
+  static Future<BitmapDescriptor> _stickDropoffLabeledMemo() =>
+      _stickDropoffLabeledCached ??= _createTextStickPin(AppColors.dropoffMarker, 'TO');
 
   // ── Pin marker (teardrop shape) ───────────────────────────────────
   static Future<BitmapDescriptor> _createPin(Color color) async {
@@ -180,6 +190,66 @@ class MarkerFactory {
       ..color = Colors.white
       ..style = PaintingStyle.fill;
     canvas.drawCircle(const Offset(10, 18), 2, centerPaint);
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(w, h);
+    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+
+    return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
+  }
+
+  // ── Text stick pin (stick pin with text label) ────────────────────
+  static Future<BitmapDescriptor> _createTextStickPin(Color color, String text) async {
+    const int w = 80;
+    const int h = 55;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final stickPaint = Paint()
+      ..color = AppColors.textPrimary
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    final shadowPaint = Paint()
+      ..color = const Color(0x40000000);
+
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(68, 51), width: 8, height: 4),
+      shadowPaint,
+    );
+
+    canvas.drawLine(
+      const Offset(68, 44),
+      const Offset(68, 16),
+      stickPaint,
+    );
+
+    canvas.drawCircle(const Offset(68, 14), 5, shadowPaint);
+
+    final headPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(const Offset(68, 13), 5, headPaint);
+
+    final centerPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(const Offset(68, 13), 2, centerPaint);
+
+    textPainter.paint(canvas, const Offset(4, 4));
 
     final picture = recorder.endRecording();
     final img = await picture.toImage(w, h);

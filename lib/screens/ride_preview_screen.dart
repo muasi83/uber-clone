@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/directions_service.dart';
+import '../services/location_service.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
-import '../utils/marker_utils.dart';
+import '../utils/marker_factory.dart';
 import '../utils/map_style_loader.dart';
+import '../widgets/swipe_button.dart';
 
 class RidePreviewScreen extends StatefulWidget {
   final double pickupLat;
@@ -43,17 +45,27 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
-  BitmapDescriptor _yellowPinMarker = BitmapDescriptor.defaultMarker;
   String? _mapStyle;
   Timer? _autoDismissTimer;
+
+  BitmapDescriptor? _pickupMarker;
+  BitmapDescriptor? _dropoffMarker;
+  BitmapDescriptor? _driverMarker;
+  BitmapDescriptor _dotMarker = BitmapDescriptor.defaultMarker;
+  Timer? _dotTimer;
+  double _dotProgress = 0.0;
+  List<LatLng> _currentPolylinePoints = [];
+  LatLng? _driverLocation;
+  int? _etaMinutes;
+  bool _pickupEtaLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadMapStyle();
     addDebugMessage('RidePreviewScreen opened');
-    _initYellowPin().then((_) => _updateMarkerIcons());
-    _addMarkers();
+    _loadAllMarkers();
+    _loadDriverLocationAndEta();
     if (!widget.driverMode) {
       _autoDismissTimer = Timer(const Duration(seconds: 10), () {
         if (mounted) Navigator.of(context).pop();
@@ -70,58 +82,85 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
     );
     await Future.delayed(const Duration(milliseconds: 300));
     await _loadRoute();
-    _fitBothPoints();
-  }
-
-  Future<void> _initYellowPin() async {
-    _yellowPinMarker = await getYellowPinMarker();
+    _fitAllPoints();
   }
 
   Future<void> _loadMapStyle() async {
     _mapStyle = await MapStyleLoader.load();
   }
 
-  void _addMarkers() {
-    _markers.add(
-      Marker(
-        markerId: const MarkerId('pickup'),
-        position: LatLng(widget.pickupLat, widget.pickupLng),
-        icon: _yellowPinMarker,
-        infoWindow: InfoWindow(title: 'Pickup: ${widget.pickupAddress}'),
-      ),
-    );
-    _markers.add(
-      Marker(
-        markerId: const MarkerId('dropoff'),
-        position: LatLng(widget.dropoffLat, widget.dropoffLng),
-        icon: _yellowPinMarker,
-        infoWindow: InfoWindow(title: 'Dropoff: ${widget.dropoffAddress}'),
-      ),
-    );
+  Future<void> _loadAllMarkers() async {
+    try {
+      _pickupMarker = await MarkerFactory.stickPickupLabeled;
+      _dropoffMarker = await MarkerFactory.stickDropoffLabeled;
+      _dotMarker = await MarkerFactory.userLocation;
+      _driverMarker = await MarkerFactory.driver;
+      if (mounted) {
+        _addMarkers();
+        _fitAllPoints();
+      }
+    } catch (e) {
+      addDebugMessage('Marker load error: $e');
+    }
   }
 
-  void _updateMarkerIcons() {
+  Future<void> _loadDriverLocationAndEta() async {
+    if (!widget.driverMode) return;
+    try {
+      final location = await LocationService.getCurrentLocation();
+      if (location != null && mounted) {
+        _driverLocation = LatLng(location.latitude, location.longitude);
+        final route = await DirectionsService.getDirections(
+          origin: _driverLocation!,
+          destination: LatLng(widget.pickupLat, widget.pickupLng),
+        );
+        if (route != null && route.isSuccess && route.durationMinutes != null) {
+          _etaMinutes = route.durationMinutes;
+        }
+        _pickupEtaLoading = false;
+        if (mounted) {
+          _addMarkers();
+          _fitAllPoints();
+          setState(() {});
+        }
+      } else {
+        if (mounted) {
+          _pickupEtaLoading = false;
+          setState(() {});
+        }
+      }
+    } catch (e) {
+      addDebugMessage('Driver location/ETA error: $e');
+      _pickupEtaLoading = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  void _addMarkers() {
+    if (_pickupMarker == null || _dropoffMarker == null) return;
     if (!mounted) return;
     setState(() {
-      _markers.removeWhere(
-        (m) => m.markerId == const MarkerId('pickup') || m.markerId == const MarkerId('dropoff'),
-      );
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('pickup'),
-          position: LatLng(widget.pickupLat, widget.pickupLng),
-          icon: _yellowPinMarker,
-          infoWindow: InfoWindow(title: 'Pickup: ${widget.pickupAddress}'),
-        ),
-      );
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('dropoff'),
-          position: LatLng(widget.dropoffLat, widget.dropoffLng),
-          icon: _yellowPinMarker,
-          infoWindow: InfoWindow(title: 'Dropoff: ${widget.dropoffAddress}'),
-        ),
-      );
+      _markers.clear();
+      _markers.add(Marker(
+        markerId: const MarkerId('pickup'),
+        position: LatLng(widget.pickupLat, widget.pickupLng),
+        icon: _pickupMarker!,
+        infoWindow: InfoWindow(title: 'Pickup: ${widget.pickupAddress}'),
+      ));
+      _markers.add(Marker(
+        markerId: const MarkerId('dropoff'),
+        position: LatLng(widget.dropoffLat, widget.dropoffLng),
+        icon: _dropoffMarker!,
+        infoWindow: InfoWindow(title: 'Dropoff: ${widget.dropoffAddress}'),
+      ));
+      if (_driverLocation != null && _driverMarker != null) {
+        _markers.add(Marker(
+          markerId: const MarkerId('driver'),
+          position: _driverLocation!,
+          icon: _driverMarker!,
+          infoWindow: const InfoWindow(title: 'You are here'),
+        ));
+      }
     });
   }
 
@@ -133,6 +172,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
       );
 
       if (route != null && route.isSuccess && route.polylinePoints != null) {
+        _currentPolylinePoints = route.polylinePoints!;
         setState(() {
           _polylines.add(
             Polyline(
@@ -144,24 +184,78 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
             ),
           );
         });
+        _startMovingDotAnimation();
       }
     } catch (e) {
       addDebugMessage('Route load error: $e');
     }
   }
 
-  void _fitBothPoints() {
-    final bounds = LatLngBounds(
-      southwest: LatLng(
-        widget.pickupLat < widget.dropoffLat ? widget.pickupLat - 0.01 : widget.dropoffLat - 0.01,
-        widget.pickupLng < widget.dropoffLng ? widget.pickupLng - 0.01 : widget.dropoffLng - 0.01,
-      ),
-      northeast: LatLng(
-        widget.pickupLat > widget.dropoffLat ? widget.pickupLat + 0.01 : widget.dropoffLat + 0.01,
-        widget.pickupLng > widget.dropoffLng ? widget.pickupLng + 0.01 : widget.dropoffLng + 0.01,
-      ),
+  // ── Moving dot animation (travels along route polyline) ──────────
+  LatLng _interpolateAlongRoute(double progress) {
+    if (_currentPolylinePoints.isEmpty) return LatLng(widget.pickupLat, widget.pickupLng);
+    if (_currentPolylinePoints.length == 1) return _currentPolylinePoints.first;
+    if (progress >= 1.0) return _currentPolylinePoints.last;
+    if (progress <= 0.0) return _currentPolylinePoints.first;
+
+    final totalSegments = _currentPolylinePoints.length - 1;
+    final rawIndex = progress * totalSegments;
+    final segIndex = rawIndex.floor();
+    final segProgress = rawIndex - segIndex;
+
+    final from = _currentPolylinePoints[segIndex];
+    final to = _currentPolylinePoints[segIndex + 1];
+    return LatLng(
+      from.latitude + (to.latitude - from.latitude) * segProgress,
+      from.longitude + (to.longitude - from.longitude) * segProgress,
     );
-    _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 80));
+  }
+
+  void _startMovingDotAnimation() {
+    _dotTimer?.cancel();
+    _dotProgress = 0.0;
+    _dotTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      if (!mounted) return;
+      setState(() {
+        _dotProgress += 0.008;
+        if (_dotProgress >= 1.2) {
+          _dotProgress = 0.0;
+        }
+      });
+    });
+  }
+
+  void _stopMovingDotAnimation() {
+    _dotTimer?.cancel();
+    _dotTimer = null;
+    _dotProgress = 0.0;
+  }
+
+  void _fitAllPoints() {
+    final points = <LatLng>[
+      LatLng(widget.pickupLat, widget.pickupLng),
+      LatLng(widget.dropoffLat, widget.dropoffLng),
+    ];
+    if (_driverLocation != null) points.add(_driverLocation!);
+
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (final p in points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(LatLngBounds(
+        southwest: LatLng(minLat - 0.01, minLng - 0.01),
+        northeast: LatLng(maxLat + 0.01, maxLng + 0.01),
+      ), 80),
+    );
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -178,6 +272,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
   @override
   void dispose() {
     _autoDismissTimer?.cancel();
+    _stopMovingDotAnimation();
     _mapController?.dispose();
     super.dispose();
   }
@@ -215,7 +310,17 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
               target: LatLng(widget.pickupLat, widget.pickupLng),
               zoom: 13,
             ),
-            markers: _markers,
+            markers: {
+              ..._markers,
+              if (widget.driverMode && _dotProgress <= 1.0 && _currentPolylinePoints.length > 1)
+                Marker(
+                  markerId: const MarkerId('moving_dot'),
+                  position: _interpolateAlongRoute(_dotProgress),
+                  icon: _dotMarker,
+                  anchor: const Offset(0.5, 0.5),
+                  zIndexInt: 10,
+                ),
+            },
             polylines: _polylines,
             myLocationEnabled: false,
             zoomControlsEnabled: false,
@@ -260,6 +365,47 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                       ),
                     ],
                   ),
+                  if (widget.driverMode && _etaMinutes != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, top: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.timer, size: 14, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Pickup in $_etaMinutes min',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (widget.driverMode && _pickupEtaLoading)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 16, top: 4),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 12, height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Calculating ETA...',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -318,20 +464,13 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           flex: 2,
-                          child: ElevatedButton(
-                            onPressed: () {
+                          child: SwipeButton(
+                            label: 'ACCEPT RIDE',
+                            icon: Icons.arrow_forward_ios,
+                            onConfirmed: () {
                               widget.onAccept?.call();
                               Navigator.of(context).pop();
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: AppColors.textPrimary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: const Text('ACCEPT RIDE', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],

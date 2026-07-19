@@ -12,6 +12,7 @@ class StorageService {
   static const String _userIdKey = 'userId';
   static const String _usernameKey = 'username';
   static const String _roleKey = 'role';
+  static const String _genderKey = 'gender';
   
   static const String _defaultServerUrl = 'https://catalog-staring-hamstring.ngrok-free.dev';
 
@@ -24,6 +25,7 @@ class StorageService {
   static int? _cachedUserId;
   static String? _cachedUsername;
   static String? _cachedRole;
+  static String? _cachedGender;
 
   static const FlutterSecureStorage _secure = FlutterSecureStorage();
 
@@ -38,6 +40,7 @@ class StorageService {
       _cachedUserId = _parseInt(await _secure.read(key: _userIdKey));
       _cachedUsername = await _secure.read(key: _usernameKey);
       _cachedRole = await _secure.read(key: _roleKey);
+      _cachedGender = await _secure.read(key: _genderKey);
       
       // Migration: if secure storage is empty but SharedPreferences has legacy data, copy it over
       if (_cachedToken == null) {
@@ -250,6 +253,33 @@ class StorageService {
     }
   }
 
+  static Future<void> saveGender(String gender) async {
+    try {
+      if (!_initialized) {
+        _warnOnce();
+        return;
+      }
+      await _secure.write(key: _genderKey, value: gender);
+      _cachedGender = gender;
+      addDebugMessage('✅ Gender saved: $gender');
+    } catch (e) {
+      addDebugMessage('❌ Error saving gender: $e');
+    }
+  }
+
+  static String? getGender() {
+    try {
+      if (!_initialized) {
+        _warnOnce();
+        return null;
+      }
+      return _cachedGender;
+    } catch (e) {
+      addDebugMessage('❌ Error getting gender: $e');
+      return null;
+    }
+  }
+
   static Future<void> clearAllData() async {
     try {
       if (!_initialized) {
@@ -263,6 +293,7 @@ class StorageService {
       _cachedUserId = null;
       _cachedUsername = null;
       _cachedRole = null;
+      _cachedGender = null;
       await setServerUrl(savedUrl);
       addDebugMessage('✅ All data cleared (server URL preserved)');
     } catch (e) {

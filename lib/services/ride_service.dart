@@ -308,6 +308,31 @@ class RideService {
     }
   }
 
+  static Future<Ride?> changeRideType(int rideId, String newRideType, String token) async {
+    try {
+      addDebugMessage('🔄 Changing ride type to $newRideType...');
+
+      final url = '${StorageService.getServerUrl()}/api/rides/$rideId/change-ride-type';
+
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers(token: token),
+            body: jsonEncode({'rideType': newRideType}),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        addDebugMessage('✅ Ride type changed to $newRideType');
+        return Ride.fromJson(jsonDecode(response.body));
+      }
+      return null;
+    } catch (e) {
+      addDebugMessage('❌ Error changing ride type: $e');
+      return null;
+    }
+  }
+
   static Future<Ride?> continueSearch(int rideId, String token) async {
     try {
       addDebugMessage('🔄 Continuing search with expanded radius...');

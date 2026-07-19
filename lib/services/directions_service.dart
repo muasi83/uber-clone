@@ -148,6 +148,10 @@ class DirectionsService {
         base = 4.0;
         rate = 0.35;
         break;
+      case 'WOMEN_DRIVER':
+        base = 3.0;
+        rate = 0.25;
+        break;
       case 'ECONOMY':
       default:
         base = 2.0;

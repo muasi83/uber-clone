@@ -29,6 +29,7 @@ class _AuthScreenState extends State<AuthScreen>
   bool _isLogin = true;
   bool _isLoading = false;
   String _selectedRole = 'RIDER';
+  String _selectedGender = 'PREFER_NOT_TO_SAY';
   String _countryCode = '+966';
 
   final TextEditingController _emailController = TextEditingController();
@@ -108,6 +109,7 @@ class _AuthScreenState extends State<AuthScreen>
               'countryCode': _countryCode,
               'phoneNumber': _phoneController.text,
               'role': _selectedRole,
+              'gender': _selectedGender,
             }),
           )
           .timeout(const Duration(seconds: 15));
@@ -119,6 +121,7 @@ class _AuthScreenState extends State<AuthScreen>
         await StorageService.saveUserId(data['userId'] ?? 0);
         await StorageService.saveUsername(data['username'] ?? '');
         await StorageService.saveRole(data['role'] ?? 'RIDER');
+        await StorageService.saveGender(data['gender'] ?? 'PREFER_NOT_TO_SAY');
         await FirebaseService.sendTokenToServer();
 
         recordEvent(
@@ -195,6 +198,7 @@ class _AuthScreenState extends State<AuthScreen>
         await StorageService.saveUserId(data['userId'] ?? 0);
         await StorageService.saveUsername(data['username'] ?? '');
         await StorageService.saveRole(data['role'] ?? 'RIDER');
+        await StorageService.saveGender(data['gender'] ?? 'PREFER_NOT_TO_SAY');
         await FirebaseService.sendTokenToServer();
 
         recordEvent(
@@ -650,6 +654,31 @@ class _AuthScreenState extends State<AuthScreen>
           prefixIcon: Icons.lock_outlined,
           isPassword: true,
         ),
+        AppSpacing.gapLg,
+        const Text(
+          'Gender',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        AppSpacing.gapSm,
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'MALE', label: Text('Male')),
+            ButtonSegment(value: 'FEMALE', label: Text('Female')),
+            ButtonSegment(value: 'PREFER_NOT_TO_SAY', label: Text('Prefer not to say')),
+          ],
+          selected: {_selectedGender},
+          onSelectionChanged: (value) {
+            setState(() => _selectedGender = value.first);
+          },
+          style: SegmentedButton.styleFrom(
+            selectedBackgroundColor: AppColors.primary,
+            selectedForegroundColor: AppColors.textOnPrimary,
+          ),
+        ),
         AppSpacing.gapXl,
         const Text(
           'I want to',
@@ -694,6 +723,7 @@ class _AuthScreenState extends State<AuthScreen>
                     _phoneController.text = '512345678';
                     setState(() {
                       _selectedRole = 'RIDER';
+                      _selectedGender = 'PREFER_NOT_TO_SAY';
                       _countryCode = '+966';
                     });
                   },
@@ -720,6 +750,7 @@ class _AuthScreenState extends State<AuthScreen>
                     _phoneController.text = '512345679';
                     setState(() {
                       _selectedRole = 'DRIVER';
+                      _selectedGender = 'PREFER_NOT_TO_SAY';
                       _countryCode = '+966';
                     });
                   },

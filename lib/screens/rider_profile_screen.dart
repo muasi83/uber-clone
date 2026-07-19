@@ -23,6 +23,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
+  String _selectedGender = 'PREFER_NOT_TO_SAY';
   bool _isSaving = false;
 
   @override
@@ -31,6 +32,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
     _nameController = TextEditingController(text: widget.user?.fullName ?? '');
     _emailController = TextEditingController(text: widget.user?.email ?? '');
     _phoneController = TextEditingController(text: widget.user?.phoneNumber ?? '');
+    _selectedGender = widget.user?.gender ?? StorageService.getGender() ?? 'PREFER_NOT_TO_SAY';
   }
 
   @override
@@ -47,7 +49,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
       final userId = widget.user?.id ?? StorageService.getUserId();
       if (userId == null) return;
 
-      await http.put(
+      final response = await http.put(
         Uri.parse('${StorageService.getServerUrl()}/api/users/$userId'),
         headers: {
           'Authorization': 'Bearer ${widget.token}',
@@ -57,8 +59,19 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
           'fullName': _nameController.text,
           'email': _emailController.text,
           'phoneNumber': _phoneController.text,
+          'gender': _selectedGender,
         }),
       );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (data.containsKey('token')) {
+          await StorageService.saveToken(data['token'] as String);
+        }
+        if (data.containsKey('gender')) {
+          await StorageService.saveGender(data['gender'] as String);
+        }
+      }
     } catch (_) {}
 
     if (mounted) {
@@ -181,6 +194,31 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
               style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
             ),
           ],
+          const SizedBox(height: 24),
+          const Text(
+            'Gender',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'MALE', label: Text('Male')),
+              ButtonSegment(value: 'FEMALE', label: Text('Female')),
+              ButtonSegment(value: 'PREFER_NOT_TO_SAY', label: Text('Prefer not to say')),
+            ],
+            selected: {_selectedGender},
+            onSelectionChanged: (value) {
+              setState(() => _selectedGender = value.first);
+            },
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: AppColors.primary,
+              selectedForegroundColor: AppColors.textOnPrimary,
+            ),
+          ),
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,

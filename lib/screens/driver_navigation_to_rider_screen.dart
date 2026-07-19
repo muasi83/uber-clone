@@ -15,6 +15,7 @@ import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
+import '../widgets/swipe_button.dart';
 import '../widgets/cancel_ride_dialog.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
@@ -665,11 +666,12 @@ class _DriverNavigationToRiderScreenState
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xxl),
-                  PremiumButton(
-                    label: _isArriving ? 'Notifying...' : "I've Arrived",
-                    icon: _isArriving ? Icons.hourglass_empty : Icons.check_circle,
-                    onPressed: _isArriving ? null : _notifyArrival,
-                    variant: ButtonVariant.gradient,
+                  SwipeButton(
+                    label: "I've Arrived",
+                    processingLabel: 'Notifying...',
+                    icon: Icons.check_circle,
+                    onConfirmed: _notifyArrival,
+                    isDisabled: _isArriving,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   SizedBox(

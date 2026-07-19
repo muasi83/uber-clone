@@ -72,4 +72,11 @@ final List<RideType> rideTypes = [
     perKmRate: 0.50,
     description: 'Premium experience',
   ),
+  RideType(
+    name: 'Women Driver',
+    icon: '👩',
+    baseFare: 3.0,
+    perKmRate: 0.25,
+    description: 'Ride with a female driver',
+  ),
 ];

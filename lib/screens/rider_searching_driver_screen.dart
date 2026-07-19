@@ -146,6 +146,8 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
           _handleRideAccepted(event);
         } else if (type == 'search_timeout') {
           _showSearchTimeoutDialog();
+        } else if (type == 'women_driver_timeout') {
+          _showWomenDriverTimeoutDialog();
         } else if (type == 'ride_cancelled') {
           _handleRideCancelled(event);
         }
@@ -305,6 +307,122 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
           ],
         ),
       );
+    }
+  }
+
+  void _showWomenDriverTimeoutDialog() {
+    if (_showTimeoutDialog || _driverFound) return;
+
+    setState(() => _showTimeoutDialog = true);
+
+    EventRecorderService.recordEvent(
+      rideId: widget.rideId,
+      eventName: 'WOMEN_DRIVER_TIMEOUT',
+      category: 'BUSINESS',
+      summary: 'No female driver found after 60 seconds',
+      screenName: 'RiderSearchingDriver',
+    );
+
+    if (mounted) {
+      UiEventRecorder.showDialog(
+        context: context,
+        dialogType: 'WomenDriverTimeout',
+        dialogText: 'No women drivers found nearby',
+        triggerReason: '60_second_women_driver_timeout',
+        buttons: ['Cancel', 'Economy', 'Luxury'],
+        builder: (context) => AlertDialog(
+          icon: const Icon(Icons.face, color: AppColors.warning, size: 48),
+          title: const Text('No Women Drivers Found'),
+          content: const Text(
+            'No female drivers are available right now. '
+            'Would you like to switch to a different ride type?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _cancelSearch();
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.error),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _switchRideType('ECONOMY');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              child: const Text('Economy'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _switchRideType('LUXURY');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              child: const Text('Luxury'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  Future<void> _switchRideType(String newRideType) async {
+    try {
+      addDebugMessage('🔄 Switching to $newRideType...');
+
+      EventRecorderService.recordEvent(
+        rideId: widget.rideId,
+        eventName: 'RIDE_TYPE_SWITCHED',
+        category: 'BUSINESS',
+        summary: 'Rider switched from WOMEN_DRIVER to $newRideType',
+        screenName: 'RiderSearchingDriver',
+      );
+
+      final token = StorageService.getToken();
+      if (token == null) return;
+
+      final ride = await RideService.changeRideType(widget.rideId, newRideType, token);
+      if (ride == null) {
+        addDebugMessage('❌ Failed to switch ride type');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to switch ride type. Please try again.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() {
+        _showTimeoutDialog = false;
+        _searchSeconds = 0;
+      });
+
+      _startSearchTimeout();
+
+      addDebugMessage('✅ Ride type switched to $newRideType');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Searching for $newRideType drivers...'),
+            backgroundColor: AppColors.info,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      addDebugMessage('❌ Error switching ride type: $e');
     }
   }
 

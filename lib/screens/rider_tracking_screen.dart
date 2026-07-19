@@ -55,6 +55,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   LatLng? _animatedDriverPos;
 
   Timer? _statusPollTimer;
+  Timer? _routeDebounceTimer;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
@@ -388,7 +389,10 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
       }
       _startDriverMarkerAnimation(newLoc);
       if (!_userInteracted) _fitBounds();
-      _updateRoute();
+      _routeDebounceTimer?.cancel();
+      _routeDebounceTimer = Timer(const Duration(milliseconds: 1500), () {
+        if (mounted) _updateRoute();
+      });
     }
   }
 
@@ -902,6 +906,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     _rideStarting = false;
     _driverAnimTimer?.cancel();
     _statusPollTimer?.cancel();
+    _routeDebounceTimer?.cancel();
     _rideEventsSub?.cancel();
     _driverLocEventsSub?.cancel();
     mapController?.dispose();

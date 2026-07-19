@@ -46,6 +46,10 @@ double calculateEstimatedFare({
       baseFare = 4.0;
       perKmRate = 0.35;
       break;
+    case 'WOMEN_DRIVER':
+      baseFare = 3.0;
+      perKmRate = 0.25;
+      break;
     case 'ECONOMY':
     default:
       baseFare = 2.0;
