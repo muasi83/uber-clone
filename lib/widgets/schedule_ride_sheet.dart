@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../services/storage_service.dart';
 import '../services/scheduled_ride_service.dart';
 import '../services/place_search_service.dart';
@@ -377,7 +378,7 @@ bool get _canSchedule =>
                     foregroundColor: AppColors.textOnPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.mdRadius,
                     ),
                     textStyle: const TextStyle(
                       fontSize: 16,
@@ -459,7 +460,7 @@ bool get _canSchedule =>
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.mdRadius,
               ),
               child: TextField(
                 controller: _pickupController,
@@ -495,16 +496,16 @@ bool get _canSchedule =>
                       Padding(
                         padding: const EdgeInsets.only(right: 3),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: AppRadius.mdRadius,
                           onTap: () => _onMapButton(_FieldType.pickup),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: AppRadius.mdRadius,
                             child: Container(
                               width: 44,
                               height: 44,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: AppRadius.mdRadius,
                               ),
                               child: Image.asset(_mapButtonAsset, width: 30, height: 30),
                             ),
@@ -545,7 +546,7 @@ bool get _canSchedule =>
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.mdRadius,
               ),
               child: TextField(
                 controller: _dropoffController,
@@ -581,16 +582,16 @@ bool get _canSchedule =>
                       Padding(
                         padding: const EdgeInsets.only(right: 3),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: AppRadius.mdRadius,
                           onTap: () => _onMapButton(_FieldType.dropoff),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: AppRadius.mdRadius,
                             child: Container(
                               width: 44,
                               height: 44,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: AppRadius.mdRadius,
                               ),
                               child: Image.asset(_mapButtonAsset, width: 30, height: 30),
                             ),
@@ -614,7 +615,7 @@ bool get _canSchedule =>
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: AppColors.outline.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: AppRadius.smRadius,
               ),
               child: const Column(
                 children: [
@@ -648,12 +649,12 @@ bool get _canSchedule =>
             setState(() => _selectedTime = picked);
           }
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdRadius,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppRadius.mdRadius,
             border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
           ),
           child: Row(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 
 class ShimmerLoading extends StatefulWidget {
@@ -13,7 +14,7 @@ class ShimmerLoading extends StatefulWidget {
     super.key,
     this.width = double.infinity,
     required this.height,
-    this.borderRadius = 8,
+    this.borderRadius = AppRadius.sm,
     this.baseColor,
     this.highlightColor,
   });
@@ -52,6 +53,10 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defaultBase = isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant;
+    final defaultHighlight = isDark ? AppColors.darkSurface : AppColors.surface;
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -62,9 +67,9 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
             borderRadius: BorderRadius.circular(widget.borderRadius),
             gradient: LinearGradient(
               colors: [
-                widget.baseColor ?? AppColors.surfaceVariant,
-                widget.highlightColor ?? AppColors.surface,
-                widget.baseColor ?? AppColors.surfaceVariant,
+                widget.baseColor ?? defaultBase,
+                widget.highlightColor ?? defaultHighlight,
+                widget.baseColor ?? defaultBase,
               ],
               stops: const [0.0, 0.5, 1.0],
               begin: Alignment(-1 + _controller.value * 2, 0),
@@ -86,7 +91,7 @@ class ShimmerList extends StatelessWidget {
     super.key,
     this.itemCount = 5,
     this.itemHeight = 80,
-    this.spacing = 12,
+    this.spacing = AppSpacing.md,
   });
 
   @override
@@ -97,7 +102,7 @@ class ShimmerList extends StatelessWidget {
           padding: EdgeInsets.only(bottom: i < itemCount - 1 ? spacing : 0),
           child: ShimmerLoading(
             height: itemHeight,
-            borderRadius: AppSpacing.radiusMd,
+            borderRadius: AppRadius.md,
           ),
         );
       }),

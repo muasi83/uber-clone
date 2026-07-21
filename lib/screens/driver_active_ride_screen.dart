@@ -14,6 +14,8 @@ import '../screens/debug_screen.dart';
 import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../widgets/swipe_button.dart';
 import '../widgets/received_payment_dialog.dart';
 import '../utils/marker_utils.dart';
@@ -370,7 +372,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
             title: const Row(
               children: [
                 Icon(Icons.cancel, color: AppColors.error, size: 24),
@@ -582,6 +584,41 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
     }
   }
 
+  Widget _buildWaitingForPayment() {
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: AppRadius.lgRadius,
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          _PulseAnimation(
+            child: Text(
+              'Waiting for payment...',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _formatElapsedTime() {
     if (_startTime == null) return '00:00';
     final elapsed = DateTime.now().difference(_startTime!);
@@ -606,16 +643,20 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
         elevation: 0,
         title: Text(
           _rideStarted ? 'Active Ride' : 'Ready to Start',
-          style: const TextStyle(color: AppColors.primary),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.primary),
         ),
         actions: [
           Stack(
             clipBehavior: Clip.none,
             children: [
-              IconButton(
-                icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
-                tooltip: 'Chat with Rider',
-                onPressed: _openChat,
+              Semantics(
+                button: true,
+                label: 'Chat with rider',
+                child: IconButton(
+                  icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
+                  tooltip: 'Chat with Rider',
+                  onPressed: _openChat,
+                ),
               ),
               _buildUnreadBadge(),
             ],
@@ -636,23 +677,27 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
             zoomControlsEnabled: false,
             style: _mapStyle,
           ),
-          Positioned(
+          PositionedDirectional(
             top: 16,
-            right: 16,
-            child: FloatingActionButton(
-              heroTag: 'toggle_marker_driver_active',
-              mini: true,
-              onPressed: () {
-                setState(() => _showDriverMarker = !_showDriverMarker);
-                _updateMarkers();
-              },
-              backgroundColor: _showDriverMarker
-                  ? AppColors.primary
-                  : AppColors.surfaceVariant,
-              child: Icon(
-                Icons.my_location,
-                color: _showDriverMarker ? AppColors.primaryLight : AppColors.textSecondary,
-                size: 20,
+            end: 16,
+            child:             Semantics(
+              button: true,
+              label: 'Toggle driver marker',
+              child: FloatingActionButton(
+                heroTag: 'toggle_marker_driver_active',
+                mini: true,
+                onPressed: () {
+                  setState(() => _showDriverMarker = !_showDriverMarker);
+                  _updateMarkers();
+                },
+                backgroundColor: _showDriverMarker
+                    ? AppColors.primary
+                    : AppColors.surfaceVariant,
+                child: Icon(
+                  Icons.my_location,
+                  color: _showDriverMarker ? AppColors.primaryLight : AppColors.textSecondary,
+                  size: 20,
+                ),
               ),
             ),
           ),
@@ -664,12 +709,12 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(AppSpacing.radiusXxl),
-                  topRight: Radius.circular(AppSpacing.radiusXxl),
+                  topLeft: Radius.circular(AppRadius.xl),
+                  topRight: Radius.circular(AppRadius.xl),
                 ),
-                boxShadow: AppSpacing.shadowXl,
+                boxShadow: AppShadows.large,
               ),
-              padding: const EdgeInsets.fromLTRB(
+              padding: const EdgeInsetsDirectional.fromSTEB(
                 AppSpacing.lg,
                 AppSpacing.lg,
                 AppSpacing.lg,
@@ -678,158 +723,241 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, color: AppColors.error, size: 20),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Destination',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textTertiary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              widget.dropoffAddress,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              formatLatLng(
-                                  widget.dropoffLat, widget.dropoffLng),
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  color: AppColors.textTertiary),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Container(height: 1, color: AppColors.outline),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time, color: AppColors.primary, size: 20),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        '$_remainingMinutes min',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (_distanceKm != null)
-                        Text(
-                          '${_distanceKm!.toStringAsFixed(1)} km',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                    ],
-                  ),
+                  // ── Ride Progress Header ───────────────────────────
                   if (_rideStarted) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
+                    Container(
+                      width: double.infinity,
+                      padding: AppSpacing.cardPadding,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: AppRadius.lgRadius,
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            _formatElapsedTime(),
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                  color: AppColors.textOnPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Ride in progress',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.textOnPrimary.withValues(alpha: 0.8),
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                  // ── Destination Premium Card ──────────────────────
+                  Container(
+                    width: double.infinity,
+                    padding: AppSpacing.cardPadding,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant,
+                      borderRadius: AppRadius.lgRadius,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.timer_outlined, color: AppColors.textTertiary, size: 18),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          _formatElapsedTime(),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: [FontFeature.tabularFigures()],
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.1),
+                            borderRadius: AppRadius.smRadius,
+                          ),
+                          child: const Icon(Icons.location_on,
+                              color: AppColors.error, size: 20),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'DESTINATION',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: AppColors.textTertiary,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.8,
+                                    ),
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                widget.dropoffAddress,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                formatLatLng(widget.dropoffLat, widget.dropoffLng),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppColors.textTertiary,
+                                    ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  // ── Time & Distance Side by Side ──────────────────
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: AppSpacing.cardPadding,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceVariant,
+                            borderRadius: AppRadius.lgRadius,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.access_time,
+                                  color: AppColors.primary, size: 22),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                '$_remainingMinutes',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                'min',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Container(
+                          padding: AppSpacing.cardPadding,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceVariant,
+                            borderRadius: AppRadius.lgRadius,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.straighten,
+                                  color: AppColors.primary, size: 22),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                _distanceKm?.toStringAsFixed(1) ?? '--',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                'km',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: AppSpacing.xxl),
+                  // ── Action Section ─────────────────────────────────
                   _rideStarted
                       ? _awaitingPayment
                           ? _paymentMethod == 'CASH'
                               ? Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Text(
-                                      'Did the customer pay in cash?',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary,
+                Text(
+                  'Did the customer pay in cash?',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                ),
+                                    const SizedBox(height: 16),
+                                    Semantics(
+                                      button: true,
+                                      label: 'Confirm cash received',
+                                      child: SwipeButton(
+                                        label: 'Cash Received',
+                                        processingLabel: 'Processing...',
+                                        icon: Icons.check_circle,
+                                        onConfirmed: _onCashReceived,
+                                        isDisabled: _cashActionInProgress,
+                                        backgroundColor: AppColors.success,
                                       ),
                                     ),
-                                    const SizedBox(height: 16),
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SwipeButton(
-                                          label: 'Cash Received',
-                                          processingLabel: 'Processing...',
-                                          icon: Icons.check_circle,
-                                          onConfirmed: _onCashReceived,
-                                          isDisabled: _cashActionInProgress,
-                                          backgroundColor: AppColors.success,
-                                        ),
-                                        const SizedBox(height: 12),
-                                        SwipeButton(
-                                          label: 'Did Not Pay',
-                                          processingLabel: 'Processing...',
-                                          icon: Icons.cancel,
-                                          onConfirmed: _onCashUnpaid,
-                                          isDisabled: _cashActionInProgress,
-                                          backgroundColor: AppColors.error,
-                                        ),
-                                      ],
+                                    const SizedBox(height: 12),
+                                    Semantics(
+                                      button: true,
+                                      label: 'Mark as unpaid',
+                                      child: SwipeButton(
+                                        label: 'Did Not Pay',
+                                        processingLabel: 'Processing...',
+                                        icon: Icons.cancel,
+                                        onConfirmed: _onCashUnpaid,
+                                        isDisabled: _cashActionInProgress,
+                                        backgroundColor: AppColors.error,
+                                      ),
                                     ),
                                   ],
                                 )
-                              : const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      SizedBox(
-                                        width: 20, height: 20,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      ),
-                                      SizedBox(width: 12),
-                                      Text('Waiting for payment...'),
-                                    ],
-                                  ),
-                                )
-                          : SwipeButton(
-                              key: const ValueKey('complete_ride'),
-                              label: 'Complete Ride',
-                              processingLabel: 'Completing...',
-                              icon: Icons.flag,
-                              onConfirmed: _completeRide,
-                              isDisabled: _isCompleting,
-                              backgroundColor: AppColors.error,
+                              : _buildWaitingForPayment()
+                          : Semantics(
+                              button: true,
+                              label: 'Complete ride',
+                              child: SwipeButton(
+                                key: const ValueKey('complete_ride'),
+                                label: 'Complete Ride',
+                                processingLabel: 'Completing...',
+                                icon: Icons.flag,
+                                onConfirmed: _completeRide,
+                                isDisabled: _isCompleting,
+                                backgroundColor: AppColors.error,
+                              ),
                             )
-                      : SwipeButton(
-                          key: const ValueKey('start_ride'),
-                          label: 'Start Ride',
-                          icon: Icons.play_arrow,
-                          onConfirmed: _startRide,
-                          backgroundColor: AppColors.success,
+                      : Semantics(
+                          button: true,
+                          label: 'Start ride',
+                          child: SwipeButton(
+                            key: const ValueKey('start_ride'),
+                            label: 'Start Ride',
+                            icon: Icons.play_arrow,
+                            onConfirmed: _startRide,
+                            backgroundColor: AppColors.success,
+                          ),
                         ),
                   const SizedBox(height: AppSpacing.md),
                   SizedBox(
@@ -842,7 +970,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                         foregroundColor: AppColors.primary,
                         side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: AppRadius.mdRadius,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
@@ -928,8 +1056,8 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
     if (_otherUserId == null) return const SizedBox.shrink();
     final count = WebSocketService.unreadCounts[_otherUserId!] ?? 0;
     if (count == 0) return const SizedBox.shrink();
-    return Positioned(
-      right: 2,
+    return PositionedDirectional(
+      end: 2,
       top: 2,
       child: Container(
         padding: const EdgeInsets.all(4),
@@ -937,7 +1065,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
         constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
         child: Text(
           count > 9 ? '9+' : '$count',
-          style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.primaryLight, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
       ),
@@ -987,5 +1115,48 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
     mapController?.dispose();
     BackgroundNavigationService().stop();
     super.dispose();
+  }
+}
+
+class _PulseAnimation extends StatefulWidget {
+  final Widget child;
+  const _PulseAnimation({required this.child});
+
+  @override
+  State<_PulseAnimation> createState() => _PulseAnimationState();
+}
+
+class _PulseAnimationState extends State<_PulseAnimation>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Opacity(opacity: _animation.value, child: child);
+      },
+      child: widget.child,
+    );
   }
 }

@@ -32,7 +32,7 @@ class MarkerFactory {
 
   static Future<BitmapDescriptor>? _destinationCached;
   static Future<BitmapDescriptor> _destinationMemo() =>
-      _destinationCached ??= _createPin(AppColors.secondary);
+      _destinationCached ??= _createPin(AppColors.brandSecondary);
 
   static Future<BitmapDescriptor>? _driverCached;
   static Future<BitmapDescriptor> _driverMemo() =>

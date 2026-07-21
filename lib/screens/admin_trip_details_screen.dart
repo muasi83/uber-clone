@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/storage_service.dart';
 import '../services/admin_service.dart';
+import '../services/currency_service.dart';
 import '../services/ui_event_recorder.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/shimmer_loading.dart';
@@ -485,7 +486,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
           children: [
             Row(
               children: [
-                Text('\$${(amount ?? 0).toStringAsFixed(2)}',
+                Text(CurrencyService.format(amount ?? 0),
                     style: const TextStyle(
                         fontSize: 18, fontWeight: FontWeight.bold)),
                 const Spacer(),
@@ -544,10 +545,10 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
                   '${detail['estimatedDuration']} min'),
             if (detail['estimatedFare'] != null)
               _infoRow(Icons.attach_money, 'Est. Fare',
-                  '\$${(detail['estimatedFare'] as num).toStringAsFixed(2)}'),
+                  CurrencyService.format((detail['estimatedFare'] as num).toDouble())),
             if (detail['finalFare'] != null)
               _infoRow(Icons.receipt, 'Final Fare',
-                  '\$${(detail['finalFare'] as num).toStringAsFixed(2)}'),
+                  CurrencyService.format((detail['finalFare'] as num).toDouble())),
           ],
         ),
       ),

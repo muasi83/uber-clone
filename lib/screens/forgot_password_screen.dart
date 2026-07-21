@@ -7,6 +7,7 @@ import '../services/storage_service.dart';
 import 'otp_screen.dart';
 import 'reset_password_screen.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_text_field.dart';
@@ -22,12 +23,40 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with RecordedScreenMixin<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   bool _isLoading = false;
+  String _emailError = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_onEmailChanged);
+  }
+
+  void _onEmailChanged() {
+    final email = _emailController.text;
+    if (email.isEmpty) {
+      _clearError();
+    } else if (!_isValidEmail(email)) {
+      setState(() => _emailError = 'Please enter a valid email address');
+    } else {
+      _clearError();
+    }
+  }
+
+  void _clearError() {
+    if (_emailError.isNotEmpty) setState(() => _emailError = '');
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+  }
 
   Future<void> _sendOtp() async {
     if (_emailController.text.isEmpty) {
       _showError('Please enter your email');
       return;
     }
+    _onEmailChanged();
+    if (_emailError.isNotEmpty) return;
 
     setState(() => _isLoading = true);
     try {
@@ -89,9 +118,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Record
         backgroundColor: AppColors.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: AppRadius.smRadius,
         ),
-        margin: const EdgeInsets.all(16),
+        margin: AppSpacing.cardPadding,
       ),
     );
   }
@@ -120,7 +149,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Record
                   height: 80,
                   decoration: BoxDecoration(
                     color: AppColors.primaryContainer,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: AppRadius.xlRadius,
                   ),
                   child: const Icon(
                     Icons.lock_outline,
@@ -152,12 +181,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Record
                   label: 'Email',
                   prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
+                  errorText: _emailError.isNotEmpty ? _emailError : null,
                 ),
                 AppSpacing.gapXxl,
                 PremiumButton(
                   label: 'Send Reset Code',
                   isLoading: _isLoading,
-                  onPressed: _isLoading ? null : _sendOtp,
+                  onPressed: (_isLoading || _emailError.isNotEmpty) ? null : _sendOtp,
                   variant: ButtonVariant.gradient,
                 ),
               ],

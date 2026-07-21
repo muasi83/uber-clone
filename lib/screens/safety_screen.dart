@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 
 class SafetyScreen extends StatelessWidget {
   const SafetyScreen({super.key});
@@ -38,21 +40,21 @@ class SafetyScreen extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right, color: AppColors.textTertiary),
             onTap: () {},
           ),
-          const SizedBox(height: 24),
+          AppSpacing.gapXl,
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.cardPadding,
             decoration: BoxDecoration(
               color: AppColors.warningContainer,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.mdRadius,
             ),
             child: Row(
               children: [
                 const Icon(Icons.info_outline, color: AppColors.warning, size: 24),
-                const SizedBox(width: 12),
+                AppSpacing.hGapMd,
                 Expanded(
                   child: Text(
                     'In case of emergency, call 911 or use the SOS button above.',
-                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary.withValues(alpha: 0.8)),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.8)),
                   ),
                 ),
               ],
@@ -72,14 +74,14 @@ class SafetyScreen extends StatelessWidget {
   }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
       child: ListTile(
         leading: Container(
           width: 44,
           height: 44,
           decoration: BoxDecoration(
             color: AppColors.successContainer,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: AppRadius.smRadius,
           ),
           child: Icon(icon, color: AppColors.success),
         ),

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import 'services/storage_service.dart';
+import 'services/currency_service.dart';
 import 'services/crash_reporter.dart';
 import 'services/notification_service.dart';
 import 'services/websocket_service.dart';
@@ -52,6 +53,12 @@ void main() async {
         await StorageService.init();
       } catch (e) {
         CrashReporter.addLog('StorageService.init failed: $e');
+      }
+
+      try {
+        await CurrencyService.load();
+      } catch (e) {
+        CrashReporter.addLog('CurrencyService.load failed: $e');
       }
 
       try {

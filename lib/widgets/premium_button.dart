@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 
 class PremiumButton extends StatefulWidget {
@@ -42,7 +43,7 @@ class _PremiumButtonState extends State<PremiumButton> {
       case ButtonVariant.primary:
         return AppColors.primary;
       case ButtonVariant.secondary:
-        return AppColors.secondary;
+        return AppColors.brandSecondary;
       case ButtonVariant.gradient:
         return AppColors.primary;
       case ButtonVariant.outline:
@@ -79,18 +80,7 @@ class _PremiumButtonState extends State<PremiumButton> {
 
   List<BoxShadow> get _shadow {
     if (!_enabled || widget.variant == ButtonVariant.text) return [];
-    return [
-      BoxShadow(
-        color: AppColors.primary.withValues(alpha: 0.35),
-        blurRadius: 16,
-        offset: const Offset(0, 6),
-      ),
-      BoxShadow(
-        color: AppColors.primary.withValues(alpha: 0.15),
-        blurRadius: 4,
-        offset: const Offset(0, 2),
-      ),
-    ];
+    return AppShadows.medium;
   }
 
   @override

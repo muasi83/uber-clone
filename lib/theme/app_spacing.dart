@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
+import 'app_radius.dart';
+import 'app_shadows.dart';
 
 class AppSpacing {
   AppSpacing._();
 
-  // Base unit: 4px
-  static const double xxs = 2;
+  // Base unit: 4px scale — only 4, 8, 12, 16, 24, 32, 48
   static const double xs = 4;
   static const double sm = 8;
   static const double md = 12;
   static const double lg = 16;
-  static const double xl = 20;
-  static const double xxl = 24;
-  static const double xxxl = 32;
-  static const double huge = 40;
-  static const double massive = 48;
-  static const double giant = 56;
-  static const double colossal = 64;
+  static const double xl = 24;
+  static const double xxl = 32;
+  static const double xxxl = 48;
 
   // Standardized padding
   static const EdgeInsets screenPadding = EdgeInsets.all(lg);
@@ -29,11 +26,7 @@ class AppSpacing {
   );
   static const EdgeInsets buttonPadding = EdgeInsets.symmetric(
     vertical: 14,
-    horizontal: xxl,
-  );
-  static const EdgeInsets chipPadding = EdgeInsets.symmetric(
-    horizontal: md,
-    vertical: sm,
+    horizontal: xl,
   );
 
   // Standardized gaps
@@ -44,9 +37,7 @@ class AppSpacing {
   static const SizedBox gapXl = SizedBox(height: xl, width: xl);
   static const SizedBox gapXxl = SizedBox(height: xxl, width: xxl);
   static const SizedBox gapXxxl = SizedBox(height: xxxl, width: xxxl);
-  static const SizedBox gapHuge = SizedBox(height: huge);
 
-  // Horizontal gaps
   static const SizedBox hGapXs = SizedBox(width: xs);
   static const SizedBox hGapSm = SizedBox(width: sm);
   static const SizedBox hGapMd = SizedBox(width: md);
@@ -54,66 +45,33 @@ class AppSpacing {
   static const SizedBox hGapXl = SizedBox(width: xl);
   static const SizedBox hGapXxl = SizedBox(width: xxl);
 
-  // Border radius
+  // ── Backward-compat radius aliases ────────────────────────────────
   static const double radiusXs = 4;
-  static const double radiusSm = 8;
-  static const double radiusMd = 12;
-  static const double radiusLg = 16;
-  static const double radiusXl = 20;
-  static const double radiusXxl = 24;
-  static const double radiusFull = 100;
+  static const double radiusSm = AppRadius.sm;
+  static const double radiusMd = AppRadius.md;
+  static const double radiusLg = AppRadius.lg;
+  static const double radiusXl = AppRadius.xl;
+  static const double radiusXxl = AppRadius.xl;
+  static const double radiusFull = 1000;
+  static const double bottomSheetTopRadius = AppRadius.sheet;
+  static const EdgeInsets chipPadding = EdgeInsets.symmetric(
+    horizontal: 12,
+    vertical: 6,
+  );
 
-  // Shadows
-  static List<BoxShadow> get shadowSm => [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
-          blurRadius: 4,
-          offset: const Offset(0, 1),
-        ),
-      ];
+  // ── Backward-compat shadow aliases ────────────────────────────────
+  static List<BoxShadow> get shadowSm => AppShadows.small;
+  static List<BoxShadow> get shadowMd => AppShadows.medium;
+  static List<BoxShadow> get shadowLg => AppShadows.large;
+  static List<BoxShadow> get shadowXl => AppShadows.large;
 
-  static List<BoxShadow> get shadowMd => [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.06),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
-        ),
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
-          blurRadius: 4,
-          offset: const Offset(0, 1),
-        ),
-      ];
-
-  static List<BoxShadow> get shadowLg => [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.08),
-          blurRadius: 16,
-          offset: const Offset(0, 4),
-        ),
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
-          blurRadius: 6,
-          offset: const Offset(0, 2),
-        ),
-      ];
-
-  static List<BoxShadow> get shadowXl => [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.1),
-          blurRadius: 24,
-          offset: const Offset(0, 8),
-        ),
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.06),
-          blurRadius: 8,
-          offset: const Offset(0, 4),
-        ),
-      ];
+  // ── Backward-compat spacing aliases ───────────────────────────────
+  static const SizedBox gapHuge = SizedBox(height: xxxl, width: xxxl);
+  static const double giant = xxxl;
+  static const double colossal = xxxl;
 
   // Layout
   static const double maxContentWidth = 400;
-  static const double bottomSheetTopRadius = 24;
   static const double appBarHeight = 56;
   static const double bottomNavHeight = 64;
   static const double mapMinHeight = 250;

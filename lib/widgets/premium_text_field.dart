@@ -14,6 +14,7 @@ class PremiumTextField extends StatefulWidget {
   final int? maxLines;
   final int? maxLength;
   final bool enabled;
+  final String? errorText;
 
   const PremiumTextField({
     super.key,
@@ -29,6 +30,7 @@ class PremiumTextField extends StatefulWidget {
     this.maxLines = 1,
     this.maxLength,
     this.enabled = true,
+    this.errorText,
   });
 
   @override
@@ -58,15 +60,18 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: widget.controller.text.isNotEmpty
-              ? AppColors.primary.withValues(alpha: 0.3)
-              : AppColors.outline,
-          width: _hasFocus ? 2 : 1,
+          color: hasError
+              ? AppColors.error
+              : widget.controller.text.isNotEmpty
+                  ? AppColors.primary.withValues(alpha: 0.3)
+                  : AppColors.outline,
+          width: hasError ? 2 : (_hasFocus ? 2 : 1),
         ),
       ),
       child: TextFormField(
@@ -81,14 +86,22 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
         decoration: InputDecoration(
           labelText: widget.label,
           hintText: widget.hint,
+          errorText: widget.errorText,
+          errorStyle: const TextStyle(
+            color: AppColors.error,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
           floatingLabelBehavior: FloatingLabelBehavior.auto,
           prefixIcon: widget.prefixIcon != null
               ? Icon(
                   widget.prefixIcon,
                   size: 20,
-                  color: _hasFocus
-                      ? AppColors.primary
-                      : AppColors.textTertiary,
+                  color: hasError
+                      ? AppColors.error
+                      : _hasFocus
+                          ? AppColors.primary
+                          : AppColors.textTertiary,
                 )
               : null,
           suffixIcon: widget.isPassword
@@ -96,7 +109,9 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
                   icon: Icon(
                     _obscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                     size: 20,
-                    color: AppColors.textTertiary,
+                    color: hasError
+                        ? AppColors.error
+                        : AppColors.textTertiary,
                   ),
                   onPressed: () => setState(() => _obscured = !_obscured),
                 )

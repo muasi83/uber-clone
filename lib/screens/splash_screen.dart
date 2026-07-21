@@ -7,6 +7,9 @@ import '../screens/rider_home_screen.dart';
 import '../screens/driver_home_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
+import '../theme/app_typography.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -218,14 +221,8 @@ class _SplashScreenState extends State<SplashScreen>
               height: 100,
               decoration: BoxDecoration(
                 color: AppColors.primary,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.4),
-                    blurRadius: 30,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                borderRadius: AppRadius.xlRadius,
+                boxShadow: AppShadows.large,
               ),
               child: const Icon(
                 Icons.directions_car,
@@ -235,94 +232,96 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.xxl),
-        const Text(
+        AppSpacing.gapXxl,
+        Text(
           'RideNow',
-          style: TextStyle(
+          style: AppTypography.textTheme.displayMedium?.copyWith(
             color: AppColors.primaryLight,
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        AppSpacing.gapSm,
         Text(
           'Premium Ride Sharing',
-          style: TextStyle(
+          style: AppTypography.textTheme.bodyLarge?.copyWith(
             color: AppColors.primaryLight.withValues(alpha: 0.7),
-            fontSize: 14,
             letterSpacing: 1.0,
           ),
         ),
         const Spacer(),
         _BouncingDots(controller: _animationController),
-        const SizedBox(height: AppSpacing.lg),
+        AppSpacing.gapLg,
         Text(
           'v1.0.0',
-          style: TextStyle(
+          style: AppTypography.textTheme.bodySmall?.copyWith(
             color: AppColors.primaryLight.withValues(alpha: 0.38),
-            fontSize: 12,
             letterSpacing: 0.5,
           ),
         ),
-        const SizedBox(height: AppSpacing.xxl),
+        AppSpacing.gapXxl,
       ],
     );
   }
 
   Widget _buildLocationRequest() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: AppSpacing.screenPadding.copyWith(
+        left: AppSpacing.xl,
+        right: AppSpacing.xl,
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Spacer(),
-          const Icon(
-            Icons.location_on,
-            size: 80,
-            color: AppColors.primary,
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.location_on,
+              size: 48,
+              color: AppColors.primary,
+            ),
           ),
-          const SizedBox(height: AppSpacing.xxl),
-          const Text(
+          AppSpacing.gapXxl,
+          Text(
             'Location Access Required',
-            style: TextStyle(
-            color: AppColors.primaryLight,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+            style: AppTypography.textTheme.headlineMedium?.copyWith(
+              color: AppColors.primaryLight,
+            ),
+            textAlign: TextAlign.center,
           ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          'RideNow needs your location to find nearby rides and drivers. This permission is required to use the app.',
-          style: TextStyle(
-            color: AppColors.primaryLight.withValues(alpha: 0.7),
-            fontSize: 14,
+          AppSpacing.gapMd,
+          Text(
+            'RideNow needs your location to find nearby rides and drivers. This permission is required to use the app.',
+            style: AppTypography.textTheme.bodyMedium?.copyWith(
+              color: AppColors.primaryLight.withValues(alpha: 0.7),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: AppSpacing.xxl),
+          AppSpacing.gapXxl,
           if (_locationDeniedForever) ...[
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: AppSpacing.cardPaddingCompact,
               decoration: BoxDecoration(
                 color: AppColors.warning.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.mdRadius,
                 border: Border.all(
                   color: AppColors.warning.withValues(alpha: 0.3),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 'Location permission was permanently denied. Please enable it in Settings.',
-                style: TextStyle(
+                style: AppTypography.textTheme.bodySmall?.copyWith(
                   color: AppColors.warning,
-                  fontSize: 13,
                 ),
                 textAlign: TextAlign.center,
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            AppSpacing.gapLg,
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -332,9 +331,9 @@ class _SplashScreenState extends State<SplashScreen>
                 label: const Text('Open Settings'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.textPrimary,
+                  foregroundColor: AppColors.textOnPrimary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppRadius.mdRadius,
                   ),
                 ),
               ),
@@ -349,21 +348,23 @@ class _SplashScreenState extends State<SplashScreen>
                 label: const Text('Grant Location Access'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.textPrimary,
+                  foregroundColor: AppColors.textOnPrimary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppRadius.mdRadius,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
+            AppSpacing.gapMd,
             TextButton(
               onPressed: () {
                 if (mounted) _navigateToAuth();
               },
               child: Text(
                 'Not Now',
-                style: TextStyle(color: AppColors.primaryLight.withValues(alpha: 0.54)),
+                style: AppTypography.textTheme.bodyMedium?.copyWith(
+                  color: AppColors.primaryLight.withValues(alpha: 0.54),
+                ),
               ),
             ),
           ],

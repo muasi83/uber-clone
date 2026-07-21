@@ -1,8 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
+import '../services/currency_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_text_field.dart';
@@ -73,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.lgRadius,
         ),
         title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
@@ -135,27 +139,40 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: AppSpacing.screenPadding,
-        child: Column(
-          children: [
-            _buildProfileCard(),
-            AppSpacing.gapXxl,
-            _buildSectionHeader('Server Configuration'),
-            AppSpacing.gapMd,
-            _buildServerConfigCard(),
-            AppSpacing.gapXxl,
-            _buildSectionHeader('About'),
-            AppSpacing.gapMd,
-            _buildAboutCard(),
-            AppSpacing.gapXxl,
-            PremiumButton(
-              label: 'Logout',
-              onPressed: _logout,
-              variant: ButtonVariant.danger,
-              icon: Icons.logout_rounded,
-            ),
-          ],
+      body: Semantics(
+        label: 'Settings page',
+        child: SingleChildScrollView(
+          padding: AppSpacing.screenPadding,
+          child: Column(
+            children: [
+              _buildProfileCard(),
+              AppSpacing.gapXxl,
+              _buildSectionHeader('Notifications'),
+              AppSpacing.gapMd,
+              _buildNotificationPrefs(),
+              AppSpacing.gapXxl,
+              _buildSectionHeader('Currency'),
+              AppSpacing.gapMd,
+              _buildCurrencySelector(),
+              AppSpacing.gapXxl,
+              _buildSectionHeader('About'),
+              AppSpacing.gapMd,
+              _buildAboutCard(),
+              if (kDebugMode) ...[
+                AppSpacing.gapXxl,
+                _buildSectionHeader('Server Configuration (Dev)'),
+                AppSpacing.gapMd,
+                _buildServerConfigCard(),
+              ],
+              AppSpacing.gapXxl,
+              PremiumButton(
+                label: 'Logout',
+                onPressed: _logout,
+                variant: ButtonVariant.danger,
+                icon: Icons.logout_rounded,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -163,7 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
 
   Widget _buildProfileCard() {
     return PremiumCard(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: Row(
         children: [
           CircleAvatar(
@@ -224,6 +241,50 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
     );
   }
 
+  Widget _buildNotificationPrefs() {
+    return PremiumCard(
+      child: Column(
+        children: [
+          Semantics(
+            label: 'Push notifications toggle',
+            child: SwitchListTile(
+              title: const Text('Push Notifications', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              subtitle: const Text('Receive ride updates and offers', style: TextStyle(fontSize: 12)),
+              value: true,
+              onChanged: (_) {},
+              activeColor: AppColors.primary,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.outline),
+          Semantics(
+            label: 'SMS notifications toggle',
+            child: SwitchListTile(
+              title: const Text('SMS Notifications', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              subtitle: const Text('Receive text messages for rides', style: TextStyle(fontSize: 12)),
+              value: true,
+              onChanged: (_) {},
+              activeColor: AppColors.primary,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.outline),
+          Semantics(
+            label: 'Email notifications toggle',
+            child: SwitchListTile(
+              title: const Text('Email Notifications', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              subtitle: const Text('Receive promotional emails', style: TextStyle(fontSize: 12)),
+              value: false,
+              onChanged: (_) {},
+              activeColor: AppColors.primary,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildServerConfigCard() {
     return PremiumCard(
       child: Column(
@@ -247,6 +308,66 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
     );
   }
 
+  Widget _buildCurrencySelector() {
+    return PremiumCard(
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.primaryContainer,
+            borderRadius: AppRadius.mdRadius,
+          ),
+          child: const Icon(
+            Icons.attach_money,
+            color: AppColors.primary,
+            size: 20,
+          ),
+        ),
+        title: const Text(
+          'Display Currency',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+        ),
+        subtitle: Text(
+          CurrencyService.symbol == '\$'
+              ? 'USD (\$)'
+              : '${CurrencyService.preferred.name.toUpperCase()} (${CurrencyService.symbol})',
+          style: const TextStyle(fontSize: 13, color: AppColors.textTertiary),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: AppColors.textTertiary),
+        onTap: () async {
+          final result = await showDialog<Currency>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.lgRadius),
+              title: const Text('Display Currency', style: TextStyle(fontSize: 16)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: Currency.values.map((c) {
+                  final label = switch (c) {
+                    Currency.usd => 'USD (\$)',
+                    Currency.sar => 'SAR (SR)',
+                    Currency.syp => 'SYP (£S)',
+                  };
+                  return RadioListTile<Currency>(
+                    value: c,
+                    groupValue: CurrencyService.preferred,
+                    title: Text(label),
+                    onChanged: (v) => Navigator.pop(ctx, v),
+                  );
+                }).toList(),
+              ),
+            ),
+          );
+          if (result != null) {
+            await CurrencyService.setCurrency(result);
+            setState(() {});
+          }
+        },
+      ),
+    );
+  }
+
   Widget _buildAboutCard() {
     return PremiumCard(
       child: Row(
@@ -256,7 +377,7 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
             height: 40,
             decoration: BoxDecoration(
               color: AppColors.infoContainer,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.mdRadius,
             ),
             child: const Icon(
               Icons.info_outline,

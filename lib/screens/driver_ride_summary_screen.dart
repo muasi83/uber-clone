@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import '../models/ride_model.dart';
+import '../services/currency_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../widgets/premium_button.dart';
 import '../services/recorded_screen_mixin.dart';
-import '../services/event_recorder_service.dart';
 import '../utils/address_utils.dart';
 
 class DriverRideSummaryScreen extends StatefulWidget {
@@ -127,17 +129,20 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.successContainer,
-              ),
-              child: const Icon(
-                Icons.check,
-                size: 56,
-                color: AppColors.success,
+            AppSpacing.gapXxl,
+            Semantics(
+              label: 'Ride completed successfully',
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.successContainer,
+                ),
+                child: const Icon(
+                  Icons.check,
+                  size: 56,
+                  color: AppColors.success,
+                ),
               ),
             ),
             AppSpacing.gapXxl,
@@ -163,8 +168,8 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
               padding: AppSpacing.cardPadding,
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                boxShadow: AppSpacing.shadowMd,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                boxShadow: AppShadows.medium,
               ),
               child: Column(
                 children: [
@@ -188,7 +193,7 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
                           ),
                         ),
                         Text(
-                          '\$${(_ride?.finalFare ?? _ride?.estimatedFare ?? 0).toStringAsFixed(2)}',
+                          CurrencyService.format(_ride?.finalFare ?? _ride?.estimatedFare ?? 0),
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -200,6 +205,13 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
                   ),
                   const Divider(color: AppColors.outline),
                   _buildDetailRow('Payment', 'PENDING'),
+                  const Divider(color: AppColors.outline),
+                  _buildDetailRow('Your Earnings', 
+                    CurrencyService.format((_ride?.finalFare ?? _ride?.estimatedFare ?? 0) * 0.85),
+                  ),
+                  _buildDetailRow('Platform Fee', 
+                    CurrencyService.format((_ride?.finalFare ?? _ride?.estimatedFare ?? 0) * 0.15),
+                  ),
                 ],
               ),
             ),
@@ -241,7 +253,7 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
                   filled: true,
                   fillColor: AppColors.surfaceVariant,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     borderSide: BorderSide.none,
                   ),
                   contentPadding: const EdgeInsets.all(AppSpacing.md),
@@ -336,7 +348,7 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
                       _ride?.pickupLatitude ?? 0, _ride?.pickupLongitude ?? 0),
                   style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapLg,
                 Text(
                   dropoff,
                   style: const TextStyle(

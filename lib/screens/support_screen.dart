@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 
 class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
@@ -9,7 +11,7 @@ class SupportScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Support'), centerTitle: true),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.screenPadding,
         children: [
           _buildSupportCard(
             icon: Icons.chat_outlined,
@@ -29,12 +31,12 @@ class SupportScreen extends StatelessWidget {
             subtitle: '+1 (555) 123-4567',
             onTap: () {},
           ),
-          const SizedBox(height: 24),
+          AppSpacing.gapXl,
           const Text(
             'Frequently Asked Questions',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
           ),
-          const SizedBox(height: 12),
+          AppSpacing.gapMd,
           _buildFaqItem('How do I cancel a ride?'),
           _buildFaqItem('How do I change my payment method?'),
           _buildFaqItem('What should I do if I left an item in the vehicle?'),
@@ -52,14 +54,14 @@ class SupportScreen extends StatelessWidget {
   }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
       child: ListTile(
         leading: Container(
           width: 44,
           height: 44,
           decoration: BoxDecoration(
             color: AppColors.infoContainer,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: AppRadius.smRadius,
           ),
           child: Icon(icon, color: AppColors.info),
         ),

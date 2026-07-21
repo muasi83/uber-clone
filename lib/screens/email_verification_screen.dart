@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 
 class EmailVerificationScreen extends StatelessWidget {
   const EmailVerificationScreen({super.key});
@@ -14,18 +16,18 @@ class EmailVerificationScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.email_outlined, size: 80, color: AppColors.primary),
-            const SizedBox(height: 24),
+            AppSpacing.gapXl,
             const Text(
               'Verify Your Email',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
             ),
-            const SizedBox(height: 12),
+            AppSpacing.gapMd,
             const Text(
               'A verification link has been sent to your email address. Please check your inbox and follow the instructions.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
             ),
-            const SizedBox(height: 32),
+            AppSpacing.gapXxl,
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -34,12 +36,12 @@ class EmailVerificationScreen extends StatelessWidget {
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.textOnPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
                 ),
                 child: const Text('Resend Verification Email', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
-            const SizedBox(height: 12),
+            AppSpacing.gapMd,
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('I\'ll do this later', style: TextStyle(color: AppColors.textSecondary)),

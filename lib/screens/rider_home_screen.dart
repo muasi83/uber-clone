@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
+import '../services/currency_service.dart';
 import '../services/driver_service.dart';
 import '../services/ride_service.dart';
 import '../services/ride_recovery_service.dart';
@@ -13,6 +14,8 @@ import '../screens/rider_pickup_location_screen.dart';
 import '../screens/rider_dropoff_location_screen.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/address_utils.dart';
@@ -266,7 +269,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                       : AppColors.error,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: AppRadius.smRadius,
                   ),
                 ),
               );
@@ -529,7 +532,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
         context: context,
         builder: (ctx) => AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: AppRadius.lgRadius,
           ),
           title: const Text('Active Ride Found'),
           content: Column(
@@ -738,12 +741,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSpacing.bottomSheetTopRadius),
+          top: Radius.circular(AppRadius.sheet),
         ),
       ),
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             AppSpacing.xl,
             AppSpacing.sm,
             AppSpacing.xl,
@@ -795,11 +798,42 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
     );
   }
 
+  Widget _buildLoadingState() {
+    return Container(
+      color: AppColors.background,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.location_searching_rounded,
+                size: 40,
+                color: AppColors.primary,
+              ),
+            ),
+            AppSpacing.gapLg,
+            Text(
+              'Finding your location...',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMapBodyWithOverlays() {
     if (_isInitializing) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return _buildLoadingState();
     } else if (_initError.isNotEmpty) {
       return _buildErrorState();
     }
@@ -807,9 +841,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
       children: [
         _buildMapBody(),
         if (!_mapReady)
-          const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          ),
+          _buildLoadingState(),
       ],
     );
   }
@@ -856,13 +888,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
       child: BottomNavigationBar(
         currentIndex: _adminTabIndex,
         onTap: (index) => setState(() => _adminTabIndex = index),
-        backgroundColor: AppColors.surface,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textSecondary,
         type: BottomNavigationBarType.fixed,
-        elevation: 0,
-        selectedFontSize: 12,
-        unselectedFontSize: 11,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.map_outlined),
@@ -894,12 +920,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
       child: BottomNavigationBar(
         currentIndex: _riderTabIndex,
         onTap: (index) => setState(() => _riderTabIndex = index),
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textSecondary,
         type: BottomNavigationBarType.fixed,
-        elevation: 0,
-        selectedFontSize: 12,
-        unselectedFontSize: 11,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.route_rounded), label: 'Rides'),
@@ -930,22 +951,20 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
               ),
             ),
             AppSpacing.gapXl,
-            const Text(
+            Text(
               'Location Unavailable',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
             ),
             AppSpacing.gapSm,
             Text(
               _initError,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
             ),
             AppSpacing.gapXl,
             ElevatedButton.icon(
@@ -967,7 +986,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                   vertical: 12,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.mdRadius,
                 ),
               ),
             ),
@@ -1013,63 +1032,100 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
           ),
 
         // Menu button
-        Positioned(
+        PositionedDirectional(
           key: const ValueKey('menu'),
           top: MediaQuery.of(context).padding.top + 8,
-          left: 16,
-          child: _buildFloatingButton(
-            icon: Icons.menu_rounded,
-            onPressed: _showMenuSheet,
-            heroTag: 'menu',
+          start: 16,
+          child: Semantics(
+            button: true,
+            label: 'Menu',
+            child: _buildFloatingButton(
+              icon: Icons.menu_rounded,
+              onPressed: _showMenuSheet,
+              heroTag: 'menu',
+            ),
           ),
         ),
 
         // Driver count badge
         if (_driverCount > 0)
-          Positioned(
+          PositionedDirectional(
             key: const ValueKey('driver_count'),
             top: MediaQuery.of(context).padding.top + 8,
-            left: 72,
-            child: _buildDriverCountBadge(),
+            start: 72,
+            child: Semantics(
+              label: '$_driverCount drivers nearby',
+              child: _buildDriverCountBadge(),
+            ),
           ),
 
         // Settings button
-        Positioned(
+        PositionedDirectional(
           key: const ValueKey('settings'),
           top: MediaQuery.of(context).padding.top + 8,
-          right: 16,
-          child: _buildFloatingButton(
-            icon: Icons.settings_outlined,
-            onPressed: () {
-              final token = StorageService.getToken();
-              final userId = StorageService.getUserId();
-              final username = StorageService.getUsername();
-              if (token != null && userId != null && username != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => SettingsScreen(
-                      username: username,
-                      userId: userId,
-                      token: token,
+          end: 16,
+          child: Semantics(
+            button: true,
+            label: 'Settings',
+            child: _buildFloatingButton(
+              icon: Icons.settings_outlined,
+              onPressed: () {
+                final token = StorageService.getToken();
+                final userId = StorageService.getUserId();
+                final username = StorageService.getUsername();
+                if (token != null && userId != null && username != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SettingsScreen(
+                        username: username,
+                        userId: userId,
+                        token: token,
+                      ),
                     ),
-                  ),
-                );
-              }
-            },
-            heroTag: 'settings',
+                  );
+                }
+              },
+              heroTag: 'settings',
+            ),
+          ),
+        ),
+
+        // Gradient overlay above sheet
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: MediaQuery.of(context).size.height * 0.25,
+          height: 60,
+          child: IgnorePointer(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    AppColors.surface.withValues(alpha: 0.95),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
 
         // Recenter button
-        Positioned(
+        PositionedDirectional(
           key: const ValueKey('recenter'),
-          bottom: MediaQuery.of(context).size.height * 0.35 + 16,
-          right: 16,
-          child: _buildFloatingButton(
-            icon: Icons.my_location_rounded,
-            onPressed: _centerOnLocation,
-            heroTag: 'center_location',
+          bottom: MediaQuery.of(context).size.height * 0.25 + 16,
+          end: 16,
+          child: Semantics(
+            button: true,
+            label: 'Recenter map',
+            child: _buildFloatingButton(
+              icon: Icons.my_location_rounded,
+              onPressed: _centerOnLocation,
+              heroTag: 'center_location',
+            ),
           ),
         ),
 
@@ -1084,16 +1140,19 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
             child: DraggableScrollableSheet(
               key: const ValueKey('sheet'),
               controller: _sheetController,
-              initialChildSize: 0.35,
+              initialChildSize: 0.25,
               minChildSize: 0.1,
               maxChildSize: 0.85,
               builder: (context, scrollController) {
                 return ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(AppSpacing.bottomSheetTopRadius),
+                    top: Radius.circular(AppRadius.xl),
                   ),
                   child: Container(
-                    color: AppColors.surface,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      boxShadow: AppShadows.large,
+                    ),
                     child: ListView(
                       controller: scrollController,
                       padding: EdgeInsets.zero,
@@ -1105,61 +1164,64 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                          padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 12),
                           child: _buildSearchBar(),
                         ),
-                        if (_isLoadingHistory)
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 12),
-                            child: Center(
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ),
-                          )
-                        else if (_recentTrips.isNotEmpty) ...[
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 20),
-                            child: Text(
-                              'Recent Trips',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          ..._recentTrips.map((ride) => _buildRecentTripItem(ride)),
+                        if (!_isSheetExpanded && _recentTrips.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const TripHistoryScreen(),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                children: [
-                                  Text(
-                                    'View All Trips',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.primary,
+                            padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 12),
+                            child: _buildQuickChips(),
+                          ),
+                        if (_isSheetExpanded) ...[
+                          if (_isLoadingHistory)
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 12),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                            )
+                          else if (_recentTrips.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: Text(
+                                'Recent Trips',
+                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                      color: AppColors.textSecondary,
                                     ),
-                                  ),
-                                  SizedBox(width: 4),
-                                  Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.primary),
-                                ],
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 4),
+                            ..._recentTrips.map((ride) => _buildRecentTripItem(ride)),
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(20, 4, 20, 12),
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const TripHistoryScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      'View All Trips',
+                                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                            color: AppColors.primary,
+                                          ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.primary),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ],
                     ),
@@ -1180,13 +1242,19 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
   }) {
     return FloatingActionButton.small(
       heroTag: heroTag,
-      backgroundColor: AppColors.surfaceVariant.withValues(alpha: 0.9),
-      elevation: 2,
+      backgroundColor: AppColors.surface.withValues(alpha: 0.95),
+      elevation: 0,
       onPressed: onPressed,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: AppRadius.mdRadius,
       ),
-      child: Icon(icon, color: AppColors.primary, size: 22),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.mdRadius,
+          boxShadow: AppShadows.medium,
+        ),
+        child: Icon(icon, color: AppColors.primary, size: 22),
+      ),
     );
   }
 
@@ -1195,39 +1263,89 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
       duration: const Duration(milliseconds: 300),
       child: Container(
         key: ValueKey('count_$_driverCount'),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: AppSpacing.shadowSm,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: AppShadows.medium,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.directions_car,
-              size: 14,
-              color: AppColors.primary,
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.directions_car_rounded,
+                size: 12,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '$_driverCount',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
             ),
             const SizedBox(width: 4),
             Text(
-              '$_driverCount',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Text(
               'nearby',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  String _timeAgo(DateTime? dateTime) {
+    if (dateTime == null) return '';
+    final diff = DateTime.now().difference(dateTime);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${diff.inDays ~/ 7}w ago';
+  }
+
+  Widget _buildQuickChips() {
+    final chips = _recentTrips.take(3).map((ride) => ride.dropoffAddress).toList();
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: chips.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          return InkWell(
+            onTap: _requestRide,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.outline),
+              ),
+              child: Center(
+                child: Text(
+                  chips[index].length > 20
+                      ? '${chips[index].substring(0, 20)}\u2026'
+                      : chips[index],
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1247,6 +1365,8 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
       'REQUESTED' => 'Requested',
       _ => ride.status,
     };
+    final timeAgo = _timeAgo(ride.requestedAt ?? ride.completedAt ?? ride.cancelledAt);
+    final fare = ride.finalFare ?? ride.estimatedFare;
     return InkWell(
       onTap: () {
         if (ride.status == 'REQUESTED' ||
@@ -1269,111 +1389,144 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
         );
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.route, size: 18, color: AppColors.primary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ride.pickupAddress.length > 25
-                        ? '${ride.pickupAddress.substring(0, 25)}…'
-                        : ride.pickupAddress,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
-                  Text(
-                    formatLatLng(ride.pickupLatitude, ride.pickupLongitude),
-                    style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
-                  ),
-                  const SizedBox(height: 1),
-                  Row(
+                  child: const Icon(Icons.route_rounded, size: 22, color: AppColors.primary),
+                ),
+                AppSpacing.hGapMd,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.arrow_forward, size: 11, color: AppColors.textTertiary),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              ride.dropoffAddress.length > 25
-                                  ? '${ride.dropoffAddress.substring(0, 25)}…'
-                                  : ride.dropoffAddress,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              ride.pickupAddress,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
+                          ),
+                          if (timeAgo.isNotEmpty)
                             Text(
-                              formatLatLng(ride.dropoffLatitude, ride.dropoffLongitude),
-                              style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                              timeAgo,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textTertiary,
+                                    fontSize: 11,
+                                  ),
                             ),
-                          ],
-                        ),
+                        ],
                       ),
+                      AppSpacing.gapXs,
+                      Row(
+                        children: [
+                          Icon(Icons.arrow_forward_rounded, size: 12, color: AppColors.textTertiary),
+                          AppSpacing.hGapXs,
+                          Expanded(
+                            child: Text(
+                              ride.dropoffAddress,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textTertiary,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (fare != null) ...[
+                        AppSpacing.gapXs,
+                        Text(
+                          '${CurrencyService.format(fare)}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                        ),
+                      ],
                     ],
                   ),
-                ],
-              ),
+                ),
+                AppSpacing.hGapSm,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: statusColor),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                statusLabel,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildSearchBar() {
-    return InkWell(
-      onTap: _requestRide,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-      child: Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          border: Border.all(color: AppColors.outline),
-        ),
-        child: const Row(
-          children: [
-            SizedBox(width: 16),
-            Icon(
-              Icons.search,
-              color: AppColors.primary,
-              size: 22,
-            ),
-            SizedBox(width: 12),
-            Text(
-              'Where to?',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
+    return Semantics(
+      button: true,
+      label: 'Search destination',
+      child: InkWell(
+        onTap: _requestRide,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        child: Container(
+          height: 60,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            border: Border.all(color: AppColors.outline),
+            boxShadow: AppShadows.small,
+          ),
+          child: Row(
+            children: [
+              AppSpacing.hGapLg,
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: const Icon(
+                  Icons.search_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
               ),
-            ),
-          ],
+              AppSpacing.hGapMd,
+              Text(
+                'Where to?',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1387,14 +1540,14 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
       child: Container(
         color: AppColors.error,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(Icons.wifi_off, color: AppColors.primaryLight, size: 16),
-            SizedBox(width: 8),
+            const Icon(Icons.wifi_off, color: AppColors.primaryLight, size: 16),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Connection lost — retrying...',
-                style: TextStyle(color: AppColors.primaryLight, fontSize: 13),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.primaryLight),
               ),
             ),
           ],

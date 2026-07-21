@@ -117,7 +117,7 @@ class _StaticBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: AppSpacing.chipPadding,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(100),
@@ -190,7 +190,7 @@ class _AnimatedBadgeState extends State<_AnimatedBadge>
       animation: _pulseAnimation,
       builder: (context, child) {
         return Container(
-          padding: AppSpacing.chipPadding,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: widget.color.withValues(alpha: 0.1 * _pulseAnimation.value),
             borderRadius: BorderRadius.circular(100),

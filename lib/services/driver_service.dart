@@ -230,4 +230,25 @@ static Future<DriverProfile?> getDriverProfile(String token) async {
     }
     return [];
   }
+
+  static Future<Map<String, dynamic>?> getFinancialSummary(String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/drivers/financial-summary';
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      addDebugMessage('❌ Error fetching financial summary: $e');
+      return null;
+    }
+  }
 }

@@ -13,6 +13,8 @@ import '../services/websocket_service.dart';
 import '../screens/debug_screen.dart';
 import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/swipe_button.dart';
@@ -487,22 +489,30 @@ class _DriverNavigationToRiderScreenState
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-          onPressed: () => Navigator.pop(context),
+        leading: Semantics(
+          button: true,
+          label: 'Back',
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-        title: const Text(
+        title: Text(
           'Navigate to Rider',
-          style: TextStyle(color: AppColors.primary),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.primary),
         ),
         actions: [
           Stack(
             clipBehavior: Clip.none,
             children: [
-              IconButton(
-                icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
-                tooltip: 'Chat with Rider',
-                onPressed: _openChat,
+              Semantics(
+                button: true,
+                label: 'Chat with rider',
+                child: IconButton(
+                  icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
+                  tooltip: 'Chat with Rider',
+                  onPressed: _openChat,
+                ),
               ),
               _buildUnreadBadge(),
             ],
@@ -524,23 +534,27 @@ class _DriverNavigationToRiderScreenState
             myLocationButtonEnabled: true,
             style: _mapStyle,
           ),
-          Positioned(
+          PositionedDirectional(
             top: 16,
-            right: 16,
-            child: FloatingActionButton(
-              heroTag: 'toggle_marker_nav',
-              mini: true,
-              onPressed: () {
-                setState(() => _showDriverMarker = !_showDriverMarker);
-                _updateMarkers();
-              },
-              backgroundColor: _showDriverMarker
-                  ? AppColors.primary
-                  : AppColors.surfaceVariant,
-              child: Icon(
-                Icons.my_location,
-                color: _showDriverMarker ? AppColors.primaryLight : AppColors.textSecondary,
-                size: 20,
+            end: 16,
+            child:             Semantics(
+              button: true,
+              label: 'Toggle driver marker',
+              child: FloatingActionButton(
+                heroTag: 'toggle_marker_nav',
+                mini: true,
+                onPressed: () {
+                  setState(() => _showDriverMarker = !_showDriverMarker);
+                  _updateMarkers();
+                },
+                backgroundColor: _showDriverMarker
+                    ? AppColors.primary
+                    : AppColors.surfaceVariant,
+                child: Icon(
+                  Icons.my_location,
+                  color: _showDriverMarker ? AppColors.primaryLight : AppColors.textSecondary,
+                  size: 20,
+                ),
               ),
             ),
           ),
@@ -549,36 +563,43 @@ class _DriverNavigationToRiderScreenState
               child: AnimatedOpacity(
                 opacity: _isArriving ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 500),
-                child: Container(
-                  color: AppColors.mapOverlay,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.check_circle, color: AppColors.primaryLight, size: 80),
-                        const SizedBox(height: AppSpacing.lg),
-                        const Text(
-                          'You have arrived!',
-                          style: TextStyle(
-                            color: AppColors.primaryLight,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.8, end: 1.0),
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeOutBack,
+                  builder: (context, scale, child) {
+                    return Transform.scale(scale: scale, child: child);
+                  },
+                  child: Container(
+                    color: AppColors.mapOverlay,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle, color: AppColors.primaryLight, size: 80),
+                          const SizedBox(height: AppSpacing.lg),
+                          Text(
+                            'You have arrived!',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  color: AppColors.primaryLight,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          'Rider has been notified',
-                          style: TextStyle(
-                            color: AppColors.primaryLight.withValues(alpha: 0.7),
-                            fontSize: 16,
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'Rider has been notified',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: AppColors.primaryLight.withValues(alpha: 0.7),
+                                ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
+          // ── Bottom sheet ────────────────────────────────────
           Positioned(
             bottom: 0,
             left: 0,
@@ -587,10 +608,10 @@ class _DriverNavigationToRiderScreenState
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(AppSpacing.radiusXxl),
-                  topRight: Radius.circular(AppSpacing.radiusXxl),
+                  topLeft: Radius.circular(AppRadius.xl),
+                  topRight: Radius.circular(AppRadius.xl),
                 ),
-                boxShadow: AppSpacing.shadowXl,
+                boxShadow: AppShadows.large,
               ),
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
@@ -601,77 +622,154 @@ class _DriverNavigationToRiderScreenState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, color: AppColors.error, size: 20),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Pickup Location',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textTertiary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              widget.pickupAddress,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              formatLatLng(widget.pickupLat, widget.pickupLng),
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  color: AppColors.textTertiary),
-                            ),
-                          ],
+                  // ── Premium Address Card ──────────────────────────
+                  Container(
+                    width: double.infinity,
+                    padding: AppSpacing.cardPadding,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant,
+                      borderRadius: AppRadius.lgRadius,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.1),
+                            borderRadius: AppRadius.smRadius,
+                          ),
+                          child: const Icon(Icons.location_on,
+                              color: AppColors.error, size: 20),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Container(height: 1, color: AppColors.outline),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time, color: AppColors.primary, size: 20),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        '$_remainingMinutes min remaining',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (_distanceKm != null)
-                        Text(
-                          '${_distanceKm!.toStringAsFixed(1)} km',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textSecondary,
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'PICKUP',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: AppColors.textTertiary,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.8,
+                                    ),
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                widget.pickupAddress,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                formatLatLng(widget.pickupLat, widget.pickupLng),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppColors.textTertiary,
+                                    ),
+                              ),
+                            ],
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  // ── Time & Distance Side by Side ──────────────────
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: AppSpacing.cardPadding,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceVariant,
+                            borderRadius: AppRadius.lgRadius,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.access_time,
+                                  color: AppColors.primary, size: 22),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                '$_remainingMinutes',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                'min',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Container(
+                          padding: AppSpacing.cardPadding,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceVariant,
+                            borderRadius: AppRadius.lgRadius,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.straighten,
+                                  color: AppColors.primary, size: 22),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                _distanceKm?.toStringAsFixed(1) ?? '--',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                'km',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xxl),
-                  SwipeButton(
+                  Semantics(
+                    button: true,
                     label: "I've Arrived",
-                    processingLabel: 'Notifying...',
-                    icon: Icons.check_circle,
-                    onConfirmed: _notifyArrival,
-                    isDisabled: _isArriving,
+                    child: SwipeButton(
+                      label: "I've Arrived",
+                      processingLabel: 'Notifying...',
+                      icon: Icons.check_circle,
+                      onConfirmed: _notifyArrival,
+                      isDisabled: _isArriving,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   SizedBox(
@@ -684,18 +782,22 @@ class _DriverNavigationToRiderScreenState
                         foregroundColor: AppColors.primary,
                         side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: AppRadius.mdRadius,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  PremiumButton(
-                    label: 'Cancel Ride',
-                    onPressed: _showCancelRideDialog,
-                    variant: ButtonVariant.danger,
-                    icon: Icons.close,
+                  Semantics(
+                    button: true,
+                    label: 'Cancel ride',
+                    child: PremiumButton(
+                      label: 'Cancel Ride',
+                      onPressed: _showCancelRideDialog,
+                      variant: ButtonVariant.danger,
+                      icon: Icons.close,
+                    ),
                   ),
                 ],
               ),
@@ -721,7 +823,7 @@ class _DriverNavigationToRiderScreenState
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
             title: const Row(
               children: [
                 Icon(Icons.cancel, color: AppColors.error, size: 24),
@@ -760,8 +862,8 @@ class _DriverNavigationToRiderScreenState
     if (_otherUserId == null) return const SizedBox.shrink();
     final count = WebSocketService.unreadCounts[_otherUserId!] ?? 0;
     if (count == 0) return const SizedBox.shrink();
-    return Positioned(
-      right: 2,
+    return PositionedDirectional(
+      end: 2,
       top: 2,
       child: Container(
         padding: const EdgeInsets.all(4),
@@ -769,7 +871,7 @@ class _DriverNavigationToRiderScreenState
         constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
         child: Text(
           count > 9 ? '9+' : '$count',
-          style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.primaryLight, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
       ),

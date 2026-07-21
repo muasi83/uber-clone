@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import '../services/currency_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/glass_card.dart';
 import 'dart:math' as math;
@@ -14,6 +17,8 @@ import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 
+/// @deprecated Use [LocationPickerScreen] from widgets/location_picker.dart instead.
+/// This screen is kept for backward compatibility but will be removed.
 class RideMapScreen extends StatefulWidget {
   final bool isDriver;
 
@@ -446,7 +451,7 @@ int _calculateDuration(double distanceKm) {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceVariant.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(AppRadius.sheet),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -498,8 +503,8 @@ int _calculateDuration(double distanceKm) {
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: AppSpacing.shadowLg,
+                      borderRadius: AppRadius.mdRadius,
+                      boxShadow: AppShadows.large,
                     ),
                     child: IconButton(
                       icon: const Icon(Icons.my_location, color: AppColors.primary),
@@ -518,7 +523,7 @@ int _calculateDuration(double distanceKm) {
                   right: 16,
                   bottom: 16,
                   child: GlassCard(
-                    borderRadius: 20,
+                    borderRadius: AppRadius.sheet,
                     padding: const EdgeInsets.all(20),
                     child: step == 1 ? _buildPickupPanel() : _buildDropoffPanel(),
                   ),
@@ -712,7 +717,7 @@ int _calculateDuration(double distanceKm) {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppColors.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.mdRadius,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -744,7 +749,7 @@ int _calculateDuration(double distanceKm) {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '\$${estimatedFare!.toStringAsFixed(2)}',
+                      '${CurrencyService.format(estimatedFare!)}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
@@ -790,7 +795,7 @@ int _calculateDuration(double distanceKm) {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.mdRadius,
           border: Border.all(
             color: selected ? AppColors.primary : AppColors.outline,
             width: 1.5,

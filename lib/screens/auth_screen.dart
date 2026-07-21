@@ -1,19 +1,21 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' show lerpDouble;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:async';
-import 'dart:io';
 import 'package:country_code_picker/country_code_picker.dart';
 import '../services/storage_service.dart';
 import '../services/firebase_service.dart';
 import '../services/recorded_screen_mixin.dart';
-import '../services/event_recorder_service.dart';
 import '../screens/debug_screen.dart';
 import '../screens/forgot_password_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_text_field.dart';
 
@@ -38,6 +40,10 @@ class _AuthScreenState extends State<AuthScreen>
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
+  String _emailError = '';
+  String _passwordError = '';
+  String _confirmPasswordError = '';
+
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -58,6 +64,9 @@ class _AuthScreenState extends State<AuthScreen>
       curve: Curves.easeOutCubic,
     ));
     _animController.forward();
+    _emailController.addListener(_onEmailChanged);
+    _passwordController.addListener(_onPasswordChanged);
+    _confirmPasswordController.addListener(_onConfirmPasswordChanged);
     recordEvent(
       eventName: 'SCREEN_OPENED',
       category: 'NAVIGATION',
@@ -65,7 +74,66 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
+  void _onEmailChanged() {
+    final email = _emailController.text;
+    if (email.isEmpty) {
+      _clearError('email');
+    } else if (!_isValidEmail(email)) {
+      setState(() => _emailError = 'Please enter a valid email address');
+    } else {
+      _clearError('email');
+    }
+  }
+
+  void _onPasswordChanged() {
+    final password = _passwordController.text;
+    if (password.isEmpty) {
+      _clearError('password');
+    } else if (password.length < 6) {
+      setState(() => _passwordError = 'Password must be at least 6 characters');
+    } else {
+      _clearError('password');
+    }
+    if (_confirmPasswordController.text.isNotEmpty) {
+      _onConfirmPasswordChanged();
+    }
+  }
+
+  void _onConfirmPasswordChanged() {
+    final confirm = _confirmPasswordController.text;
+    if (confirm.isEmpty) {
+      _clearError('confirmPassword');
+    } else if (confirm != _passwordController.text) {
+      setState(() => _confirmPasswordError = 'Passwords do not match');
+    } else {
+      _clearError('confirmPassword');
+    }
+  }
+
+  void _clearError(String field) {
+    setState(() {
+      switch (field) {
+        case 'email': _emailError = ''; break;
+        case 'password': _passwordError = ''; break;
+        case 'confirmPassword': _confirmPasswordError = ''; break;
+      }
+    });
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+  }
+
+  bool _validateAll() {
+    _onEmailChanged();
+    _onPasswordChanged();
+    if (!_isLogin) _onConfirmPasswordChanged();
+    return _emailError.isEmpty && _passwordError.isEmpty && _confirmPasswordError.isEmpty;
+  }
+
   Future<void> _register() async {
+    if (!_validateAll()) return;
+
     try {
       if (_emailController.text.isEmpty ||
           _passwordController.text.isEmpty ||
@@ -73,16 +141,6 @@ class _AuthScreenState extends State<AuthScreen>
           _phoneController.text.isEmpty ||
           _confirmPasswordController.text.isEmpty) {
         _showError('Please fill all fields');
-        return;
-      }
-
-      if (_passwordController.text.length < 6) {
-        _showError('Password must be at least 6 characters');
-        return;
-      }
-
-      if (_passwordController.text != _confirmPasswordController.text) {
-        _showError('Passwords do not match');
         return;
       }
 
@@ -161,6 +219,8 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   Future<void> _login() async {
+    if (!_validateAll()) return;
+
     try {
       if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
         _showError('Please enter email and password');
@@ -276,9 +336,9 @@ class _AuthScreenState extends State<AuthScreen>
         backgroundColor: AppColors.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: AppRadius.smRadius,
         ),
-        margin: const EdgeInsets.all(16),
+        margin: AppSpacing.screenPadding,
       ),
     );
   }
@@ -288,116 +348,75 @@ class _AuthScreenState extends State<AuthScreen>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-              GestureDetector(
-              onLongPress: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DebugScreen()),
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.only(top: 60, bottom: 40),
-                decoration: const BoxDecoration(
-                  gradient: AppColors.darkGradient,
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.textPrimary.withValues(alpha: 0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.directions_car_rounded,
-                        size: 36,
-                        color: AppColors.primaryLight,
-                      ),
-                    ),
-                    AppSpacing.gapLg,
-                    const Text(
-                      'RideNow',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryLight,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    AppSpacing.gapXs,
-                    Text(
-                      'Sign in to continue',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppColors.primaryLight.withValues(alpha: 0.85),
-                      ),
-                    ),
-                  ],
-                ),
+        body: CustomScrollView(
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _AuthHeaderDelegate(
+                minExtent: kToolbarHeight + MediaQuery.of(context).padding.top + 4,
+                maxExtent: 260,
+                onLongPress: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const DebugScreen()),
+                  );
+                },
               ),
             ),
-            Transform.translate(
-              offset: const Offset(0, -24),
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+            SliverToBoxAdapter(
+              child: Transform.translate(
+                offset: const Offset(0, -24),
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(AppRadius.xl),
+                      topRight: Radius.circular(AppRadius.xl),
+                    ),
                   ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                  child: Column(
-                    children: [
-                      AppSpacing.gapLg,
-                      _buildPillToggle(),
-                      AppSpacing.gapXxl,
-                      FadeTransition(
-                        opacity: _fadeAnim,
-                        child: SlideTransition(
-                          position: _slideAnim,
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 250),
-                            transitionBuilder: (child, animation) {
-      return FadeTransition(
-                                opacity: animation,
-                                child: child,
-    );
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                    child: Column(
+                      children: [
+                        AppSpacing.gapLg,
+                        _buildPillToggle(),
+                        AppSpacing.gapXxl,
+                        FadeTransition(
+                          opacity: _fadeAnim,
+                          child: SlideTransition(
+                            position: _slideAnim,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 250),
+                              transitionBuilder: (child, animation) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: child,
+                                );
                               },
-                            child: _isLogin
-                                ? _buildLoginForm()
-                                : _buildRegisterForm(),
+                              child: _isLogin
+                                  ? _buildLoginForm()
+                                  : _buildRegisterForm(),
+                            ),
                           ),
                         ),
-                      ),
-                      AppSpacing.gapXxl,
-                      TextButton(
-                        onPressed: _showServerUrlDialog,
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.textTertiary,
-                        ),
-                        child: const Text(
-                          'Settings',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                        AppSpacing.gapLg,
+                        if (kDebugMode)
+                          TextButton(
+                            onPressed: _showServerUrlDialog,
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.textTertiary,
+                            ),
+                            child: const Text(
+                              'Server Settings (Dev)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -405,7 +424,7 @@ class _AuthScreenState extends State<AuthScreen>
           ],
         ),
       ),
-    ));
+    );
   }
 
   Widget _buildPillToggle() {
@@ -413,7 +432,7 @@ class _AuthScreenState extends State<AuthScreen>
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.lgRadius,
       ),
       child: Row(
         children: [
@@ -425,16 +444,8 @@ class _AuthScreenState extends State<AuthScreen>
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: _isLogin ? AppColors.surface : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: _isLogin
-                      ? [
-                          BoxShadow(
-                            color: AppColors.textPrimary.withValues(alpha: 0.06),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
+                  borderRadius: AppRadius.mdRadius,
+                  boxShadow: _isLogin ? AppShadows.small : null,
                 ),
                 child: Text(
                   'Login',
@@ -456,16 +467,8 @@ class _AuthScreenState extends State<AuthScreen>
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: !_isLogin ? AppColors.surface : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: !_isLogin
-                      ? [
-                          BoxShadow(
-                            color: AppColors.textPrimary.withValues(alpha: 0.06),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
+                  borderRadius: AppRadius.mdRadius,
+                  boxShadow: !_isLogin ? AppShadows.small : null,
                 ),
                 child: Text(
                   'Register',
@@ -486,7 +489,109 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
+  Widget _buildDisabledSocialSection() {
+    return Column(
+      children: [
+        _buildOrDivider(),
+        AppSpacing.gapLg,
+        Opacity(
+          opacity: 0.5,
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildComingSoonButton(
+                  icon: Icons.g_mobiledata_rounded,
+                  label: 'Google',
+                ),
+              ),
+              AppSpacing.hGapMd,
+              Expanded(
+                child: _buildComingSoonButton(
+                  icon: Icons.apple,
+                  label: 'Apple',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComingSoonButton({
+    required IconData icon,
+    required String label,
+  }) {
+    return Column(
+      children: [
+        OutlinedButton.icon(
+          onPressed: null,
+          icon: Icon(icon, size: 22, color: AppColors.textTertiary),
+          label: Text(
+            'Continue with $label',
+            style: const TextStyle(fontSize: 13, color: AppColors.textTertiary),
+          ),
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: AppColors.outline.withValues(alpha: 0.3)),
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Coming Soon',
+          style: TextStyle(
+            fontSize: 10,
+            color: AppColors.textTertiary.withValues(alpha: 0.6),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrDivider() {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: AppColors.outline)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Text(
+            'OR',
+            style: TextStyle(
+              color: AppColors.textTertiary.withValues(alpha: 0.7),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const Expanded(child: Divider(color: AppColors.outline)),
+      ],
+    );
+  }
+
+  Widget _buildSwitchLink({required bool isLogin}) {
+    return Align(
+      alignment: Alignment.center,
+      child: TextButton(
+        onPressed: () => setState(() => _isLogin = !isLogin),
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          padding: const EdgeInsets.symmetric(vertical: 4),
+        ),
+        child: Text(
+          isLogin ? 'Create an account' : 'Already have an account? Sign in',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildLoginForm() {
+    final loginDisabled = _isLoading || _emailError.isNotEmpty || _passwordError.isNotEmpty;
+
     return Column(
       key: const ValueKey('login'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -496,6 +601,7 @@ class _AuthScreenState extends State<AuthScreen>
           label: 'Email',
           prefixIcon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
+          errorText: _emailError.isNotEmpty ? _emailError : null,
         ),
         AppSpacing.gapLg,
         PremiumTextField(
@@ -504,6 +610,7 @@ class _AuthScreenState extends State<AuthScreen>
           prefixIcon: Icons.lock_outlined,
           isPassword: true,
           obscureText: true,
+          errorText: _passwordError.isNotEmpty ? _passwordError : null,
         ),
         Align(
           alignment: Alignment.centerRight,
@@ -531,10 +638,14 @@ class _AuthScreenState extends State<AuthScreen>
         AppSpacing.gapMd,
         PremiumButton(
           label: 'Sign In',
-          onPressed: _isLoading ? null : _login,
+          onPressed: loginDisabled ? null : _login,
           isLoading: _isLoading,
           variant: ButtonVariant.gradient,
         ),
+        AppSpacing.gapXl,
+        _buildDisabledSocialSection(),
+        AppSpacing.gapLg,
+        _buildSwitchLink(isLogin: true),
         if (kDebugMode)
           Row(
             children: [
@@ -551,7 +662,7 @@ class _AuthScreenState extends State<AuthScreen>
                     foregroundColor: AppColors.primary,
                     side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.mdRadius,
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -571,7 +682,7 @@ class _AuthScreenState extends State<AuthScreen>
                     foregroundColor: AppColors.primary,
                     side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.mdRadius,
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -584,6 +695,11 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   Widget _buildRegisterForm() {
+    final registerDisabled = _isLoading ||
+        _emailError.isNotEmpty ||
+        _passwordError.isNotEmpty ||
+        _confirmPasswordError.isNotEmpty;
+
     return Column(
       key: const ValueKey('register'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -599,12 +715,13 @@ class _AuthScreenState extends State<AuthScreen>
           label: 'Email',
           prefixIcon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
+          errorText: _emailError.isNotEmpty ? _emailError : null,
         ),
         AppSpacing.gapLg,
         Container(
           decoration: BoxDecoration(
             color: AppColors.surfaceVariant,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: AppRadius.lgRadius,
             border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
           ),
           child: Row(
@@ -612,7 +729,7 @@ class _AuthScreenState extends State<AuthScreen>
               CountryCodePicker(
                 onChanged: (code) => _countryCode = code.dialCode ?? '+966',
                 initialSelection: 'SA',
-                favorite: ['+966', '+971', '+1'],
+                favorite: const ['+966', '+971', '+1'],
                 showFlagDialog: true,
                 alignLeft: false,
                 textStyle: const TextStyle(
@@ -646,6 +763,7 @@ class _AuthScreenState extends State<AuthScreen>
           label: 'Password',
           prefixIcon: Icons.lock_outlined,
           isPassword: true,
+          errorText: _passwordError.isNotEmpty ? _passwordError : null,
         ),
         AppSpacing.gapLg,
         PremiumTextField(
@@ -653,6 +771,7 @@ class _AuthScreenState extends State<AuthScreen>
           label: 'Confirm Password',
           prefixIcon: Icons.lock_outlined,
           isPassword: true,
+          errorText: _confirmPasswordError.isNotEmpty ? _confirmPasswordError : null,
         ),
         AppSpacing.gapLg,
         const Text(
@@ -733,7 +852,7 @@ class _AuthScreenState extends State<AuthScreen>
                     foregroundColor: AppColors.primary,
                     side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.mdRadius,
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -760,7 +879,7 @@ class _AuthScreenState extends State<AuthScreen>
                     foregroundColor: AppColors.primary,
                     side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.mdRadius,
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -771,10 +890,14 @@ class _AuthScreenState extends State<AuthScreen>
         AppSpacing.gapXl,
         PremiumButton(
           label: 'Create Account',
-          onPressed: _isLoading ? null : _register,
+          onPressed: registerDisabled ? null : _register,
           isLoading: _isLoading,
           variant: ButtonVariant.gradient,
         ),
+        AppSpacing.gapXl,
+        _buildDisabledSocialSection(),
+        AppSpacing.gapLg,
+        _buildSwitchLink(isLogin: false),
       ],
     );
   }
@@ -795,7 +918,7 @@ class _AuthScreenState extends State<AuthScreen>
           color: isSelected
               ? AppColors.primaryContainer
               : AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadius.lgRadius,
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.outline,
             width: isSelected ? 2 : 1,
@@ -840,10 +963,10 @@ class _AuthScreenState extends State<AuthScreen>
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: AppRadius.xlRadius,
         ),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -872,7 +995,7 @@ class _AuthScreenState extends State<AuthScreen>
                         foregroundColor: AppColors.textSecondary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: AppRadius.mdRadius,
                         ),
                       ),
                       child: const Text('Cancel'),
@@ -921,4 +1044,98 @@ class _AuthScreenState extends State<AuthScreen>
     _confirmPasswordController.dispose();
     super.dispose();
   }
+}
+
+class _AuthHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _AuthHeaderDelegate({
+    required this.minExtent,
+    required this.maxExtent,
+    required this.onLongPress,
+  });
+
+  @override
+  final double minExtent;
+  @override
+  final double maxExtent;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final progress = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    final topPadding = MediaQuery.of(context).padding.top;
+
+    return GestureDetector(
+      onLongPress: onLongPress,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.only(top: topPadding),
+        decoration: const BoxDecoration(
+          gradient: AppColors.darkGradient,
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              top: lerpDouble(16, 0, progress),
+              child: Opacity(
+                opacity: 1.0 - progress,
+                child: Container(
+                  padding: AppSpacing.cardPadding,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    boxShadow: AppShadows.medium,
+                  ),
+                  child: const Icon(
+                    Icons.directions_car_rounded,
+                    size: 36,
+                    color: AppColors.primaryLight,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: lerpDouble(32, 12, progress),
+              left: 0,
+              right: 0,
+              child: Text(
+                'RideNow',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: lerpDouble(28, 20, progress),
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryLight,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            if (progress < 0.8)
+              Positioned(
+                bottom: lerpDouble(6, -20, progress),
+                left: 0,
+                right: 0,
+                child: Opacity(
+                  opacity: 1.0 - (progress / 0.8),
+                  child: Text(
+                    'Sign in to continue',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.primaryLight.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _AuthHeaderDelegate oldDelegate) => true;
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 
 class PremiumCard extends StatelessWidget {
@@ -38,7 +39,7 @@ class PremiumCard extends StatelessWidget {
         gradient: gradient,
         borderRadius: BorderRadius.circular(borderRadius ?? 16),
         border: border,
-        boxShadow: shadows ?? AppSpacing.shadowSm,
+        boxShadow: shadows ?? AppShadows.small,
       ),
       child: Material(
         color: Colors.transparent,

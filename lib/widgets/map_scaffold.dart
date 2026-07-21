@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import 'bottom_sheet_handle.dart';
 
@@ -71,10 +73,8 @@ class MapBottomSheet extends StatelessWidget {
           return Container(
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(AppSpacing.bottomSheetTopRadius),
-              ),
-              boxShadow: AppSpacing.shadowXl,
+              borderRadius: AppRadius.sheetTopRadius,
+              boxShadow: AppShadows.large,
             ),
             child: Column(
               children: [
@@ -99,10 +99,8 @@ class MapBottomSheet extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppSpacing.bottomSheetTopRadius),
-        ),
-        boxShadow: AppSpacing.shadowXl,
+        borderRadius: AppRadius.sheetTopRadius,
+        boxShadow: AppShadows.large,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

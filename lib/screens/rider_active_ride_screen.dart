@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import '../services/currency_service.dart';
 import '../services/directions_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
@@ -10,6 +11,8 @@ import '../services/websocket_service.dart';
 import '../screens/debug_screen.dart';
 import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 
 import '../utils/marker_utils.dart';
@@ -76,6 +79,8 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
   StreamSubscription<Map<String, dynamic>>? _driverLocationSub;
   Timer? _driverTimeout;
   Timer? _routeDebounceTimer;
+  StreamSubscription<String>? _connectionStateSub;
+  bool _wasDisconnected = false;
 
   @override
   void initState() {
@@ -99,10 +104,101 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
     _startStatusPolling();
     _driverTimeout = Timer(const Duration(seconds: 3), _fetchDriverCurrentLocation);
 
+    _setupConnectionStateListener();
+
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('🚗 ACTIVE RIDE');
     addDebugMessage('Destination: ${widget.dropoffAddress}');
     addDebugMessage('═══════════════════════════════════════');
+  }
+
+  void _setupConnectionStateListener() {
+    _connectionStateSub = WebSocketService.connectionState.listen((state) {
+      if (!mounted) return;
+      if (state == 'disconnected') {
+        _wasDisconnected = true;
+        addDebugMessage('⚠️ WebSocket disconnected - awaiting reconnect');
+      } else if (state == 'connected' && _wasDisconnected) {
+        _wasDisconnected = false;
+        addDebugMessage('🔄 WebSocket reconnected - rehydrating ride state');
+        _handleReconnected();
+      }
+    });
+  }
+
+  Future<void> _handleReconnected() async {
+    addDebugMessage('🔄 Reconnected - fetching latest ride state');
+    final token = StorageService.getToken();
+    if (token == null) return;
+    try {
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride == null || !mounted || _rideCompleting) return;
+
+      if (ride.driverLatitude != null && ride.driverLongitude != null) {
+        setState(() {
+          _driverLocation = LatLng(ride.driverLatitude!, ride.driverLongitude!);
+          _driverName = ride.driver?.fullName ?? _driverName;
+          _otherUserId = ride.driver?.id ?? _otherUserId;
+        });
+        _updateMarkers();
+        _updateRoute();
+        addDebugMessage('✅ Ride state rehydrated after reconnect');
+      }
+
+      if (ride.status == 'CANCELLED') {
+        if (_rideCompleting) return;
+        _rideCompleting = true;
+        _statusPollTimer?.cancel();
+        ChatScreen.clearAllCache();
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/rider-home',
+            (route) => false,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(ride.cancellationReason ?? 'The ride was cancelled'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (ride.status == 'COMPLETED') {
+        if (_paymentInProgress || _rideCompleting) return;
+        _rideCompleting = true;
+        _statusPollTimer?.cancel();
+        addDebugMessage('✅ Reconnect detected ride COMPLETED');
+        ChatScreen.clearAllCache();
+
+        final paymentStatus = await RideService.getPaymentStatus(widget.rideId, token);
+        if (!mounted) return;
+        final status = paymentStatus?['status'] as String?;
+        if (status == 'COMPLETED') {
+          _paymentInProgress = false;
+          _rideCompleting = false;
+          if (mounted) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/rider-completed',
+              arguments: {
+                'rideId': widget.rideId,
+                'totalFare': paymentStatus?['amount'] ?? ride.finalFare,
+              },
+            );
+          }
+          return;
+        }
+
+        _handlePayment(totalFare: ride.finalFare);
+        return;
+      }
+    } catch (e) {
+      addDebugMessage('⚠️ Reconnect rehydration error: $e');
+    }
   }
 
   Future<void> _initYellowPin() async {
@@ -257,7 +353,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         dialogText: 'Cash Payment confirmation',
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
           title: const Text('Cash Payment'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -265,7 +361,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
               const Text('Please pay the driver directly:'),
               const SizedBox(height: 16),
               Text(
-                '\$${_paymentAmount.toStringAsFixed(2)}',
+                '${CurrencyService.format(_paymentAmount)}',
                 style: const TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
@@ -358,7 +454,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         dialogText: 'Payment Failed retry dialog',
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
           title: const Text('Payment Failed'),
           content: Text(error ?? 'Payment confirmation failed'),
           actions: [
@@ -557,7 +653,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
         child: Text(
           count > 9 ? '9+' : '$count',
-          style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.primaryLight, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
       ),
@@ -579,7 +675,6 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
 
     final driverPos = _animatedDriverPos ?? _driverLocation;
     if (driverPos != null) {
-      addDebugMessage('_updateMarkers rotation=$_driverHeading');
       updated.add(
         Marker(
           markerId: const MarkerId('driver'),
@@ -689,6 +784,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -699,26 +795,33 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
-          onPressed: _showCancelRideDialog,
-        ),
-        title: const Text(
-          'En Route',
-          style: TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
+        leading: Semantics(
+          button: true,
+          label: 'Cancel ride',
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+            onPressed: _showCancelRideDialog,
           ),
+        ),
+        title: Text(
+          'En Route',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
         ),
         actions: [
           Stack(
             clipBehavior: Clip.none,
             children: [
-              IconButton(
-                icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
-                tooltip: 'Chat with Driver',
-                onPressed: _openChat,
+              Semantics(
+                button: true,
+                label: 'Chat with driver',
+                child: IconButton(
+                  icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
+                  tooltip: 'Chat with Driver',
+                  onPressed: _openChat,
+                ),
               ),
               _buildUnreadBadge(),
             ],
@@ -747,9 +850,9 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppSpacing.radiusXxl),
+                  top: Radius.circular(AppRadius.xl),
                 ),
-                boxShadow: AppSpacing.shadowXl,
+                boxShadow: AppShadows.large,
               ),
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xxl,
@@ -765,50 +868,43 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                       margin: const EdgeInsets.only(bottom: AppSpacing.lg),
                       decoration: BoxDecoration(
                         color: AppColors.textTertiary.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                   ),
+
                   Container(
                     width: double.infinity,
-                    padding: AppSpacing.cardPaddingCompact,
+                    padding: AppSpacing.cardPadding,
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: Row(
+                    child: Column(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(AppSpacing.sm),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                          ),
-                          child: const Icon(
-                            Icons.access_time_rounded,
-                            color: AppColors.primary,
-                            size: 22,
+                        Text(
+                          'Estimated arrival',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        AppSpacing.hGapMd,
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        AppSpacing.gapSm,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              'Estimated arrival',
-                              style: TextStyle(
-                                color: AppColors.textSecondary.withValues(alpha: 0.8),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
+                            const Icon(
+                              Icons.access_time_rounded,
+                              color: AppColors.primary,
+                              size: 24,
                             ),
-                            const SizedBox(height: 2),
+                            AppSpacing.hGapSm,
                             Text(
                               '$_remainingMinutes min remaining',
-                              style: const TextStyle(
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
                                 color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 17,
+                                letterSpacing: -0.5,
                               ),
                             ),
                           ],
@@ -817,15 +913,34 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                     ),
                   ),
                   AppSpacing.gapLg,
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                    child: LinearProgressIndicator(
-                      backgroundColor: AppColors.outline.withValues(alpha: 0.5),
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                      minHeight: 3,
-                    ),
+
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 0.65),
+                    duration: const Duration(milliseconds: 1500),
+                    builder: (context, value, _) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        child: Container(
+                          height: 4,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: AppColors.outline.withValues(alpha: 0.5),
+                          ),
+                          child: FractionallySizedBox(
+                            alignment: AlignmentDirectional.centerStart,
+                            widthFactor: value.clamp(0.0, 1.0),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                gradient: AppColors.primaryGradientH,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   AppSpacing.gapLg,
+
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -833,7 +948,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                         padding: const EdgeInsets.all(AppSpacing.sm),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
                         ),
                         child: const Icon(
                           Icons.location_on,
@@ -846,20 +961,18 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Destination',
-                              style: TextStyle(
+                              style: theme.textTheme.labelSmall?.copyWith(
                                 color: AppColors.textTertiary,
-                                fontSize: 11,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            AppSpacing.gapXs,
                             Text(
                               widget.dropoffAddress,
-                              style: const TextStyle(
+                              style: theme.textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                fontSize: 14,
                                 color: AppColors.textPrimary,
                               ),
                               maxLines: 2,
@@ -868,15 +981,16 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                             Text(
                               formatLatLng(
                                   widget.dropoffLat, widget.dropoffLng),
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  color: AppColors.textTertiary),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
+
                   if (_driverName != null) ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
@@ -888,24 +1002,22 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                     Row(
                       children: [
                         CircleAvatar(
-                          radius: 18,
+                          radius: 16,
                           backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                           child: Text(
                             _driverName![0].toUpperCase(),
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                         ),
                         AppSpacing.hGapMd,
                         Expanded(
                           child: Text(
                             _driverName!,
-                            style: const TextStyle(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
-                              fontSize: 14,
                               color: AppColors.textPrimary,
                             ),
                           ),
@@ -916,12 +1028,16 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                             Container(
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
                               ),
-                              child: IconButton(
-                                icon: const Icon(Icons.chat_rounded,
-                                    color: AppColors.primary, size: 20),
-                                onPressed: _openChat,
+                              child: Semantics(
+                                button: true,
+                                label: 'Chat with driver',
+                                child: IconButton(
+                                  icon: const Icon(Icons.chat_rounded,
+                                      color: AppColors.primary, size: 20),
+                                  onPressed: _openChat,
+                                ),
                               ),
                             ),
                             _buildUnreadBadge(),
@@ -977,7 +1093,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
       dialogText: 'Cannot cancel ride dialog',
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
         title: const Row(
           children: [
             Icon(Icons.info_outline, color: AppColors.warning, size: 24),
@@ -1008,6 +1124,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
     _routeDebounceTimer?.cancel();
     _rideEventsSub?.cancel();
     _driverLocationSub?.cancel();
+    _connectionStateSub?.cancel();
     mapController?.dispose();
     super.dispose();
   }

@@ -5,6 +5,10 @@ import '../models/models.dart';
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/premium_card.dart';
 import 'rider_profile_screen.dart';
 import 'email_verification_screen.dart';
 import 'phone_verification_screen.dart';
@@ -57,7 +61,7 @@ class _AccountScreenState extends State<AccountScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.lgRadius),
         title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
         actions: [
@@ -108,10 +112,10 @@ class _AccountScreenState extends State<AccountScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: AppSpacing.screenPadding,
               children: [
                 _buildProfileHeader(),
-                const SizedBox(height: 24),
+                AppSpacing.gapXl,
                 _buildMenuItem(
                   icon: Icons.person_outline,
                   title: 'Profile',
@@ -194,7 +198,7 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapLg,
                 _buildMenuItem(
                   icon: Icons.logout_rounded,
                   title: 'Logout',
@@ -209,63 +213,61 @@ class _AccountScreenState extends State<AccountScreen> {
 
   Widget _buildProfileHeader() {
     final name = _user?.fullName ?? StorageService.getUsername() ?? 'User';
-    final email = _user?.email ?? '';
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
+    return Semantics(
+      label: 'Account profile for $name',
+      child: PremiumCard(
+        shadows: AppShadows.small,
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 32,
-              backgroundColor: AppColors.primaryContainer,
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
+            Semantics(
+              label: 'Profile avatar',
+              child: CircleAvatar(
+                radius: 32,
+                backgroundColor: AppColors.primaryContainer,
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 16),
+            AppSpacing.hGapLg,
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                  Semantics(
+                    label: 'User name',
+                    child: Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
-                  if (email.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Rider',
-                        style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                      ),
-                      if (_user?.gender != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          _genderLabel(_user!.gender!),
-                          style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                        ),
-                      ],
-                  ],
-                  const SizedBox(height: 4),
+                  AppSpacing.gapXs,
                   Row(
                     children: [
-                      const Icon(Icons.star, size: 14, color: AppColors.warning),
-                      const SizedBox(width: 4),
-                      const Text(
-                        '4.8',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                      Semantics(
+                        label: 'Rating 4.8 out of 5',
+                        child: Row(
+                          children: [
+                            Icon(Icons.star, size: 14, color: AppColors.warning),
+                            const SizedBox(width: 4),
+                            const Text(
+                              '4.8',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 8),
                       Text(
                         'Rider',
                         style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
@@ -275,7 +277,10 @@ class _AccountScreenState extends State<AccountScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.edit_outlined, size: 20, color: AppColors.textSecondary),
+            Semantics(
+              label: 'Edit profile',
+              child: Icon(Icons.edit_outlined, size: 20, color: AppColors.textSecondary),
+            ),
           ],
         ),
       ),
@@ -290,55 +295,58 @@ class _AccountScreenState extends State<AccountScreen> {
     bool isDestructive = false,
     required VoidCallback onTap,
   }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: isDestructive
-                ? AppColors.error.withValues(alpha: 0.1)
-                : AppColors.primaryContainer,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            icon,
-            color: isDestructive ? AppColors.error : AppColors.primary,
-            size: 20,
+    return Semantics(
+      label: '$title, $subtitle',
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+        child: PremiumCard(
+          hasRipple: true,
+          onTap: onTap,
+          shadows: [],
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isDestructive
+                      ? AppColors.error.withValues(alpha: 0.1)
+                      : AppColors.primaryContainer,
+                  borderRadius: AppRadius.smRadius,
+                ),
+                child: Icon(
+                  icon,
+                  color: isDestructive ? AppColors.error : AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              AppSpacing.hGapMd,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: isDestructive ? AppColors.error : AppColors.textPrimary,
+                      ),
+                    ),
+                    AppSpacing.gapXs,
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                    ),
+                  ],
+                ),
+              ),
+              trailing ?? const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 20),
+            ],
           ),
         ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-            color: isDestructive ? AppColors.error : AppColors.textPrimary,
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
-        ),
-        trailing: trailing ?? const Icon(Icons.chevron_right, color: AppColors.textTertiary),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        onTap: onTap,
       ),
     );
   }
 
-  String _genderLabel(String gender) {
-    switch (gender) {
-      case 'MALE':
-        return 'Male';
-      case 'FEMALE':
-        return 'Female';
-      case 'PREFER_NOT_TO_SAY':
-        return 'Prefer not to say';
-      default:
-        return '';
-    }
-  }
 }

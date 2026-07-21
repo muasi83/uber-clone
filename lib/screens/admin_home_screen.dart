@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/storage_service.dart';
 import '../services/admin_service.dart';
+import '../services/currency_service.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/shimmer_loading.dart';
 import 'admin_trip_details_screen.dart';
+import 'admin_driver_list_screen.dart';
+import 'admin_earnings_dashboard_screen.dart';
 import '../theme/app_colors.dart';
 import '../services/recorded_screen_mixin.dart';
+
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
 
@@ -226,9 +230,58 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
       ),
       body: Column(
         children: [
+          _buildNavSection(),
           if (_showFilters) _buildFilterPanel(),
           Expanded(child: _buildBody()),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNavSection() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      color: AppColors.surface,
+      child: Row(
+        children: [
+          Expanded(
+            child: _navButton(
+              icon: Icons.people,
+              label: 'Drivers',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminDriverListScreen()),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _navButton(
+              icon: Icons.account_balance,
+              label: 'Earnings',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminEarningsDashboardScreen()),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _navButton({required IconData icon, required String label, required VoidCallback onTap}) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 18),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -522,7 +575,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
                           fontSize: 12, color: AppColors.textSecondary)),
                   const Spacer(),
                   if (finalFare != null)
-                    Text('\$${finalFare.toStringAsFixed(2)}',
+                    Text(CurrencyService.format(finalFare),
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 14)),
                   const SizedBox(width: 8),

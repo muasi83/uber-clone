@@ -5,12 +5,16 @@ import 'package:geocoding/geocoding.dart';
 import 'dart:math' as math;
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 
+/// @deprecated Use [LocationPickerScreen] from widgets/location_picker.dart instead.
+/// This screen is kept for backward compatibility but will be removed.
 class RideLocationPickerScreen extends StatefulWidget {
   const RideLocationPickerScreen({super.key});
 
@@ -396,7 +400,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                 elevation: 0,
               leading: IconButton(
                 icon: Container(
-                  padding: const EdgeInsets.all(8),
+                   padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceVariant.withValues(alpha: 0.9),
                     shape: BoxShape.circle,
@@ -409,7 +413,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceVariant.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: AppRadius.xlRadius,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -453,10 +457,10 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
             child: Container(
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: AppSpacing.shadowLg,
+                borderRadius: AppRadius.lgRadius,
+                boxShadow: AppShadows.large,
               ),
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.cardPadding,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -464,7 +468,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                   Container(
                     decoration: BoxDecoration(
                       color: AppColors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.mdRadius,
                       border: Border.all(
                         color: _step == 0 ? AppColors.primary.withValues(alpha: 0.3) : AppColors.outline,
                       ),
@@ -491,7 +495,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                     ),
                   ),
                   if (_step == 1) ...[
-                    const SizedBox(height: 8),
+                    AppSpacing.gapSm,
                     // Connecting line
                     Container(
                       height: 20,
@@ -499,29 +503,29 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                       color: AppColors.outline,
                       margin: const EdgeInsets.only(left: 14),
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.gapSm,
                     // Dropoff search
                     Container(
                       decoration: BoxDecoration(
                         color: AppColors.surfaceVariant,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _step == 1 ? AppColors.primary.withValues(alpha: 0.3) : AppColors.outline,
-                        ),
+                      borderRadius: AppRadius.mdRadius,
+                      border: Border.all(
+                        color: _step == 1 ? AppColors.primary.withValues(alpha: 0.3) : AppColors.outline,
                       ),
-                      child: TextField(
-                        controller: _dropoffSearchController,
-                        readOnly: true,
-                        decoration: const InputDecoration(
-                          hintText: 'Dropoff location',
-                          prefixIcon: Icon(
-                            Icons.location_on,
-                            size: 18,
-                            color: AppColors.error,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 14),
-                          hintStyle: TextStyle(color: AppColors.textTertiary),
+                    ),
+                    child: TextField(
+                      controller: _dropoffSearchController,
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Dropoff location',
+                        prefixIcon: Icon(
+                          Icons.location_on,
+                          size: 18,
+                          color: AppColors.error,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 14),
+                        hintStyle: TextStyle(color: AppColors.textTertiary),
                         ),
                         style: const TextStyle(
                           fontSize: 14,
@@ -531,12 +535,12 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                       ),
                     ),
                     if (_estimatedDistance != null && _estimatedFare != null) ...[
-                      const SizedBox(height: 12),
+                      AppSpacing.gapMd,
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
                           color: AppColors.primaryContainer,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: AppRadius.smRadius,
                         ),
                         child: Row(
                           children: [
@@ -569,17 +573,17 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 12),
+                    AppSpacing.gapMd,
                     Row(
                       children: [
                         Expanded(
                           child: _rideTypeChip('ECONOMY', '\$0.20/km'),
                         ),
-                        const SizedBox(width: 8),
+                        AppSpacing.hGapSm,
                         Expanded(
                           child: _rideTypeChip('WOMEN_DRIVER', '\$0.25/km'),
                         ),
-                        const SizedBox(width: 8),
+                        AppSpacing.hGapSm,
                         Expanded(
                           child: _rideTypeChip('LUXURY', '\$0.35/km'),
                         ),
@@ -598,8 +602,8 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
             child: Container(
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: AppSpacing.shadowLg,
+                borderRadius: AppRadius.mdRadius,
+                boxShadow: AppShadows.large,
               ),
               child: IconButton(
                 icon: const Icon(Icons.my_location, color: AppColors.primary),
@@ -634,7 +638,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                           onPressed: _backToPickup,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      AppSpacing.hGapMd,
                       Expanded(
                         flex: 2,
                         child: PremiumButton(
@@ -683,7 +687,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: AppRadius.smRadius,
           border: Border.all(
             color: selected ? AppColors.primary : AppColors.outline,
           ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 
 class PhoneVerificationScreen extends StatefulWidget {
   const PhoneVerificationScreen({super.key});
@@ -27,18 +29,18 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.phone_android_outlined, size: 80, color: AppColors.primary),
-            const SizedBox(height: 24),
+            AppSpacing.gapXl,
             const Text(
               'Verify Your Phone',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
             ),
-            const SizedBox(height: 12),
+            AppSpacing.gapMd,
             const Text(
               'Enter the 6-digit code sent to your phone number',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
             ),
-            const SizedBox(height: 24),
+            AppSpacing.gapXl,
             TextField(
               controller: _codeController,
               textAlign: TextAlign.center,
@@ -47,12 +49,12 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
               decoration: InputDecoration(
                 hintText: '000000',
                 hintStyle: TextStyle(color: AppColors.textTertiary),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(borderRadius: AppRadius.mdRadius),
                 contentPadding: const EdgeInsets.symmetric(vertical: 16),
               ),
               style: const TextStyle(fontSize: 28, letterSpacing: 12, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 24),
+            AppSpacing.gapXl,
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -61,12 +63,12 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.textOnPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
                 ),
                 child: const Text('Verify', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
-            const SizedBox(height: 12),
+            AppSpacing.gapMd,
             TextButton(
               onPressed: () {},
               child: const Text('Resend Code', style: TextStyle(color: AppColors.textSecondary)),

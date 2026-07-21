@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/websocket_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
+import '../services/location_service.dart';
 import '../services/event_recorder_service.dart';
 import '../services/ui_event_recorder.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../utils/map_style_loader.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/cancel_ride_dialog.dart';
 
@@ -42,6 +45,10 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
   Timer? _pollTimer;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
 
+  String? _mapStyle;
+  LatLng? _currentLocation;
+  Set<Circle> _searchCircles = {};
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +59,8 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
     _setupWebSocketListeners();
     _startSearchTimeout();
     _startPolling();
+    _loadMapStyle();
+    _initCurrentLocation();
 
     EventRecorderService.recordEvent(
       rideId: widget.rideId,
@@ -83,6 +92,45 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       if (_driverFound || !mounted) return;
       _checkRideStatus();
     });
+  }
+
+  Future<void> _loadMapStyle() async {
+    _mapStyle = await MapStyleLoader.load();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _initCurrentLocation() async {
+    final loc = await LocationService.getCurrentLocation();
+    if (loc != null && mounted) {
+      setState(() {
+        _currentLocation = LatLng(loc.latitude, loc.longitude);
+        _updateSearchCircles();
+      });
+    }
+  }
+
+  void _updateSearchCircles() {
+    if (_currentLocation == null) return;
+    final baseRadius = 300.0 + (_searchSeconds * 5);
+    final pulseOffset = _pulseAnimation.value * 200.0;
+    _searchCircles = {
+      Circle(
+        circleId: const CircleId('search_radius'),
+        center: _currentLocation!,
+        radius: baseRadius + pulseOffset,
+        fillColor: AppColors.primaryLight.withValues(alpha: 0.06),
+        strokeColor: AppColors.primaryLight.withValues(alpha: 0.25),
+        strokeWidth: 2,
+      ),
+      Circle(
+        circleId: const CircleId('search_dot'),
+        center: _currentLocation!,
+        radius: 8,
+        fillColor: AppColors.primaryLight,
+        strokeColor: AppColors.primaryLight,
+        strokeWidth: 0,
+      ),
+    };
   }
 
   Future<void> _checkRideStatus() async {
@@ -131,7 +179,13 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
 
     _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
+    )..addListener(_onPulseTick);
+  }
+
+  void _onPulseTick() {
+    if (mounted && _currentLocation != null) {
+      _updateSearchCircles();
+    }
   }
 
   void _setupWebSocketListeners() {
@@ -163,7 +217,10 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
     _acceptanceTimer?.cancel();
     _acceptanceTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) { timer.cancel(); return; }
-      setState(() => _searchSeconds++);
+      setState(() {
+        _searchSeconds++;
+        if (_currentLocation != null) _updateSearchCircles();
+      });
     });
   }
 
@@ -527,139 +584,200 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
         child: Scaffold(
-        body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-        child: _driverFound
-            ? _buildDriverFoundContent()
-            : _buildSearchingContent(progressString),
-      ),
-    ),
-    ));
+          body: Stack(
+            children: [
+              if (_currentLocation != null && _mapStyle != null)
+                Semantics(
+                  label: 'Map showing search area',
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: _currentLocation!,
+                      zoom: 14,
+                    ),
+                    circles: _searchCircles,
+                    style: _mapStyle,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: false,
+                    myLocationEnabled: false,
+                    compassEnabled: false,
+
+                  ),
+                ),
+              Container(
+                width: double.infinity,
+                height: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.primary,
+                      Color(0xBF1A237E),
+                      Color(0x991A237E),
+                    ],
+                  ),
+                ),
+                child: _driverFound
+                    ? _buildDriverFoundContent()
+                    : _buildSearchingContent(progressString),
+              ),
+            ],
+          ),
+        ),
+      ));
   }
 
   Widget _buildSearchingContent(String progressString) {
-    return SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ScaleTransition(
-              scale: _pulseAnimation,
-              child: Container(
-                width: 130,
-                height: 130,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.primaryLight.withValues(alpha: 0.15),
-                ),
-                child: Center(
+    return Semantics(
+      label: 'Searching for nearby drivers',
+      child: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Semantics(
+                label: 'Searching animation',
+                child: ScaleTransition(
+                  scale: _pulseAnimation,
                   child: Container(
-                    width: 110,
-                    height: 110,
+                    width: 130,
+                    height: 130,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.primaryLight.withValues(alpha: 0.24),
+                      color: AppColors.primaryLight.withValues(alpha: 0.15),
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.local_taxi,
-                        color: AppColors.primaryLight,
-                        size: 54,
+                    child: Center(
+                      child: Container(
+                        width: 110,
+                        height: 110,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primaryLight.withValues(alpha: 0.24),
+                        ),
+                        child: Center(
+                          child: Semantics(
+                            label: 'Taxi icon',
+                            child: const Icon(
+                              Icons.local_taxi,
+                              color: AppColors.primaryLight,
+                              size: 54,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-            AppSpacing.gapHuge,
-            const Text(
-              'Finding your driver',
-              style: TextStyle(
-                color: AppColors.primaryLight,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            AppSpacing.gapMd,
-            Text(
-              'Searching nearby drivers$progressString',
-              style: TextStyle(
-                color: AppColors.primaryLight.withValues(alpha: 0.7),
-                fontSize: 15,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            AppSpacing.gapXl,
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-              ),
-              child: Text(
-                '${_searchSeconds}s',
-                style: const TextStyle(
-                  color: AppColors.primaryLight,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+              AppSpacing.gapHuge,
+              Semantics(
+                label: 'Finding your driver',
+                child: const Text(
+                  'Finding your driver',
+                  style: TextStyle(
+                    color: AppColors.primaryLight,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.colossal),
-              child:               PremiumButton(
-                label: 'Cancel Search',
-                onPressed: _cancelSearch,
-                variant: ButtonVariant.danger,
-                icon: Icons.close,
+              AppSpacing.gapMd,
+              Semantics(
+                label: 'Search progress $progressString',
+                child: Text(
+                  'Searching nearby drivers$progressString',
+                  style: TextStyle(
+                    color: AppColors.primaryLight.withValues(alpha: 0.7),
+                    fontSize: 15,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-          ],
+              AppSpacing.gapXl,
+              Semantics(
+                label: 'Search duration $_searchSeconds seconds',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(1000),
+                  ),
+                  child: Text(
+                    '${_searchSeconds}s',
+                    style: const TextStyle(
+                      color: AppColors.primaryLight,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.colossal),
+                child: PremiumButton(
+                  label: 'Cancel Search',
+                  onPressed: _cancelSearch,
+                  variant: ButtonVariant.danger,
+                  icon: Icons.close,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildDriverFoundContent() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: AppColors.success.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(50),
+    return Semantics(
+      label: 'Driver found',
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Semantics(
+              label: 'Success checkmark',
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(1000),
+                ),
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  size: 56,
+                  color: AppColors.success,
+                ),
+              ),
             ),
-            child: const Icon(
-              Icons.check_circle_rounded,
-              size: 56,
-              color: AppColors.success,
+            AppSpacing.gapXl,
+            Semantics(
+              label: 'Driver found',
+              child: const Text(
+                'Driver Found!',
+                style: TextStyle(
+                  color: AppColors.primaryLight,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          ),
-          AppSpacing.gapXl,
-          const Text(
-            'Driver Found!',
-            style: TextStyle(
-              color: AppColors.primaryLight,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+            AppSpacing.gapSm,
+            Semantics(
+              label: 'Redirecting to tracking',
+              child: Text(
+                'Redirecting to tracking...',
+                style: TextStyle(
+                  color: AppColors.primaryLight.withValues(alpha: 0.7),
+                  fontSize: 14,
+                ),
+              ),
             ),
-          ),
-          AppSpacing.gapSm,
-          Text(
-            'Redirecting to tracking...',
-            style: TextStyle(
-              color: AppColors.primaryLight.withValues(alpha: 0.7),
-              fontSize: 14,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

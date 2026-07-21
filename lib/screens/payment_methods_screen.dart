@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 class PaymentMethodsScreen extends StatefulWidget {
   final String token;
   const PaymentMethodsScreen({super.key, required this.token});
@@ -18,10 +20,10 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Payment Methods'), centerTitle: true),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.screenPadding,
         children: [
           ..._methods.map((m) => _buildMethodCard(m)),
-          const SizedBox(height: 16),
+          AppSpacing.gapLg,
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -32,11 +34,11 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          AppSpacing.gapXl,
           const Text(
             'Your payment information is stored securely. We use token-based storage and never save full card details.',
             style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
@@ -50,14 +52,14 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
   Widget _buildMethodCard(Map<String, dynamic> method) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
       child: ListTile(
         leading: Container(
           width: 44,
           height: 44,
           decoration: BoxDecoration(
             color: AppColors.primaryContainer,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: AppRadius.smRadius,
           ),
           child: Icon(method['icon'] as IconData, color: AppColors.primary),
         ),

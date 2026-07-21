@@ -28,7 +28,7 @@ class DriverInfoCard extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: AppColors.primaryContainer,
+            color: AppColors.primaryLight.withValues(alpha: 0.2),
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -95,7 +95,7 @@ class DriverInfoCard extends StatelessWidget {
                   size: 22,
                 ),
                 style: IconButton.styleFrom(
-                  backgroundColor: AppColors.primaryContainer,
+                  backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
                   padding: const EdgeInsets.all(10),
                 ),
               ),

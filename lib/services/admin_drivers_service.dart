@@ -60,4 +60,36 @@ class AdminDriversService {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> toggleVerify(int driverId, String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/admin/drivers/$driverId/verify';
+      final response = await http
+          .patch(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> toggleBlock(int driverId, String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/admin/drivers/$driverId/block';
+      final response = await http
+          .patch(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 }

@@ -3,6 +3,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/models.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
+import '../theme/app_spacing.dart';
 import '../services/storage_service.dart';
 
 class RiderProfileScreen extends StatefulWidget {
@@ -85,8 +88,8 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
   void _showPhotoOptions() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTopRadius,
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
@@ -145,7 +148,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
         centerTitle: true,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.screenPadding,
         children: [
           Center(
             child: Stack(
@@ -181,20 +184,20 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          AppSpacing.gapXxl,
           _buildField('Full Name', _nameController, Icons.person_outline),
-          const SizedBox(height: 16),
+          AppSpacing.gapLg,
           _buildField('Email', _emailController, Icons.email_outlined),
-          const SizedBox(height: 16),
+          AppSpacing.gapLg,
           _buildField('Phone', _phoneController, Icons.phone_outlined),
           if (widget.user?.countryCode != null) ...[
-            const SizedBox(height: 4),
+            AppSpacing.gapXs,
             Text(
               'Country Code: ${widget.user!.countryCode}',
               style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
             ),
           ],
-          const SizedBox(height: 24),
+          AppSpacing.gapXl,
           const Text(
             'Gender',
             style: TextStyle(
@@ -203,7 +206,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 8),
+          AppSpacing.gapSm,
           SegmentedButton<String>(
             segments: const [
               ButtonSegment(value: 'MALE', label: Text('Male')),
@@ -219,7 +222,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
               selectedForegroundColor: AppColors.textOnPrimary,
             ),
           ),
-          const SizedBox(height: 32),
+          AppSpacing.gapXxl,
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -228,7 +231,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.textOnPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
               ),
               child: _isSaving
                   ? const SizedBox(
@@ -250,7 +253,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 20, color: AppColors.textSecondary),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(borderRadius: AppRadius.mdRadius),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../services/currency_service.dart';
 import '../services/directions_service.dart';
 import '../services/websocket_service.dart';
 import '../services/location_service.dart';
@@ -14,13 +15,17 @@ import '../services/storage_service.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/address_utils.dart';
 import '../models/ride_model.dart';
+import '../models/location_model.dart';
 import '../screens/debug_screen.dart';
 import '../screens/rider_searching_driver_screen.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_card.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/ride_type_selector.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
@@ -534,7 +539,7 @@ class _RiderDropoffLocationScreenState
     }
 
     _fitBoundsToRouteForReview();
-    _selectedFare = _calculateFare('ECONOMY');
+    _selectedFare = RideTypeSelector.calculateFare(rideTypes, 'ECONOMY', 0.0);
     setState(() {
       _isDropoffConfirmed = true;
       _showTripDetails = true;
@@ -543,7 +548,7 @@ class _RiderDropoffLocationScreenState
   }
 
   void _autoShowReview() {
-    _selectedFare = _calculateFare('ECONOMY');
+    _selectedFare = RideTypeSelector.calculateFare(rideTypes, 'ECONOMY', 0.0);
     setState(() {
       _isDropoffConfirmed = true;
       _showTripDetails = true;
@@ -582,57 +587,11 @@ class _RiderDropoffLocationScreenState
     });
   }
 
-  double _calculateFare(String rideType) {
-    double baseFare;
-    double ratePerKm;
-    switch (rideType) {
-      case 'LUXURY':
-        baseFare = 6.0;
-        ratePerKm = 0.50;
-        break;
-      case 'COMFORT':
-        baseFare = 4.0;
-        ratePerKm = 0.35;
-        break;
-      case 'WOMEN_DRIVER':
-        baseFare = 3.0;
-        ratePerKm = 0.25;
-        break;
-      case 'ECONOMY':
-      default:
-        baseFare = 2.0;
-        ratePerKm = 0.20;
-        break;
-    }
-    return baseFare + ((_routeDistanceKm ?? 0.0) * ratePerKm);
-  }
-
-  double _getRatePerKm(String rideType) {
-    switch (rideType) {
-      case 'LUXURY':
-        return 0.50;
-      case 'COMFORT':
-        return 0.35;
-      case 'WOMEN_DRIVER':
-        return 0.25;
-      case 'ECONOMY':
-      default:
-        return 0.20;
-    }
-  }
-
-  void _updateRideType(String rideType) {
-    setState(() {
-      _selectedRideType = rideType;
-      _selectedFare = _calculateFare(rideType);
-    });
-  }
-
   void _showPaymentMethodSelector() {
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -641,11 +600,11 @@ class _RiderDropoffLocationScreenState
               'Payment Method',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 16),
+            AppSpacing.gapLg,
             _buildPaymentOption('WALLET', Icons.account_balance_wallet),
             _buildPaymentOption('CASH', Icons.money),
             _buildPaymentOption('CARD', Icons.credit_card),
-            const SizedBox(height: 16),
+            AppSpacing.gapLg,
           ],
         ),
       ),
@@ -887,8 +846,8 @@ class _RiderDropoffLocationScreenState
             left: 0,
             right: 0,
             bottom: MediaQuery.of(context).padding.bottom,
-            child: GlassCard(
-              borderRadius: AppSpacing.radiusXxl,
+            child:             GlassCard(
+              borderRadius: AppRadius.xl,
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
                 AppSpacing.sm,
@@ -1156,17 +1115,11 @@ class _RiderDropoffLocationScreenState
       maxChildSize: 0.85,
       builder: (context, scrollController) {
         return Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.textPrimary.withValues(alpha: 0.15),
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.sheetTopRadius,
+          boxShadow: AppShadows.large,
+        ),
           child: ListView(
             controller: scrollController,
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -1179,11 +1132,11 @@ class _RiderDropoffLocationScreenState
                     child: Container(
                       width: 40,
                       height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.outlineVariant,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+              margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
                     ),
                   ),
                   IconButton(
@@ -1199,7 +1152,7 @@ class _RiderDropoffLocationScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(Icons.trip_origin, color: AppColors.pickupMarker, size: 20),
-                  const SizedBox(width: 12),
+                  AppSpacing.hGapMd,
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1218,7 +1171,7 @@ class _RiderDropoffLocationScreenState
                 ],
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                 child: Column(
                   children: List.generate(3, (i) => Container(
                     width: 2, height: 4,
@@ -1234,7 +1187,7 @@ class _RiderDropoffLocationScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(Icons.location_on, color: AppColors.dropoffMarker, size: 20),
-                  const SizedBox(width: 12),
+                  AppSpacing.hGapMd,
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1257,7 +1210,7 @@ class _RiderDropoffLocationScreenState
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              AppSpacing.gapSm,
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -1270,34 +1223,32 @@ class _RiderDropoffLocationScreenState
               // Ride type selection
               const Text('Select ride type',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              const SizedBox(height: 12),
-              _buildRideTypeCard(
-                type: 'ECONOMY', icon: Icons.local_taxi,
-                description: 'Affordable, everyday rides', rate: '\$0.20/km',
-                isSelected: _selectedRideType == 'ECONOMY',
+              AppSpacing.gapMd,
+              RideTypeSelector(
+                rideTypes: rideTypes,
+                selectedApiName: _selectedRideType,
+                onChanged: (type) {
+                  setState(() {
+                    _selectedRideType = type;
+                    _selectedFare = _routeDistanceKm != null
+                        ? RideTypeSelector.calculateFare(
+                            rideTypes, type, _routeDistanceKm!,
+                          )
+                        : 0.0;
+                  });
+                },
+                distanceKm: _routeDistanceKm,
               ),
-              const SizedBox(height: 12),
-              _buildRideTypeCard(
-                type: 'LUXURY', icon: Icons.directions_car,
-                description: 'Premium vehicles, top drivers', rate: '\$0.35/km',
-                isSelected: _selectedRideType == 'LUXURY',
-              ),
-              const SizedBox(height: 12),
-              _buildRideTypeCard(
-                type: 'WOMEN_DRIVER', icon: Icons.face,
-                description: 'Ride with a female driver', rate: '\$0.25/km',
-                isSelected: _selectedRideType == 'WOMEN_DRIVER',
-              ),
-              const SizedBox(height: 16),
+              AppSpacing.gapLg,
 
               // Payment method
               const Text('Payment method',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              const SizedBox(height: 12),
+              AppSpacing.gapMd,
               GestureDetector(
                 onTap: _showPaymentMethodSelector,
                 child: PremiumCard(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   hasRipple: true,
                   child: Row(
                     children: [
@@ -1305,7 +1256,7 @@ class _RiderDropoffLocationScreenState
                         width: 36, height: 36,
                         decoration: BoxDecoration(
                           color: AppColors.primaryContainer,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: AppRadius.smRadius,
                         ),
                         child: Icon(
                           _selectedPaymentMethod == 'WALLET'
@@ -1314,7 +1265,7 @@ class _RiderDropoffLocationScreenState
                           color: AppColors.primary, size: 20,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      AppSpacing.hGapMd,
                       Expanded(
                         child: Text(_selectedPaymentMethod,
                             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
@@ -1324,25 +1275,25 @@ class _RiderDropoffLocationScreenState
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.gapLg,
 
               // Price breakdown
               PremiumCard(
-                padding: const EdgeInsets.all(16),
+                padding: AppSpacing.cardPadding,
                 child: Column(
                   children: [
-                    _priceRow('Base fare', '\$2.00'),
-                    const SizedBox(height: 12),
+                    _priceRow('Base fare', CurrencyService.format(2.0)),
+                    AppSpacing.gapMd,
                     _priceRow(
                       'Distance (${_routeDistanceKm!.toStringAsFixed(1)} km)',
-                      '\$${(_routeDistanceKm! * _getRatePerKm(_selectedRideType)).toStringAsFixed(2)}',
+                      '${CurrencyService.format(_routeDistanceKm! * RideTypeSelector.getRatePerKm(rideTypes, _selectedRideType))}',
                     ),
                     const Divider(height: 24),
-                    _priceRow('Total', '\$${_selectedFare.toStringAsFixed(2)}', isTotal: true),
+                    _priceRow('Total', '${CurrencyService.format(_selectedFare)}', isTotal: true),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.gapLg,
 
               // Confirm button
               PremiumButton(
@@ -1357,83 +1308,6 @@ class _RiderDropoffLocationScreenState
           ),
         );
       },
-    );
-  }
-
-  Widget _buildRideTypeCard({
-    required String type,
-    required IconData icon,
-    required String description,
-    required String rate,
-    required bool isSelected,
-  }) {
-    return GestureDetector(
-      onTap: () => _updateRideType(type),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.surface : AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.outline,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected ? [BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          )] : [],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                width: 48, height: 48,
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: isSelected ? AppColors.primary : AppColors.textTertiary, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(type, style: TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 15,
-                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                    )),
-                    const SizedBox(height: 2),
-                    Text(description, style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(rate, style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
-                  const SizedBox(height: 2),
-                  Text('\$${_calculateFare(type).toStringAsFixed(2)}',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16,
-                          color: isSelected ? AppColors.primary : AppColors.textPrimary)),
-                ],
-              ),
-              if (isSelected) ...[
-                const SizedBox(width: 8),
-                Container(
-                  width: 24, height: 24,
-                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                  child: const Icon(Icons.check, color: AppColors.primaryLight, size: 16),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -1461,7 +1335,7 @@ class _RiderDropoffLocationScreenState
           horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
         color: AppColors.primaryContainer.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        borderRadius: AppRadius.smRadius,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

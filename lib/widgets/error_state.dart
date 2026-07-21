@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_radius.dart';
-import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
+import 'premium_button.dart';
 
-class EmptyState extends StatelessWidget {
+class ErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback? onRetry;
   final IconData icon;
   final String title;
-  final String subtitle;
-  final String? actionLabel;
-  final VoidCallback? onAction;
 
-  const EmptyState({
+  const ErrorState({
     super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.actionLabel,
-    this.onAction,
+    required this.message,
+    this.onRetry,
+    this.icon = Icons.error_outline_rounded,
+    this.title = 'Something went wrong',
   });
 
   @override
@@ -31,15 +28,14 @@ class EmptyState extends StatelessWidget {
             Container(
               width: 80,
               height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-                boxShadow: AppShadows.small,
+              decoration: const BoxDecoration(
+                color: AppColors.error,
+                shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 40,
-                color: AppColors.textTertiary,
+                color: Colors.white,
               ),
             ),
             AppSpacing.gapXl,
@@ -52,22 +48,19 @@ class EmptyState extends StatelessWidget {
             ),
             AppSpacing.gapSm,
             Text(
-              subtitle,
+              message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,
                   ),
               textAlign: TextAlign.center,
             ),
-            if (actionLabel != null && onAction != null) ...[
+            if (onRetry != null) ...[
               AppSpacing.gapXl,
-              TextButton.icon(
-                onPressed: onAction,
-                icon: const Icon(Icons.refresh, size: 18),
-                label: Text(actionLabel!),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  padding: AppSpacing.buttonPadding,
-                ),
+              PremiumButton(
+                label: 'Retry',
+                onPressed: onRetry,
+                icon: Icons.refresh,
+                width: 200,
               ),
             ],
           ],

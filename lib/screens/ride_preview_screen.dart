@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../services/currency_service.dart';
 import '../services/directions_service.dart';
 import '../services/location_service.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
+import '../theme/app_spacing.dart';
 import '../utils/marker_factory.dart';
 import '../utils/map_style_loader.dart';
 import '../widgets/swipe_button.dart';
@@ -17,6 +21,11 @@ class RidePreviewScreen extends StatefulWidget {
   final String pickupAddress;
   final String dropoffAddress;
   final double? estimatedFare;
+
+  // Rider info for driver mode
+  final String? riderName;
+  final double? riderRating;
+  final int? riderRideCount;
 
   // Driver mode
   final bool driverMode;
@@ -32,6 +41,9 @@ class RidePreviewScreen extends StatefulWidget {
     required this.pickupAddress,
     required this.dropoffAddress,
     this.estimatedFare,
+    this.riderName,
+    this.riderRating,
+    this.riderRideCount,
     this.driverMode = false,
     this.onAccept,
     this.onIgnore,
@@ -284,19 +296,25 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.textPrimary,
         foregroundColor: AppColors.primaryLight,
-        title: const Text('Trip Preview'),
+        title: Semantics(
+          label: 'Trip preview',
+          child: const Text('Trip Preview'),
+        ),
         actions: [
           Center(
-            child: Container(
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                'Auto-closes in 6s',
-                style: TextStyle(fontSize: 12, color: AppColors.primaryLight.withValues(alpha: 0.7)),
+            child: Semantics(
+              label: 'Auto-closes in 6 seconds',
+              child: Container(
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withValues(alpha: 0.15),
+                  borderRadius: AppRadius.xlRadius,
+                ),
+                child: Text(
+                  'Auto-closes in 6s',
+                  style: TextStyle(fontSize: 12, color: AppColors.primaryLight.withValues(alpha: 0.7)),
+                ),
               ),
             ),
           ),
@@ -304,7 +322,9 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
       ),
       body: Stack(
         children: [
-          GoogleMap(
+          Semantics(
+            label: 'Route map',
+            child: GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
               target: LatLng(widget.pickupLat, widget.pickupLng),
@@ -326,191 +346,254 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
             zoomControlsEnabled: false,
             mapToolbarEnabled: false,
             style: _mapStyle,
+            ),
           ),
-          Positioned(
-            left: 16,
-            right: 16,
+          PositionedDirectional(
+            start: 16,
+            end: 16,
             bottom: MediaQuery.of(context).padding.bottom + 16,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.textPrimary.withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 8, height: 8,
-                        decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
+            child: Semantics(
+              label: widget.driverMode ? 'Ride request details' : 'Trip preview',
+              child: Container(
+                padding: AppSpacing.cardPadding,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppRadius.xlRadius,
+                  boxShadow: AppShadows.large,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.driverMode && widget.riderName != null) ...[
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                            child: Text(
+                              widget.riderName!.isNotEmpty
+                                  ? widget.riderName![0].toUpperCase()
+                                  : 'R',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.riderName!,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.star, size: 12, color: AppColors.warning),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      (widget.riderRating ?? 0).toStringAsFixed(1),
+                                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                    ),
+                                    if (widget.riderRideCount != null) ...[
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '${widget.riderRideCount} rides',
+                                        style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.pickupAddress,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+                      const SizedBox(height: 12),
                     ],
-                  ),
-                  if (widget.driverMode && _etaMinutes != null)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 16, top: 4),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.timer, size: 14, color: AppColors.primary),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Pickup in $_etaMinutes min',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8, height: 8,
+                          decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            widget.pickupAddress,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ],
-                      ),
-                    )
-                  else if (widget.driverMode && _pickupEtaLoading)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 16, top: 4),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 12, height: 12,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 1.5,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'Calculating ETA...',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Container(
-                        width: 8, height: 8,
-                        decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.dropoffAddress,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                    if (widget.driverMode && _etaMinutes != null)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(start: 16, top: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.timer, size: 14, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Pickup in $_etaMinutes min',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (widget.driverMode && _pickupEtaLoading)
+                      const Padding(
+                        padding: EdgeInsetsDirectional.only(start: 16, top: 4),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 12, height: 12,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Calculating ETA...',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                  if (widget.estimatedFare != null) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.attach_money, size: 16, color: AppColors.primary),
-                        Text(
-                          '\$${widget.estimatedFare!.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
+                        Container(
+                          width: 8, height: 8,
+                          decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            widget.dropoffAddress,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                  ],
-                  const SizedBox(height: 12),
-                  if (widget.driverMode)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () {
-                              widget.onIgnore?.call();
-                              Navigator.of(context).pop();
-                            },
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.textTertiary,
-                              backgroundColor: AppColors.surfaceVariant,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                    if (widget.estimatedFare != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.attach_money, size: 16, color: AppColors.primary),
+                          Text(
+                            CurrencyService.format(widget.estimatedFare!),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
                             ),
-                            child: const Text('IGNORE', style: TextStyle(fontWeight: FontWeight.w600)),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: SwipeButton(
-                            label: 'ACCEPT RIDE',
-                            icon: Icons.arrow_forward_ios,
-                            onConfirmed: () {
-                              widget.onAccept?.call();
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text('Return to Offer', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ],
                       ),
-                    ),
-                ],
+                    ],
+                    const SizedBox(height: 12),
+                    if (widget.driverMode)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Semantics(
+                              label: 'Ignore ride request',
+                              child: TextButton(
+                                onPressed: () {
+                                  widget.onIgnore?.call();
+                                  Navigator.of(context).pop();
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.textTertiary,
+                                  backgroundColor: AppColors.surfaceVariant,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: AppRadius.mdRadius,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                                child: const Text('IGNORE', style: TextStyle(fontWeight: FontWeight.w600)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: Semantics(
+                              label: 'Accept ride request, swipe to confirm',
+                              child: SwipeButton(
+                                label: 'ACCEPT RIDE',
+                                icon: Icons.arrow_forward_ios,
+                                onConfirmed: () {
+                                  widget.onAccept?.call();
+                                  Navigator.of(context).pop();
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Semantics(
+                        label: 'Return to offer',
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppRadius.mdRadius,
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text('Return to Offer', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
           if (!widget.driverMode)
-            Positioned(
+            PositionedDirectional(
               top: MediaQuery.of(context).padding.top + 60,
-              left: 0,
-              right: 0,
+              start: 0,
+              end: 0,
               child: IgnorePointer(
                 child: Center(
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppColors.textPrimary,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppRadius.sheet),
                     ),
-                    child: const Text(
-                      'Loading route...',
-                      style: TextStyle(color: AppColors.primaryLight, fontSize: 13),
+                    child: Semantics(
+                      label: 'Loading route',
+                      child: const Text(
+                        'Loading route...',
+                        style: TextStyle(color: AppColors.primaryLight, fontSize: 13),
+                      ),
                     ),
                   ),
                 ),

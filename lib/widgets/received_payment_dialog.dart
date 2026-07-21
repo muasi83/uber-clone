@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/currency_service.dart';
 import '../theme/app_colors.dart';
 
 class ReceivedPaymentResult {
@@ -31,7 +32,7 @@ Future<ReceivedPaymentResult?> showReceivedPaymentDialog(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '\$${amount.toStringAsFixed(2)}',
+              CurrencyService.format(amount),
               style: const TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,

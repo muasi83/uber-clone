@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/ride_model.dart';
+import '../services/currency_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../utils/address_utils.dart';
 
 class PastRidesView extends StatefulWidget {
@@ -197,7 +199,7 @@ class _PastRidesViewState extends State<PastRidesView> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -209,7 +211,7 @@ class _PastRidesViewState extends State<PastRidesView> {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: _statusColor(ride.status).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: AppRadius.smRadius,
                   ),
                   child: Text(
                     _statusLabel(ride.status),
@@ -223,7 +225,7 @@ class _PastRidesViewState extends State<PastRidesView> {
                 const Spacer(),
                 if (fare != null)
                   Text(
-                    '\$${fare.toStringAsFixed(2)}',
+                    CurrencyService.format(fare),
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,

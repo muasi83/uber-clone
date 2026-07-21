@@ -24,6 +24,7 @@ class _LocationBannerState extends State<LocationBanner>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _sub = _monitor.onStatusChanged.listen((enabled) {
+      if (!mounted) return;
       if (enabled) {
         _dismissedByUser = false;
         _dismissSheet();
@@ -41,6 +42,7 @@ class _LocationBannerState extends State<LocationBanner>
   }
 
   Future<void> _checkGpsNow() async {
+    if (!mounted) return;
     final enabled = await Geolocator.isLocationServiceEnabled();
     if (enabled) {
       _dismissedByUser = false;
@@ -51,6 +53,7 @@ class _LocationBannerState extends State<LocationBanner>
   }
 
   void _showSheet() {
+    if (!mounted) return;
     if (_sheetContext != null) return;
     showModalBottomSheet(
       context: context,

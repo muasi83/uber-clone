@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 
 class RideStatusBar extends StatelessWidget {
@@ -31,7 +32,7 @@ class RideStatusBar extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: _color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: AppRadius.mdRadius,
         border: Border.all(
           color: _color.withValues(alpha: 0.2),
         ),

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 import '../services/storage_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_text_field.dart';
@@ -23,21 +24,60 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+  String _passwordError = '';
+  String _confirmPasswordError = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_onPasswordChanged);
+    _confirmPasswordController.addListener(_onConfirmPasswordChanged);
+  }
+
+  void _onPasswordChanged() {
+    final password = _passwordController.text;
+    if (password.isEmpty) {
+      _clearError('password');
+    } else if (password.length < 6) {
+      setState(() => _passwordError = 'Password must be at least 6 characters');
+    } else {
+      _clearError('password');
+    }
+    if (_confirmPasswordController.text.isNotEmpty) {
+      _onConfirmPasswordChanged();
+    }
+  }
+
+  void _onConfirmPasswordChanged() {
+    final confirm = _confirmPasswordController.text;
+    if (confirm.isEmpty) {
+      _clearError('confirmPassword');
+    } else if (confirm != _passwordController.text) {
+      setState(() => _confirmPasswordError = 'Passwords do not match');
+    } else {
+      _clearError('confirmPassword');
+    }
+  }
+
+  void _clearError(String field) {
+    setState(() {
+      if (field == 'password') _passwordError = '';
+      if (field == 'confirmPassword') _confirmPasswordError = '';
+    });
+  }
+
+  bool _validateAll() {
+    _onPasswordChanged();
+    _onConfirmPasswordChanged();
+    return _passwordError.isEmpty && _confirmPasswordError.isEmpty;
+  }
 
   Future<void> _resetPassword() async {
+    if (!_validateAll()) return;
+
     if (_passwordController.text.isEmpty ||
         _confirmPasswordController.text.isEmpty) {
       _showError('Please fill all fields');
-      return;
-    }
-
-    if (_passwordController.text.length < 6) {
-      _showError('Password must be at least 6 characters');
-      return;
-    }
-
-    if (_passwordController.text != _confirmPasswordController.text) {
-      _showError('Passwords do not match');
       return;
     }
 
@@ -65,9 +105,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               backgroundColor: AppColors.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: AppRadius.smRadius,
               ),
-              margin: const EdgeInsets.all(16),
+              margin: AppSpacing.cardPadding,
             ),
           );
         }
@@ -94,9 +134,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         backgroundColor: AppColors.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: AppRadius.smRadius,
         ),
-        margin: const EdgeInsets.all(16),
+        margin: AppSpacing.cardPadding,
       ),
     );
   }
@@ -125,7 +165,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   height: 80,
                   decoration: BoxDecoration(
                     color: AppColors.primaryContainer,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: AppRadius.xlRadius,
                   ),
                   child: const Icon(
                     Icons.lock_reset_outlined,
@@ -157,6 +197,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   label: 'New Password',
                   prefixIcon: Icons.lock_outlined,
                   isPassword: true,
+                  errorText: _passwordError.isNotEmpty ? _passwordError : null,
                 ),
                 AppSpacing.gapLg,
                 PremiumTextField(
@@ -164,12 +205,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   label: 'Confirm Password',
                   prefixIcon: Icons.lock_outlined,
                   isPassword: true,
+                  errorText: _confirmPasswordError.isNotEmpty ? _confirmPasswordError : null,
                 ),
                 AppSpacing.gapXxl,
                 PremiumButton(
                   label: 'Reset Password',
                   isLoading: _isLoading,
-                  onPressed: _isLoading ? null : _resetPassword,
+                  onPressed: (_isLoading || _passwordError.isNotEmpty || _confirmPasswordError.isNotEmpty) ? null : _resetPassword,
                   variant: ButtonVariant.gradient,
                 ),
               ],

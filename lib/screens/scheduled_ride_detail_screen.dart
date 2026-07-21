@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import '../models/scheduled_ride.dart';
+import '../services/currency_service.dart';
 import '../services/scheduled_ride_service.dart';
 import '../services/storage_service.dart';
 import '../utils/address_utils.dart';
@@ -105,25 +108,25 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
         onRefresh: _refreshRide,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.cardPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildStatusCard(ride, dateStr),
-              const SizedBox(height: 16),
+              AppSpacing.gapLg,
               _buildAddressSection(ride),
-              const SizedBox(height: 16),
+              AppSpacing.gapLg,
               if (ride.isAssigned || ride.isDriverArrived) ...[
                 _buildDriverSection(ride),
-                const SizedBox(height: 16),
+                AppSpacing.gapLg,
               ],
               if (ride.pickupCode != null && (ride.isAssigned || ride.isDriverArrived)) ...[
                 _buildPickupCodeCard(ride),
-                const SizedBox(height: 16),
+                AppSpacing.gapLg,
               ],
               _buildInfoSection(ride),
               if (ride.cancellationReason != null) ...[
-                const SizedBox(height: 16),
+                AppSpacing.gapLg,
                 _buildCancellationCard(ride),
               ],
             ],
@@ -154,14 +157,14 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: statusColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: AppRadius.smRadius,
               ),
               child: Text(
                 ride.status,
@@ -174,7 +177,7 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
             ),
             const Spacer(),
             Icon(Icons.schedule, size: 16, color: AppColors.textTertiary),
-            const SizedBox(width: 4),
+            AppSpacing.hGapXs,
             Text(
               dateStr,
               style: const TextStyle(fontSize: 13, color: AppColors.textTertiary),
@@ -188,32 +191,32 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
   Widget _buildAddressSection(ScheduledRide ride) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 const Icon(Icons.trip_origin, size: 16, color: AppColors.pickupMarker),
-                const SizedBox(width: 8),
+                AppSpacing.hGapSm,
                 const Text('Pickup', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
               ],
             ),
-            const SizedBox(height: 4),
+            AppSpacing.gapXs,
             Text(ride.pickupAddress, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
             Text(
               formatLatLng(ride.pickupLatitude, ride.pickupLongitude),
               style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
             ),
-            const SizedBox(height: 12),
+            AppSpacing.gapMd,
             Row(
               children: [
                 const Icon(Icons.location_on, size: 16, color: AppColors.error),
-                const SizedBox(width: 8),
+                AppSpacing.hGapSm,
                 const Text('Dropoff', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
               ],
             ),
-            const SizedBox(height: 4),
+            AppSpacing.gapXs,
             Text(ride.dropoffAddress, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
             Text(
               formatLatLng(ride.dropoffLatitude, ride.dropoffLongitude),
@@ -228,7 +231,7 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
   Widget _buildDriverSection(ScheduledRide ride) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -239,7 +242,7 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
                 Text('Driver', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
               ],
             ),
-            const SizedBox(height: 8),
+            AppSpacing.gapSm,
             if (ride.driverName != null)
               Text(ride.driverName!, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             if (ride.driverPhone != null)
@@ -253,14 +256,14 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
   Widget _buildPickupCodeCard(ScheduledRide ride) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           children: [
             const Text(
               'Pickup Code',
               style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
             ),
-            const SizedBox(height: 8),
+            AppSpacing.gapSm,
             Text(
               ride.pickupCode!,
               style: const TextStyle(
@@ -270,7 +273,7 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
                 color: AppColors.primary,
               ),
             ),
-            const SizedBox(height: 4),
+            AppSpacing.gapXs,
             const Text(
               'Share this code with your driver to start the ride',
               style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
@@ -285,16 +288,16 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
   Widget _buildInfoSection(ScheduledRide ride) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Details', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-            const SizedBox(height: 8),
+            AppSpacing.gapSm,
             if (ride.rideType != null)
               _infoRow('Type', ride.rideType!),
             if (ride.estimatedFare != null)
-              _infoRow('Fare', '\$${ride.estimatedFare!.toStringAsFixed(2)}'),
+              _infoRow('Fare', CurrencyService.format(ride.estimatedFare!)),
             if (ride.estimatedDistance != null)
               _infoRow('Distance', '${ride.estimatedDistance!.toStringAsFixed(1)} km'),
             if (ride.estimatedDuration != null)
@@ -324,11 +327,11 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
     return Card(
       color: AppColors.error.withValues(alpha: 0.05),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Row(
           children: [
             const Icon(Icons.cancel, color: AppColors.error, size: 20),
-            const SizedBox(width: 8),
+            AppSpacing.hGapSm,
             Expanded(
               child: Text(
                 ride.cancellationReason ?? 'Cancelled',

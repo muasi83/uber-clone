@@ -10,6 +10,8 @@ import '../services/driver_service.dart';
 import '../screens/debug_screen.dart';
 import '../screens/chat_screen.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/cancel_ride_dialog.dart';
@@ -60,6 +62,8 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   late Animation<double> _pulseAnimation;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
   StreamSubscription<Map<String, dynamic>>? _driverLocEventsSub;
+  StreamSubscription<String>? _connectionStateSub;
+  bool _wasDisconnected = false;
   double _driverRating = 4.0;
 
   @override
@@ -84,10 +88,103 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     _initCarIcon();
     _initYellowPin();
 
+    _setupConnectionStateListener();
+
     addDebugMessage('═══════════════════════════════════════');
     addDebugMessage('TRACKING DRIVER');
     addDebugMessage('Ride ID: ${widget.rideId}');
     addDebugMessage('═══════════════════════════════════════');
+  }
+
+  void _setupConnectionStateListener() {
+    _connectionStateSub = WebSocketService.connectionState.listen((state) {
+      if (!mounted) return;
+      if (state == 'disconnected') {
+        _wasDisconnected = true;
+        addDebugMessage('⚠️ WebSocket disconnected - awaiting reconnect');
+      } else if (state == 'connected' && _wasDisconnected) {
+        _wasDisconnected = false;
+        addDebugMessage('🔄 WebSocket reconnected - rehydrating tracking state');
+        _handleReconnected();
+      }
+    });
+  }
+
+  Future<void> _handleReconnected() async {
+    addDebugMessage('🔄 Reconnected - fetching latest ride state');
+    final token = StorageService.getToken();
+    if (token == null) return;
+    try {
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      if (ride == null || !mounted) return;
+
+      if (ride.driverLatitude != null && ride.driverLongitude != null) {
+        setState(() {
+          _driverLocation = LatLng(ride.driverLatitude!, ride.driverLongitude!);
+        });
+        _updateMarkers();
+        _updateRoute();
+        _fitBounds();
+        addDebugMessage('✅ Tracking state rehydrated after reconnect');
+      }
+
+      if (ride.status == 'CANCELLED') {
+        if (_rideStarting) return;
+        _rideStarting = true;
+        _statusPollTimer?.cancel();
+        ChatScreen.clearAllCache();
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 48),
+              title: const Text('Ride Cancelled'),
+              content: Text(ride.cancellationReason ?? 'The ride was cancelled'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/rider-home',
+                      (route) => false,
+                    );
+                  },
+                  child: const Text('Back to Home'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      if (ride.status == 'STARTED') {
+        if (_rideStarting) return;
+        _rideStarting = true;
+        _statusPollTimer?.cancel();
+        if (mounted) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/rider-active-ride',
+            arguments: {
+              'rideId': widget.rideId,
+              'pickupLat': ride.pickupLatitude,
+              'pickupLng': ride.pickupLongitude,
+              'dropoffLat': ride.dropoffLatitude,
+              'dropoffLng': ride.dropoffLongitude,
+              'dropoffAddress': ride.dropoffAddress,
+              'driverLat': _driverLocation?.latitude,
+              'driverLng': _driverLocation?.longitude,
+            },
+          );
+        }
+        return;
+      }
+    } catch (e) {
+      addDebugMessage('⚠️ Reconnect rehydration error: $e');
+    }
   }
 
   void _startStatusPolling() {
@@ -365,7 +462,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
         child: Text(
           count > 9 ? '9+' : '$count',
-          style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.primaryLight, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
       ),
@@ -412,7 +509,6 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
 
     final driverPos = _animatedDriverPos ?? _driverLocation;
     if (driverPos != null) {
-      addDebugMessage('_updateMarkers rotation=$_driverHeading');
       updated.add(
         Marker(
           markerId: const MarkerId('driver'),
@@ -592,26 +688,33 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
-          onPressed: () => _showCancelRideDialog(),
-        ),
-        title: const Text(
-          'Trip to Destination',
-          style: TextStyle(
-            color: AppColors.primaryLight,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
+        leading: Semantics(
+          button: true,
+          label: 'Cancel ride',
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+            onPressed: () => _showCancelRideDialog(),
           ),
+        ),
+        title: Text(
+          'Trip to Destination',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppColors.primaryLight,
+                fontWeight: FontWeight.w600,
+              ),
         ),
         actions: [
           Stack(
             clipBehavior: Clip.none,
             children: [
-              IconButton(
-                icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary),
-                tooltip: 'Chat with Driver',
-                onPressed: _openChat,
+              Semantics(
+                button: true,
+                label: 'Chat with driver',
+                child: IconButton(
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary),
+                  tooltip: 'Chat with Driver',
+                  onPressed: _openChat,
+                ),
               ),
               _buildUnreadBadge(),
             ],
@@ -646,16 +749,20 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
             Positioned(
               right: 16,
               bottom: 240,
-              child: FloatingActionButton.small(
-                heroTag: 'recenter',
-                onPressed: () {
-                  setState(() {
-                    _userInteracted = false;
-                    _fitBounds();
-                  });
-                },
-                backgroundColor: AppColors.surface,
-                child: const Icon(Icons.my_location, color: AppColors.primary),
+              child:               Semantics(
+                button: true,
+                label: 'Recenter map',
+                child: FloatingActionButton.small(
+                  heroTag: 'recenter',
+                  onPressed: () {
+                    setState(() {
+                      _userInteracted = false;
+                      _fitBounds();
+                    });
+                  },
+                  backgroundColor: AppColors.surface,
+                  child: const Icon(Icons.my_location, color: AppColors.primary),
+                ),
               ),
             ),
 
@@ -667,9 +774,9 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppSpacing.radiusXxl),
+                  top: Radius.circular(AppRadius.xl),
                 ),
-                boxShadow: AppSpacing.shadowXl,
+                boxShadow: AppShadows.large,
               ),
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, AppSpacing.xxl + 8,
@@ -693,17 +800,16 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                   Row(
                     children: [
                       CircleAvatar(
-                        radius: 24,
+                        radius: 28,
                         backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                         child: Text(
                           _driverName().isNotEmpty
                               ? _driverName()[0].toUpperCase()
                               : 'D',
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
-                          ),
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
                       ),
                       AppSpacing.hGapMd,
@@ -713,7 +819,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                           children: [
                             Text(
                               _driverName(),
-                              style: theme.textTheme.titleMedium?.copyWith(
+                              style: theme.textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
                               ),
@@ -746,12 +852,16 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                           Container(
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
-                            child: IconButton(
-                              icon: const Icon(Icons.chat_rounded,
-                                  color: AppColors.primary, size: 20),
-                              onPressed: _openChat,
+                            child: Semantics(
+                              button: true,
+                              label: 'Chat with driver',
+                              child: IconButton(
+                                icon: const Icon(Icons.chat_rounded,
+                                    color: AppColors.primary, size: 20),
+                                onPressed: _openChat,
+                              ),
                             ),
                           ),
                           _buildUnreadBadge(),
@@ -760,6 +870,62 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                     ],
                   ),
                   AppSpacing.gapXl,
+
+                  Container(
+                    width: double.infinity,
+                    padding: AppSpacing.cardPadding,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: const Icon(
+                            Icons.access_time_rounded,
+                            color: AppColors.primary,
+                            size: 22,
+                          ),
+                        ),
+                        AppSpacing.hGapMd,
+                        if (_remainingMinutes > 0)
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '$_remainingMinutes',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.primary,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: ' min',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Text(
+                            'Calculating...',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.gapMd,
 
                   Row(
                     children: [
@@ -811,30 +977,37 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                             ? Icons.check_circle
                             : Icons.navigation,
                       ),
-                      const Spacer(),
-                      if (_remainingMinutes > 0)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.access_time_rounded,
-                              size: 18,
-                              color: AppColors.textSecondary,
-                            ),
-                            AppSpacing.hGapXs,
-                            Text(
-                              '$_remainingMinutes min',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                          ],
-                        ),
                     ],
                   ),
                   AppSpacing.gapMd,
+
+                  if (!_driverArrived)
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 0.85),
+                      duration: const Duration(milliseconds: 1500),
+                      builder: (context, value, _) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          child: Container(
+                            height: 4,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: AppColors.outline.withValues(alpha: 0.5),
+                            ),
+                            child: FractionallySizedBox(
+                              alignment: AlignmentDirectional.centerStart,
+                              widthFactor: value.clamp(0.0, 1.0),
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  gradient: AppColors.primaryGradientH,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  AppSpacing.gapSm,
 
                   Text(
                     _driverArrived
@@ -844,19 +1017,6 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                       color: AppColors.textTertiary,
                     ),
                   ),
-                  AppSpacing.gapLg,
-
-                  if (!_driverArrived)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: LinearProgressIndicator(
-                        minHeight: 4,
-                        backgroundColor: AppColors.outline.withValues(alpha: 0.5),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          AppColors.primary,
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -909,6 +1069,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     _routeDebounceTimer?.cancel();
     _rideEventsSub?.cancel();
     _driverLocEventsSub?.cancel();
+    _connectionStateSub?.cancel();
     mapController?.dispose();
     _pulseController.dispose();
     super.dispose();

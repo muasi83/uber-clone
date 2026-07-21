@@ -6,7 +6,9 @@ import 'package:flutter/foundation.dart';
 import '../screens/rider_dropoff_location_screen.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_shadows.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/glass_card.dart';
 import '../services/websocket_service.dart';
@@ -18,6 +20,7 @@ import '../utils/map_style_loader.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/marker_factory.dart';
 import '../utils/address_utils.dart';
+import '../models/location_model.dart';
 
 class RiderPickupLocationScreen extends StatefulWidget {
   final double initialLat;
@@ -47,6 +50,12 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
 
   LatLng? _lastLookupCenter;
   bool _loggedGeocodingErrorOnce = false;
+
+  final TextEditingController _searchController = TextEditingController();
+  List<LocationData> _searchResults = [];
+  bool _isSearching = false;
+  Timer? _searchDebounce;
+  bool _showSearchResults = false;
 
   // Driver markers on map
   final Map<String, Marker> _driverMarkers = {};
@@ -353,6 +362,65 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
     if (mounted) setState(() {});
   }
 
+  void _onSearchChanged(String query) {
+    _searchDebounce?.cancel();
+    if (query.trim().length < 3) {
+      setState(() {
+        _searchResults = [];
+        _showSearchResults = false;
+      });
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(query.trim());
+    });
+  }
+
+  Future<void> _performSearch(String query) async {
+    setState(() => _isSearching = true);
+    try {
+      final result = await LocationService.getCoordinatesFromAddress(query);
+      if (!mounted) return;
+      if (result != null) {
+        setState(() {
+          _searchResults = [result];
+          _showSearchResults = true;
+          _isSearching = false;
+        });
+      } else {
+        setState(() {
+          _searchResults = [];
+          _showSearchResults = false;
+          _isSearching = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  void _selectSearchResult(LocationData result) {
+    final loc = LatLng(result.latitude, result.longitude);
+    setState(() {
+      _pickupLocation = loc;
+      _pickupAddress = result.address;
+      _showSearchResults = false;
+      _searchController.text = result.address;
+    });
+    mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(loc, 17),
+    );
+    _bounceController.forward(from: 0);
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _searchResults = [];
+      _showSearchResults = false;
+    });
+  }
+
   void _confirmPickup() {
     if (_pickupLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -409,18 +477,91 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
             child: SafeArea(
               top: true,
               bottom: false,
-              child: AppBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                title: const Text(
-                  'Set Pickup Location',
-                  style: TextStyle(color: AppColors.primary),
-                ),
-                centerTitle: true,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    leading: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    title: const Text(
+                      'Set Pickup Location',
+                      style: TextStyle(color: AppColors.primary),
+                    ),
+                    centerTitle: true,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: AppRadius.mdRadius,
+                        boxShadow: AppShadows.small,
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: _onSearchChanged,
+                        decoration: InputDecoration(
+                          hintText: 'Search for a place...',
+                          hintStyle: const TextStyle(color: AppColors.textTertiary),
+                          prefixIcon: const Icon(Icons.search, color: AppColors.textTertiary, size: 22),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 20, color: AppColors.textTertiary),
+                                  onPressed: _clearSearch,
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+                      ),
+                    ),
+                  ),
+                  if (_showSearchResults && _searchResults.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: AppRadius.mdRadius,
+                        boxShadow: AppShadows.medium,
+                      ),
+                      child: _isSearching
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(AppSpacing.lg),
+                                child: SizedBox(
+                                  width: 20, height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: _searchResults.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.outline),
+                              itemBuilder: (context, index) {
+                                final result = _searchResults[index];
+                                return ListTile(
+                                  dense: true,
+                                  leading: const Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
+                                  title: Text(
+                                    result.address,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                                  ),
+                                  onTap: () => _selectSearchResult(result),
+                                );
+                              },
+                            ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -441,7 +582,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
             right: 0,
             bottom: MediaQuery.of(context).padding.bottom,
             child: GlassCard(
-              borderRadius: AppSpacing.radiusXxl,
+              borderRadius: AppRadius.xl,
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -556,6 +697,8 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
     _driverLocationSub?.cancel();
     _bounceController.dispose();
     mapController?.dispose();
+    _searchController.dispose();
+    _searchDebounce?.cancel();
 
     super.dispose();
   }

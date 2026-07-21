@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../utils/address_utils.dart';
 import '../services/storage_service.dart';
+import '../services/currency_service.dart';
 import '../services/scheduled_ride_service.dart';
 import '../services/websocket_service.dart';
 import '../models/scheduled_ride.dart';
@@ -99,7 +101,7 @@ class _UpcomingRidesViewState extends State<UpcomingRidesView> {
           Container(
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: AppRadius.lgRadius,
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -186,7 +188,7 @@ class _UpcomingRidesViewState extends State<UpcomingRidesView> {
                 foregroundColor: AppColors.textOnPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.mdRadius,
                 ),
                 textStyle: const TextStyle(
                   fontSize: 16,
@@ -242,7 +244,7 @@ class _UpcomingRidesViewState extends State<UpcomingRidesView> {
       },
       child: Card(
       margin: const EdgeInsets.only(top: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -254,7 +256,7 @@ class _UpcomingRidesViewState extends State<UpcomingRidesView> {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.info.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.smRadius,
                   ),
                   child: Text(
                     ride.status,
@@ -327,7 +329,7 @@ class _UpcomingRidesViewState extends State<UpcomingRidesView> {
                   const Icon(Icons.attach_money, size: 14, color: AppColors.textTertiary),
                   const SizedBox(width: 6),
                   Text(
-                    '\$${ride.estimatedFare!.toStringAsFixed(2)}',
+                    CurrencyService.format(ride.estimatedFare!),
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                   ),
                 ],
@@ -358,7 +360,7 @@ class _UpcomingRidesViewState extends State<UpcomingRidesView> {
               : isToday
                   ? AppColors.primary.withValues(alpha: 0.1)
                   : null,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.smRadius,
         ),
         child: Stack(
           clipBehavior: Clip.none,

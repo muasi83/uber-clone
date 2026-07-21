@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_shadows.dart';
 
 class SwipeButton extends StatefulWidget {
   final String label;
@@ -135,13 +136,7 @@ class _SwipeButtonState extends State<SwipeButton> {
                           : AppColors.surfaceVariant,
                       borderRadius: BorderRadius.circular(_thumbSize / 2),
                       boxShadow: _showActive
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.15),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
+                          ? AppShadows.medium
                           : null,
                     ),
                     child: Center(

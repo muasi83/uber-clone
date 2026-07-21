@@ -5,6 +5,7 @@ import '../services/storage_service.dart';
 import 'home_screen.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../services/recorded_screen_mixin.dart';
@@ -160,7 +161,7 @@ class _OtpScreenState extends State<OtpScreen> with RecordedScreenMixin<OtpScree
                     color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 4),
+                AppSpacing.gapXs,
                 Text(
                   widget.email,
                   style: const TextStyle(
@@ -178,7 +179,7 @@ class _OtpScreenState extends State<OtpScreen> with RecordedScreenMixin<OtpScree
                   keyboardType: TextInputType.number,
                   pinTheme: PinTheme(
                     shape: PinCodeFieldShape.box,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppRadius.mdRadius,
                     fieldHeight: 56,
                     fieldWidth: 48,
                     activeFillColor: AppColors.surface,
@@ -217,7 +218,7 @@ class _OtpScreenState extends State<OtpScreen> with RecordedScreenMixin<OtpScree
       height: 80,
       decoration: BoxDecoration(
         color: AppColors.primaryContainer,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.xlRadius,
       ),
       child: const Icon(
         Icons.mark_email_read_outlined,

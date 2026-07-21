@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import '../services/currency_service.dart';
 
 double calculateHaversineDistance(double lat1, double lng1, double lat2, double lng2) {
   const earthRadius = 6371.0;
@@ -27,7 +28,7 @@ String formatDistance(double km) {
 }
 
 String formatFare(double fare) {
-  return '\$${fare.toStringAsFixed(2)}';
+  return CurrencyService.format(fare);
 }
 
 double calculateEstimatedFare({

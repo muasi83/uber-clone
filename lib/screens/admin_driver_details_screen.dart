@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/storage_service.dart';
 import '../services/admin_drivers_service.dart';
+import '../services/currency_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/address_utils.dart';
 import '../services/recorded_screen_mixin.dart';
@@ -174,9 +175,37 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
                   online ? AppColors.success : AppColors.textTertiary,
                 ),
                 if (active) _buildInfoChip(Icons.check_circle, 'Active', AppColors.success),
+                if (!active) _buildInfoChip(Icons.block, 'Blocked', AppColors.error),
                 if (verified) _buildInfoChip(Icons.verified, 'Verified', AppColors.primary),
+                if (!verified) _buildInfoChip(Icons.verified, 'Unverified', AppColors.warning),
                 if (d['currentRideId'] != null)
                   _buildInfoChip(Icons.route, 'On Ride', AppColors.warning),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _toggleVerify(d),
+                    icon: Icon(verified ? Icons.verified : Icons.verified, size: 16),
+                    label: Text(verified ? 'Unverify' : 'Verify'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: verified ? AppColors.warning : AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _toggleBlock(d),
+                    icon: Icon(active ? Icons.block : Icons.check_circle, size: 16),
+                    label: Text(active ? 'Block' : 'Unblock'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: active ? AppColors.error : AppColors.success,
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
@@ -447,13 +476,56 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
               children: [
                 Text(status, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor)),
                 if (fare != null)
-                  Text('\$${fare.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  Text(CurrencyService.format(fare), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _toggleVerify(Map<String, dynamic> d) async {
+    if (_token == null) return;
+    final result = await AdminDriversService.toggleVerify(widget.driverId, _token!);
+    if (!mounted) return;
+    if (result != null) {
+      _loadDetail();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to toggle verification')),
+      );
+    }
+  }
+
+  Future<void> _toggleBlock(Map<String, dynamic> d) async {
+    if (_token == null) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm'),
+        content: Text(d['active'] == true
+            ? 'Block this driver? They will be unable to login or accept rides.'
+            : 'Unblock this driver?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(d['active'] == true ? 'Block' : 'Unblock'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final result = await AdminDriversService.toggleBlock(widget.driverId, _token!);
+    if (!mounted) return;
+    if (result != null) {
+      _loadDetail();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to toggle block status')),
+      );
+    }
   }
 
   Widget _buildDetailRow(String label, String value) {

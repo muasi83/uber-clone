@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/currency_service.dart';
 import '../theme/app_colors.dart';
 
 class PaymentDialogResult {
@@ -31,7 +32,7 @@ Future<PaymentDialogResult?> showPaymentDialog(
           const Text('Your trip has been completed.'),
           const SizedBox(height: 16),
           Text(
-            '\$${amount.toStringAsFixed(2)}',
+            CurrencyService.format(amount),
             style: const TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.bold,
