@@ -1,93 +1,67 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import '../services/place_search_service.dart';
+import '../screens/rider_dropoff_location_screen.dart';
+import '../widgets/location_picker.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
-import '../services/storage_service.dart';
-import '../services/scheduled_ride_service.dart';
-import '../services/place_search_service.dart';
-import '../screens/debug_screen.dart';
-import '../widgets/location_picker.dart';
 
 enum _FieldType { pickup, dropoff }
 
-class ScheduleRideSheet extends StatefulWidget {
-  final DateTime selectedDate;
-  const ScheduleRideSheet({super.key, required this.selectedDate});
+class RideCollectorScreen extends StatefulWidget {
+  const RideCollectorScreen({super.key});
 
   @override
-  State<ScheduleRideSheet> createState() => _ScheduleRideSheetState();
+  State<RideCollectorScreen> createState() => _RideCollectorScreenState();
 }
 
-class _ScheduleRideSheetState extends State<ScheduleRideSheet> {
+class _RideCollectorScreenState extends State<RideCollectorScreen> {
   final _pickupController = TextEditingController();
   final _dropoffController = TextEditingController();
   final _pickupFocus = FocusNode();
   final _dropoffFocus = FocusNode();
 
-  bool _isScheduling = false;
   bool _isSearching = false;
   bool _searchedOnce = false;
   List<PlaceSearchResult> _searchResults = [];
   Timer? _debounce;
 
-  String? _pickupPlaceId;
-  String? _dropoffPlaceId;
   double? _pickupLat;
   double? _pickupLng;
+  String _pickupAddress = '';
+
   double? _dropoffLat;
   double? _dropoffLng;
+  String _dropoffAddress = '';
+
+  double? _lastNavPickupLat;
+  double? _lastNavPickupLng;
+  String _lastNavPickupAddress = '';
+  double? _lastNavDropoffLat;
+  double? _lastNavDropoffLng;
+  String _lastNavDropoffAddress = '';
 
   _FieldType? _activeField;
   _FieldType? _lastActiveField;
   int _searchSequence = 0;
   bool _isProgrammaticChange = false;
 
+  bool _isNavigating = false;
+
+  String _userLanguage = 'en';
+
   static const String _mapButtonAsset = 'assets/images/map_button.png';
   static const Duration _debounceDuration = Duration(milliseconds: 500);
-
-  TimeOfDay _selectedTime = TimeOfDay.now();
-  double? _userLat;
-  double? _userLng;
-  String _userLanguage = 'en';
 
   @override
   void initState() {
     super.initState();
-    _selectedTime = TimeOfDay(
-      hour: (TimeOfDay.now().hour + 1) % 24,
-      minute: 0,
-    );
     _pickupController.addListener(_onPickupChanged);
     _dropoffController.addListener(_onDropoffChanged);
     _pickupFocus.addListener(_onFocusChanged);
     _dropoffFocus.addListener(_onFocusChanged);
     _initUserContext();
-  }
-
-  Future<void> _initUserContext() async {
-    try {
-      final lang = Platform.localeName.split('_').firstOrNull ?? 'en';
-      if (mounted) setState(() => _userLanguage = lang);
-
-      Position? pos;
-      try {
-        pos = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
-        ).timeout(const Duration(seconds: 5));
-      } catch (_) {
-        pos = await Geolocator.getLastKnownPosition();
-      }
-
-      if (mounted && pos != null) {
-        final p = pos;
-        setState(() {
-          _userLat = p.latitude;
-          _userLng = p.longitude;
-        });
-      }
-    } catch (_) {}
   }
 
   @override
@@ -98,6 +72,13 @@ class _ScheduleRideSheetState extends State<ScheduleRideSheet> {
     _dropoffFocus.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _initUserContext() async {
+    try {
+      final lang = Platform.localeName.split('_').firstOrNull ?? 'en';
+      if (mounted) setState(() => _userLanguage = lang);
+    } catch (_) {}
   }
 
   void _onFocusChanged() {
@@ -136,6 +117,15 @@ class _ScheduleRideSheetState extends State<ScheduleRideSheet> {
         _searchResults = [];
         _isSearching = false;
         _searchedOnce = false;
+        if (_activeField == _FieldType.pickup && _pickupController.text.isEmpty) {
+          _pickupLat = null;
+          _pickupLng = null;
+          _pickupAddress = '';
+        } else if (_activeField == _FieldType.dropoff && _dropoffController.text.isEmpty) {
+          _dropoffLat = null;
+          _dropoffLng = null;
+          _dropoffAddress = '';
+        }
       });
       return;
     }
@@ -144,22 +134,17 @@ class _ScheduleRideSheetState extends State<ScheduleRideSheet> {
 
   Future<void> _performSearch(String query) async {
     _searchSequence++;
-    final int seq = _searchSequence;
+    final seq = _searchSequence;
     setState(() => _isSearching = true);
-    addDebugMessage('[SCHEDULE SEARCH] Query="$query" Sequence=$seq');
     try {
       final language = _searchLanguage(query);
-      addDebugMessage('[SCHEDULE SEARCH] Language=$language UserLanguage=$_userLanguage');
       final results = await PlaceSearchService.search(
         query.trim(),
-        lat: _userLat,
-        lng: _userLng,
         language: language,
       );
       if (mounted && seq == _searchSequence) {
         final currentText = _activeControllerText;
         if (query.trim() != currentText.trim()) return;
-        addDebugMessage('[SCHEDULE SEARCH] Received ${results.length} results');
         setState(() {
           _searchResults = results;
           _isSearching = false;
@@ -167,7 +152,6 @@ class _ScheduleRideSheetState extends State<ScheduleRideSheet> {
         });
       }
     } catch (e) {
-      addDebugMessage('[SCHEDULE SEARCH] Exception: $e');
       if (mounted && seq == _searchSequence) {
         setState(() {
           _searchResults = [];
@@ -178,9 +162,18 @@ class _ScheduleRideSheetState extends State<ScheduleRideSheet> {
     }
   }
 
+  String _searchLanguage(String query) {
+    return RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]').hasMatch(query) ? 'ar' : _userLanguage;
+  }
+
+  String get _activeControllerText {
+    if (_activeField == _FieldType.pickup) return _pickupController.text;
+    if (_activeField == _FieldType.dropoff) return _dropoffController.text;
+    return '';
+  }
+
   Future<void> _onSelectResult(PlaceSearchResult result) async {
     final field = _activeField;
-    final expectedDescription = result.description;
 
     PlaceDetails? details;
     try {
@@ -190,57 +183,33 @@ class _ScheduleRideSheetState extends State<ScheduleRideSheet> {
     }
 
     if (!mounted) return;
-
-    if (_activeField != field) {
-      return;
-    }
+    if (_activeField != field) return;
 
     final lat = details?.lat;
     final lng = details?.lng;
+    final address = details?.address ?? result.description;
 
     _isProgrammaticChange = true;
     try {
       if (field == _FieldType.pickup) {
-        _pickupController.text = expectedDescription;
-        _pickupPlaceId = result.placeId;
+        _pickupController.text = result.description;
         _pickupLat = lat;
         _pickupLng = lng;
+        _pickupAddress = address;
         _pickupFocus.unfocus();
       } else if (field == _FieldType.dropoff) {
-        _dropoffController.text = expectedDescription;
-        _dropoffPlaceId = result.placeId;
+        _dropoffController.text = result.description;
         _dropoffLat = lat;
         _dropoffLng = lng;
+        _dropoffAddress = address;
         _dropoffFocus.unfocus();
       }
     } finally {
       _isProgrammaticChange = false;
     }
     setState(() => _searchResults = []);
-  }
 
-  void _onReverse() {
-    _isProgrammaticChange = true;
-    try {
-      final tempText = _pickupController.text;
-      final tempPlaceId = _pickupPlaceId;
-      final tempLat = _pickupLat;
-      final tempLng = _pickupLng;
-
-      _pickupController.text = _dropoffController.text;
-      _dropoffController.text = tempText;
-
-      setState(() {
-        _pickupPlaceId = _dropoffPlaceId;
-        _pickupLat = _dropoffLat;
-        _pickupLng = _dropoffLng;
-        _dropoffPlaceId = tempPlaceId;
-        _dropoffLat = tempLat;
-        _dropoffLng = tempLng;
-      });
-    } finally {
-      _isProgrammaticChange = false;
-    }
+    _checkAndNavigate();
   }
 
   Future<void> _onMapButton(_FieldType field) async {
@@ -256,6 +225,7 @@ class _ScheduleRideSheetState extends State<ScheduleRideSheet> {
         ),
       ),
     );
+    print('MAP_RESULT = $result');
 
     if (result != null && mounted) {
       final lat = result['lat'] as double?;
@@ -266,194 +236,110 @@ class _ScheduleRideSheetState extends State<ScheduleRideSheet> {
       try {
         if (field == _FieldType.pickup) {
           _pickupController.text = address;
+          _pickupLat = lat;
+          _pickupLng = lng;
+          _pickupAddress = address;
         } else {
           _dropoffController.text = address;
+          _dropoffLat = lat;
+          _dropoffLng = lng;
+          _dropoffAddress = address;
         }
       } finally {
         _isProgrammaticChange = false;
       }
+      setState(() {});
 
-      setState(() {
-        if (field == _FieldType.pickup) {
-          _pickupLat = lat;
-          _pickupLng = lng;
-          _pickupPlaceId = null;
-        } else {
-          _dropoffLat = lat;
-          _dropoffLng = lng;
-          _dropoffPlaceId = null;
-        }
-      });
+      _checkAndNavigate();
     }
   }
 
-  Future<void> _onSchedule() async {
-    if (_pickupController.text.isEmpty || _dropoffController.text.isEmpty) return;
+  bool get _bothReady =>
+      _pickupLat != null &&
+      _pickupLng != null &&
+      _pickupAddress.isNotEmpty &&
+      _dropoffLat != null &&
+      _dropoffLng != null &&
+      _dropoffAddress.isNotEmpty;
 
-    final scheduledDateTime = DateTime(
-      widget.selectedDate.year,
-      widget.selectedDate.month,
-      widget.selectedDate.day,
-      _selectedTime.hour,
-      _selectedTime.minute,
-    );
+  bool get _valuesChangedSinceNavigation =>
+      _pickupLat != _lastNavPickupLat ||
+      _pickupLng != _lastNavPickupLng ||
+      _pickupAddress != _lastNavPickupAddress ||
+      _dropoffLat != _lastNavDropoffLat ||
+      _dropoffLng != _lastNavDropoffLng ||
+      _dropoffAddress != _lastNavDropoffAddress;
 
-    if (!scheduledDateTime.isAfter(DateTime.now())) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a future date and time')),
-        );
-      }
-      return;
-    }
-
-    setState(() => _isScheduling = true);
-    try {
-      final token = StorageService.getToken();
-      if (token == null) {
-        if (mounted) Navigator.of(context).pop();
-        return;
-      }
-
-      final result = await ScheduledRideService.create(
-        pickupLat: _pickupLat ?? 0.0,
-        pickupLng: _pickupLng ?? 0.0,
-        pickupAddress: _pickupController.text,
-        dropoffLat: _dropoffLat ?? 0.0,
-        dropoffLng: _dropoffLng ?? 0.0,
-        dropoffAddress: _dropoffController.text,
-        scheduledAt: scheduledDateTime,
-        token: token,
-      );
-
-      if (mounted) {
-        final messenger = ScaffoldMessenger.of(context);
-        Navigator.of(context).pop(result != null);
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(result != null ? 'Ride scheduled successfully!' : 'Failed to schedule ride'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An unexpected error occurred')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isScheduling = false);
-    }
+  void _saveNavigationValues() {
+    _lastNavPickupLat = _pickupLat;
+    _lastNavPickupLng = _pickupLng;
+    _lastNavPickupAddress = _pickupAddress;
+    _lastNavDropoffLat = _dropoffLat;
+    _lastNavDropoffLng = _dropoffLng;
+    _lastNavDropoffAddress = _dropoffAddress;
   }
 
-bool get _canSchedule =>
-    _pickupController.text.isNotEmpty &&
-    _dropoffController.text.isNotEmpty &&
-    _pickupLat != null && _pickupLng != null &&
-    _dropoffLat != null && _dropoffLng != null;
+  void _checkAndNavigate() {
+    if (!_bothReady) return;
+    if (_isNavigating) return;
+    _isNavigating = true;
+    _saveNavigationValues();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RiderDropoffLocationScreen(
+          pickupLat: _pickupLat!,
+          pickupLng: _pickupLng!,
+          pickupAddress: _pickupAddress,
+          dropoffLat: _dropoffLat!,
+          dropoffLng: _dropoffLng!,
+          dropoffAddress: _dropoffAddress,
+        ),
+      ),
+    ).then((_) {
+      _isNavigating = false;
+      if (mounted && _bothReady && _valuesChangedSinceNavigation) {
+        _checkAndNavigate();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 8),
-            _buildPickupField(),
-            const SizedBox(height: 8),
-            _buildDropoffField(),
-            const SizedBox(height: 12),
-            _buildSearchResults(),
-            const SizedBox(height: 8),
-            _buildTimePicker(),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _canSchedule && !_isScheduling ? _onSchedule : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.textOnPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdRadius,
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  child: _isScheduling
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.textOnPrimary,
-                          ),
-                        )
-                      : Text(
-                          'Schedule Ride — ${_formatDate(widget.selectedDate)} at ${_selectedTime.format(context)}',
-                        ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
+        title: const Text(
+          'New Ride',
+          style: TextStyle(color: AppColors.primary),
+        ),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              _buildPickupField(),
+              const SizedBox(height: 8),
+              _buildDropoffField(),
+              const SizedBox(height: 12),
+              _buildSearchResults(),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const SizedBox(width: 48),
-        const Text(
-          'Schedule your later ride',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(),
-          color: AppColors.textSecondary,
-        ),
-      ],
-    );
-  }
-
-  IconData _searchIcon(bool isFocused) {
-    return isFocused ? Icons.search_rounded : Icons.circle_outlined;
-  }
-
-  String _searchLanguage(String query) {
-    return RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]').hasMatch(query) ? 'ar' : _userLanguage;
-  }
-
-  String get _activeControllerText {
-    if (_activeField == _FieldType.pickup) return _pickupController.text;
-    if (_activeField == _FieldType.dropoff) return _dropoffController.text;
-    return '';
   }
 
   Widget _buildPickupField() {
@@ -484,20 +370,20 @@ bool get _canSchedule =>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_pickupController.text.isNotEmpty)
-                    IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        onPressed: () {
-                          setState(() {
-                            _pickupPlaceId = null;
-                            _pickupLat = null;
-                            _pickupLng = null;
-                          });
-                          _pickupController.clear();
-                        },
-                        color: AppColors.textTertiary,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () {
+                            setState(() {
+                              _pickupLat = null;
+                              _pickupLng = null;
+                              _pickupAddress = '';
+                            });
+                            _pickupController.clear();
+                          },
+                          color: AppColors.textTertiary,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
                       Padding(
                         padding: const EdgeInsets.only(right: 3),
                         child: InkWell(
@@ -572,14 +458,14 @@ bool get _canSchedule =>
                       if (_dropoffController.text.isNotEmpty)
                         IconButton(
                           icon: const Icon(Icons.close, size: 18),
-                        onPressed: () {
-                          setState(() {
-                            _dropoffPlaceId = null;
-                            _dropoffLat = null;
-                            _dropoffLng = null;
-                          });
-                          _dropoffController.clear();
-                        },
+                          onPressed: () {
+                            setState(() {
+                              _dropoffLat = null;
+                              _dropoffLng = null;
+                              _dropoffAddress = '';
+                            });
+                            _dropoffController.clear();
+                          },
                           color: AppColors.textTertiary,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
@@ -614,74 +500,22 @@ bool get _canSchedule =>
             ),
           ),
           const SizedBox(width: 10),
-          GestureDetector(
-            onTap: _onReverse,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.outline.withValues(alpha: 0.3),
-                borderRadius: AppRadius.smRadius,
-              ),
-              child: const Column(
-                children: [
-                  Icon(Icons.keyboard_arrow_up, size: 16, color: AppColors.textSecondary),
-                  Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.textSecondary),
-                ],
-              ),
+          Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: AppColors.dropoffMarker,
+              shape: BoxShape.circle,
             ),
           ),
+          const SizedBox(width: 20),
         ],
       ),
     );
   }
 
-  Widget _buildTimePicker() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: InkWell(
-        onTap: () async {
-          final picked = await showTimePicker(
-            context: context,
-            initialTime: _selectedTime,
-            builder: (context, child) {
-              return MediaQuery(
-                data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-                child: child!,
-              );
-            },
-          );
-          if (picked != null && mounted) {
-            setState(() => _selectedTime = picked);
-          }
-        },
-        borderRadius: AppRadius.mdRadius,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: AppRadius.mdRadius,
-            border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.access_time_rounded, size: 20, color: AppColors.textSecondary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  _selectedTime.format(context),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
-            ],
-          ),
-        ),
-      ),
-    );
+  IconData _searchIcon(bool isFocused) {
+    return isFocused ? Icons.search_rounded : Icons.circle_outlined;
   }
 
   Widget _buildSearchResults() {

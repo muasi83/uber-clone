@@ -13,6 +13,8 @@ import '../models/ride_model.dart';
 import '../screens/rider_pickup_location_screen.dart';
 import '../screens/rider_dropoff_location_screen.dart';
 import '../screens/debug_screen.dart';
+import '../screens/ride_collector_screen.dart';
+import '../widgets/schedule_ride_sheet.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_shadows.dart';
@@ -1164,7 +1166,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 12),
+                          padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 12),
+                          child: _buildRideScheduleRow(),
+                        ),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 12),
                           child: _buildSearchBar(),
                         ),
                         if (!_isSheetExpanded && _recentTrips.isNotEmpty)
@@ -1528,6 +1534,102 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRideScheduleRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Semantics(
+              button: true,
+              label: 'Request a new ride',
+              child: InkWell(
+                onTap: _onRidePressed,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.directions_car_rounded, color: AppColors.textOnPrimary, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Ride',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: AppColors.textOnPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Semantics(
+              button: true,
+              label: 'Schedule a ride for later',
+              child: InkWell(
+                onTap: _onSchedulePressed,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: AppColors.outline),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.schedule_rounded, color: AppColors.primary, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Schedule',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onRidePressed() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const RideCollectorScreen()),
+    );
+  }
+
+  void _onSchedulePressed() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      enableDrag: false,
+      isDismissible: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => ScheduleRideSheet(
+        selectedDate: DateTime.now(),
       ),
     );
   }

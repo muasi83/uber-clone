@@ -140,6 +140,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
   }
 
   void _onConfirm() {
+    print('LOCATION_PICKER_RETURNING: lat=${_selectedLocation.latitude}, lng=${_selectedLocation.longitude}, address=$_address');
     Navigator.of(context).pop({
       'lat': _selectedLocation.latitude,
       'lng': _selectedLocation.longitude,

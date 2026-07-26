@@ -35,6 +35,9 @@ class RiderDropoffLocationScreen extends StatefulWidget {
   final double pickupLng;
   final String pickupAddress;
   final Ride? initialTrip;
+  final double? dropoffLat;
+  final double? dropoffLng;
+  final String? dropoffAddress;
 
   const RiderDropoffLocationScreen({
     super.key,
@@ -42,6 +45,9 @@ class RiderDropoffLocationScreen extends StatefulWidget {
     required this.pickupLng,
     required this.pickupAddress,
     this.initialTrip,
+    this.dropoffLat,
+    this.dropoffLng,
+    this.dropoffAddress,
   });
 
   @override
@@ -133,6 +139,14 @@ class _RiderDropoffLocationScreenState
       final trip = widget.initialTrip!;
       _dropoffLocation = LatLng(trip.dropoffLatitude, trip.dropoffLongitude);
       _dropoffAddress = trip.dropoffAddress;
+      _isAutoReviewing = true;
+      _calculateRoute(
+        LatLng(widget.pickupLat, widget.pickupLng),
+        _dropoffLocation!,
+      );
+    } else if (widget.dropoffLat != null && widget.dropoffLng != null && widget.dropoffAddress != null) {
+      _dropoffLocation = LatLng(widget.dropoffLat!, widget.dropoffLng!);
+      _dropoffAddress = widget.dropoffAddress!;
       _isAutoReviewing = true;
       _calculateRoute(
         LatLng(widget.pickupLat, widget.pickupLng),

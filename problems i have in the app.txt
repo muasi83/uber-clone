@@ -13,6 +13,9 @@ opencode -s ses_09630c892ffeNWH3fgKqrVNK8s
 opencode -s ses_081d05932ffemhk5T3DRboA645
 
 
+opencode -s ses_061c67395ffeOnAktI6nJZzjhp
+
+
 start of two problems  
 
 Start
