@@ -4,14 +4,17 @@ import 'package:http/http.dart' as http;
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../services/currency_service.dart';
+import '../services/locale_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
-import '../theme/app_shadows.dart';
+
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_text_field.dart';
 import '../widgets/premium_card.dart';
 import '../services/recorded_screen_mixin.dart';
+import '../l10n/app_localizations.dart';
+import '../main.dart' as app;
 
 class SettingsScreen extends StatefulWidget {
   final String username;
@@ -46,10 +49,11 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
   }
 
   Future<void> _saveUrl() async {
+    final l10n = AppLocalizations.of(context);
     if (_urlController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('URL cannot be empty'),
+        SnackBar(
+          content: Text(l10n.urlCannotBeEmpty),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -63,8 +67,8 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Server URL updated'),
+        SnackBar(
+          content: Text(l10n.serverUrlUpdated),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
@@ -73,20 +77,21 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
   }
 
   Future<void> _logout() async {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.lgRadius,
         ),
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text(l10n.logout),
+        content: Text(l10n.areYouSureYouWantToLogOut),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary),
+            child: Text(
+              l10n.cancel,
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
           ),
           TextButton(
@@ -110,9 +115,9 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
                     .pushNamedAndRemoveUntil('/auth', (route) => false);
               }
             },
-            child: const Text(
-              'Logout',
-              style: TextStyle(
+            child: Text(
+              l10n.logout,
+              style: const TextStyle(
                 color: AppColors.error,
                 fontWeight: FontWeight.w600,
               ),
@@ -125,13 +130,14 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        title: const Text(
-          'Settings',
-          style: TextStyle(color: AppColors.primaryLight),
+        title: Text(
+          l10n.settings,
+          style: const TextStyle(color: AppColors.primaryLight),
         ),
         elevation: 0,
         leading: IconButton(
@@ -140,33 +146,37 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
         ),
       ),
       body: Semantics(
-        label: 'Settings page',
+        label: l10n.settings,
         child: SingleChildScrollView(
           padding: AppSpacing.screenPadding,
           child: Column(
             children: [
-              _buildProfileCard(),
+              _buildProfileCard(l10n),
               AppSpacing.gapXxl,
-              _buildSectionHeader('Notifications'),
+              _buildSectionHeader(l10n.language),
               AppSpacing.gapMd,
-              _buildNotificationPrefs(),
+              _buildLanguageSelector(l10n),
               AppSpacing.gapXxl,
-              _buildSectionHeader('Currency'),
+              _buildSectionHeader(l10n.notifications),
               AppSpacing.gapMd,
-              _buildCurrencySelector(),
+              _buildNotificationPrefs(l10n),
               AppSpacing.gapXxl,
-              _buildSectionHeader('About'),
+              _buildSectionHeader(l10n.currency),
               AppSpacing.gapMd,
-              _buildAboutCard(),
+              _buildCurrencySelector(l10n),
+              AppSpacing.gapXxl,
+              _buildSectionHeader(l10n.about),
+              AppSpacing.gapMd,
+              _buildAboutCard(l10n),
               if (kDebugMode) ...[
                 AppSpacing.gapXxl,
                 _buildSectionHeader('Server Configuration (Dev)'),
                 AppSpacing.gapMd,
-                _buildServerConfigCard(),
+                _buildServerConfigCard(l10n),
               ],
               AppSpacing.gapXxl,
               PremiumButton(
-                label: 'Logout',
+                label: l10n.logout,
                 onPressed: _logout,
                 variant: ButtonVariant.danger,
                 icon: Icons.logout_rounded,
@@ -178,7 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
     );
   }
 
-  Widget _buildProfileCard() {
+  Widget _buildProfileCard(dynamic l10n) {
     return PremiumCard(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Row(
@@ -211,9 +221,9 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
                   ),
                 ),
                 AppSpacing.gapXs,
-                const Text(
-                  'Settings',
-                  style: TextStyle(
+                Text(
+                  l10n.settings,
+                  style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textTertiary,
                   ),
@@ -241,15 +251,53 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
     );
   }
 
-  Widget _buildNotificationPrefs() {
+  Widget _buildLanguageSelector(dynamic l10n) {
+    return PremiumCard(
+      child: Column(
+        children: [
+          ListTile(
+            leading: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primaryContainer,
+                borderRadius: AppRadius.mdRadius,
+              ),
+              child: const Icon(Icons.language, color: AppColors.primary, size: 20),
+            ),
+            title: Text(
+              l10n.language,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+            ),
+            trailing: DropdownButton<String>(
+              value: Localizations.localeOf(context).languageCode == 'ar' ? 'ar' : 'en',
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: 'en', child: Text('English')),
+                DropdownMenuItem(value: 'ar', child: Text('العربية')),
+              ],
+              onChanged: (code) {
+                if (code == null) return;
+                final locale = Locale(code);
+                LocaleService.setLocale(locale);
+                app.MyApp.localeNotifier.value = locale;
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationPrefs(dynamic l10n) {
     return PremiumCard(
       child: Column(
         children: [
           Semantics(
             label: 'Push notifications toggle',
             child: SwitchListTile(
-              title: const Text('Push Notifications', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-              subtitle: const Text('Receive ride updates and offers', style: TextStyle(fontSize: 12)),
+              title: Text(l10n.pushNotifications, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              subtitle: Text(l10n.rideUpdatesAndOffers, style: const TextStyle(fontSize: 12)),
               value: true,
               onChanged: (_) {},
               activeColor: AppColors.primary,
@@ -260,8 +308,8 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
           Semantics(
             label: 'SMS notifications toggle',
             child: SwitchListTile(
-              title: const Text('SMS Notifications', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-              subtitle: const Text('Receive text messages for rides', style: TextStyle(fontSize: 12)),
+              title: Text(l10n.smsNotifications, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              subtitle: Text(l10n.receiveTextMessagesForRides, style: const TextStyle(fontSize: 12)),
               value: true,
               onChanged: (_) {},
               activeColor: AppColors.primary,
@@ -272,8 +320,8 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
           Semantics(
             label: 'Email notifications toggle',
             child: SwitchListTile(
-              title: const Text('Email Notifications', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-              subtitle: const Text('Receive promotional emails', style: TextStyle(fontSize: 12)),
+              title: Text(l10n.emailNotifications, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              subtitle: Text(l10n.receivePromotionalEmails, style: const TextStyle(fontSize: 12)),
               value: false,
               onChanged: (_) {},
               activeColor: AppColors.primary,
@@ -285,20 +333,20 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
     );
   }
 
-  Widget _buildServerConfigCard() {
+  Widget _buildServerConfigCard(dynamic l10n) {
     return PremiumCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PremiumTextField(
             controller: _urlController,
-            label: 'Server URL',
+            label: l10n.serverUrl,
             hint: 'https://your-ngrok-url.ngrok-free.dev',
             prefixIcon: Icons.link,
           ),
           AppSpacing.gapLg,
           PremiumButton(
-            label: 'Save Server URL',
+            label: l10n.saveServerUrl,
             onPressed: _isChanged ? _saveUrl : null,
             isDisabled: !_isChanged,
             icon: Icons.save_outlined,
@@ -308,7 +356,7 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
     );
   }
 
-  Widget _buildCurrencySelector() {
+  Widget _buildCurrencySelector(dynamic l10n) {
     return PremiumCard(
       child: ListTile(
         leading: Container(
@@ -324,9 +372,9 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
             size: 20,
           ),
         ),
-        title: const Text(
-          'Display Currency',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+        title: Text(
+          l10n.displayCurrency,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
         ),
         subtitle: Text(
           CurrencyService.symbol == '\$'
@@ -340,7 +388,7 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
             context: context,
             builder: (ctx) => AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: AppRadius.lgRadius),
-              title: const Text('Display Currency', style: TextStyle(fontSize: 16)),
+              title: Text(l10n.displayCurrency, style: const TextStyle(fontSize: 16)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: Currency.values.map((c) {
@@ -368,7 +416,7 @@ class _SettingsScreenState extends State<SettingsScreen> with RecordedScreenMixi
     );
   }
 
-  Widget _buildAboutCard() {
+  Widget _buildAboutCard(dynamic l10n) {
     return PremiumCard(
       child: Row(
         children: [

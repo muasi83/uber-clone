@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import 'premium_button.dart';
@@ -19,6 +20,7 @@ class ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: AppSpacing.screenPadding,
@@ -57,7 +59,7 @@ class ErrorState extends StatelessWidget {
             if (onRetry != null) ...[
               AppSpacing.gapXl,
               PremiumButton(
-                label: 'Retry',
+                label: l10n.retry,
                 onPressed: onRetry,
                 icon: Icons.refresh,
                 width: 200,

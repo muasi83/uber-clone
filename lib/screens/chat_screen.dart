@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
@@ -125,6 +126,12 @@ class _ChatScreenState extends State<ChatScreen>
     _scrollController.dispose();
     _typingDotsController.dispose();
     ChatScreen.activeChatPartnerId = null;
+    if (identical(WebSocketService.onMessageReceived, _handleIncomingMessage)) {
+      WebSocketService.onMessageReceived = null;
+    }
+    if (identical(WebSocketService.onTyping, _handleTypingIndicator)) {
+      WebSocketService.onTyping = null;
+    }
     super.dispose();
   }
 
@@ -338,7 +345,7 @@ class _ChatScreenState extends State<ChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Failed to send message'),
+            content: Text(AppLocalizations.of(context).failedToSendMessage),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -370,6 +377,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -380,7 +388,7 @@ class _ChatScreenState extends State<ChatScreen>
         surfaceTintColor: AppColors.surface,
         leading: Semantics(
           button: true,
-          label: 'Back',
+          label: l10n.goBack,
           child: IconButton(
             icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
             onPressed: () => Navigator.pop(context),
@@ -437,7 +445,7 @@ class _ChatScreenState extends State<ChatScreen>
                       _buildTypingDots(size: 5),
                       AppSpacing.hGapXs,
                       Text(
-                        'typing',
+                        l10n.typing,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppColors.textTertiary,
                             ),
@@ -470,6 +478,7 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: AppSpacing.screenPadding,
@@ -495,7 +504,7 @@ class _ChatScreenState extends State<ChatScreen>
             ),
             AppSpacing.gapLg,
             Text(
-              'No messages yet',
+              l10n.noMessagesYet,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
@@ -503,7 +512,7 @@ class _ChatScreenState extends State<ChatScreen>
             ),
             AppSpacing.gapXs,
             Text(
-              'Send a message to start chatting',
+              l10n.sendAMessageToStartChatting,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textTertiary,
                   ),
@@ -514,19 +523,20 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  String _dateLabel(DateTime date) {
+  String _dateLabel(DateTime date, AppLocalizations l10n) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final msgDate = DateTime(date.year, date.month, date.day);
 
     final diff = today.difference(msgDate).inDays;
 
-    if (diff == 0) return 'Today';
-    if (diff == 1) return 'Yesterday';
+    if (diff == 0) return l10n.today;
+    if (diff == 1) return l10n.yesterday;
     return DateFormat('MMM d, yyyy').format(date);
   }
 
   Widget _buildDateSeparator(DateTime date) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Center(
@@ -537,7 +547,7 @@ class _ChatScreenState extends State<ChatScreen>
             borderRadius: BorderRadius.circular(14),
           ),
           child: Text(
-            _dateLabel(date),
+            _dateLabel(date, l10n),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: AppColors.textSecondary,
                   fontWeight: FontWeight.w500,
@@ -699,6 +709,7 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Widget _buildTypingIndicator() {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
@@ -716,7 +727,7 @@ class _ChatScreenState extends State<ChatScreen>
                 _buildTypingDots(),
                 AppSpacing.hGapSm,
                 Text(
-                  '${widget.receiverName} is typing...',
+                  l10n.isTyping(widget.receiverName),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondary,
                         fontStyle: FontStyle.italic,
@@ -767,6 +778,7 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Widget _buildMessageInput() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -798,8 +810,8 @@ class _ChatScreenState extends State<ChatScreen>
                       child: TextField(
                         controller: _messageController,
                         onChanged: (_) => _sendTypingIndicator(),
-                        decoration: const InputDecoration(
-                          hintText: 'Type a message...',
+                        decoration: InputDecoration(
+                          hintText: l10n.typeAMessage,
                           hintStyle: TextStyle(color: AppColors.textTertiary),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(
@@ -815,7 +827,7 @@ class _ChatScreenState extends State<ChatScreen>
                   AppSpacing.hGapSm,
                   Semantics(
                     button: true,
-                    label: 'Send message',
+                    label: l10n.sendMessage,
                     child: GestureDetector(
                       onTap: _sendMessage,
                       child: Container(

@@ -13,6 +13,7 @@ import '../widgets/premium_button.dart';
 import '../widgets/glass_card.dart';
 import '../services/websocket_service.dart';
 import '../services/location_service.dart';
+import '../services/place_search_service.dart';
 import '../services/driver_service.dart';
 import '../models/ride_model.dart';
 import '../utils/marker_utils.dart';
@@ -21,6 +22,7 @@ import '../utils/bearing_utils.dart';
 import '../utils/marker_factory.dart';
 import '../utils/address_utils.dart';
 import '../models/location_model.dart';
+import '../l10n/app_localizations.dart';
 
 class RiderPickupLocationScreen extends StatefulWidget {
   final double initialLat;
@@ -52,7 +54,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
   bool _loggedGeocodingErrorOnce = false;
 
   final TextEditingController _searchController = TextEditingController();
-  List<LocationData> _searchResults = [];
+  List<PlaceSearchResult> _searchResults = [];
   bool _isSearching = false;
   Timer? _searchDebounce;
   bool _showSearchResults = false;
@@ -379,33 +381,33 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
   Future<void> _performSearch(String query) async {
     setState(() => _isSearching = true);
     try {
-      final result = await LocationService.getCoordinatesFromAddress(query);
+      final results = await PlaceSearchService.search(query, language: 'en');
       if (!mounted) return;
-      if (result != null) {
-        setState(() {
-          _searchResults = [result];
-          _showSearchResults = true;
-          _isSearching = false;
-        });
-      } else {
-        setState(() {
-          _searchResults = [];
-          _showSearchResults = false;
-          _isSearching = false;
-        });
-      }
+      setState(() {
+        _searchResults = results;
+        _showSearchResults = results.isNotEmpty;
+        _isSearching = false;
+      });
     } catch (_) {
       if (mounted) setState(() => _isSearching = false);
     }
   }
 
-  void _selectSearchResult(LocationData result) {
-    final loc = LatLng(result.latitude, result.longitude);
+  Future<void> _selectSearchResult(PlaceSearchResult result) async {
+    PlaceDetails? details;
+    try {
+      details = await PlaceSearchService.getPlaceDetails(result.placeId, language: 'en');
+    } catch (_) {
+      details = null;
+    }
+    if (!mounted) return;
+    final loc = LatLng(details?.lat ?? 0, details?.lng ?? 0);
+    final address = details?.address ?? result.description;
     setState(() {
       _pickupLocation = loc;
-      _pickupAddress = result.address;
+      _pickupAddress = address;
       _showSearchResults = false;
-      _searchController.text = result.address;
+      _searchController.text = address;
     });
     mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(loc, 17),
@@ -424,9 +426,9 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
   void _confirmPickup() {
     if (_pickupLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Please select a pickup location',
+            AppLocalizations.of(context).pleaseSelectAPickupLocation,
           ),
           backgroundColor: AppColors.error,
         ),
@@ -551,7 +553,7 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
                                   dense: true,
                                   leading: const Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
                                   title: Text(
-                                    result.address,
+                                    result.description,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
@@ -597,9 +599,9 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
                     ),
                   ),
                   if (_isLoadingAddress)
-                    const Row(
+                    Row(
                       children: [
-                        SizedBox(
+                        const SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
@@ -611,8 +613,8 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
                         ),
                         AppSpacing.hGapMd,
                         Text(
-                          'Finding address...',
-                          style: TextStyle(color: AppColors.textSecondary),
+                          AppLocalizations.of(context).findingAddress,
+                          style: const TextStyle(color: AppColors.textSecondary),
                         ),
                       ],
                     )

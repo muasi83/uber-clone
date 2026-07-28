@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/ride_model.dart';
 import '../services/currency_service.dart';
 import '../services/ride_service.dart';
@@ -81,14 +82,14 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
     super.dispose();
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(String status, AppLocalizations l10n) {
     switch (status) {
-      case 'COMPLETED': return 'Completed';
-      case 'CANCELLED': return 'Cancelled';
-      case 'REQUESTED': return 'Requested';
-      case 'ACCEPTED': return 'Accepted';
-      case 'DRIVER_ARRIVED': return 'Driver Arrived';
-      case 'STARTED': return 'Started';
+      case 'COMPLETED': return l10n.completed;
+      case 'CANCELLED': return l10n.cancelled;
+      case 'REQUESTED': return l10n.requested;
+      case 'ACCEPTED': return l10n.accept;
+      case 'DRIVER_ARRIVED': return l10n.driverArrived2;
+      case 'STARTED': return l10n.rideStarted2;
       default: return status;
     }
   }
@@ -111,10 +112,11 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Trip History'),
+        title: Text(l10n.tripHistory),
         backgroundColor: AppColors.textPrimary,
         foregroundColor: AppColors.primaryLight,
         iconTheme: const IconThemeData(color: AppColors.primaryLight),
@@ -127,11 +129,11 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
               padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
               child: Row(
                 children: [
-                  _buildFilterChip('ALL', 'All'),
+                  _buildFilterChip('ALL', l10n.all),
                   const SizedBox(width: 8),
-                  _buildFilterChip('COMPLETED', 'Completed'),
+                  _buildFilterChip('COMPLETED', l10n.completed),
                   const SizedBox(width: 8),
-                  _buildFilterChip('CANCELLED', 'Cancelled'),
+                  _buildFilterChip('CANCELLED', l10n.cancelled),
                 ],
               ),
             ),
@@ -146,9 +148,9 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                     children: [
                       Icon(Icons.history, size: 64, color: AppColors.textTertiary),
                       AppSpacing.gapLg,
-                      const Text(
-                        'No trips yet',
-                        style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+                      Text(
+                        l10n.noTripsYet,
+                        style: const TextStyle(fontSize: 16, color: AppColors.textSecondary),
                       ),
                     ],
                   ),
@@ -178,9 +180,10 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   }
 
   Widget _buildFilterChip(String value, String label) {
+    final l10n = AppLocalizations.of(context);
     final selected = _statusFilter == value;
     return Semantics(
-      label: 'Filter by $label',
+      label: '${l10n.filterBy} $label',
       child: GestureDetector(
         onTap: () => setState(() {
           _statusFilter = value;
@@ -210,13 +213,14 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   }
 
   Widget _buildTripCard(Ride ride) {
+    final l10n = AppLocalizations.of(context);
     final dateStr = ride.requestedAt != null
         ? DateFormat('MMM dd, yyyy – HH:mm').format(ride.requestedAt!)
         : '';
     final fare = ride.finalFare ?? ride.estimatedFare;
 
     return Semantics(
-      label: 'Trip ${_statusLabel(ride.status)} from ${ride.pickupAddress} to ${ride.dropoffAddress}',
+      label: '${l10n.trip} ${_statusLabel(ride.status, l10n)} from ${ride.pickupAddress} to ${ride.dropoffAddress}',
       child: Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.md),
         child: PremiumCard(
@@ -235,7 +239,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                       borderRadius: AppRadius.smRadius,
                     ),
                     child: Text(
-                      _statusLabel(ride.status),
+                      _statusLabel(ride.status, l10n),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -294,7 +298,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                     const Icon(Icons.person, size: 14, color: AppColors.textTertiary),
                     const SizedBox(width: 6),
                     Text(
-                      'Driver: ${ride.driver!.fullName}',
+                      l10n.driver2(ride.driver!.fullName),
                       style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
                     ),
                   ],
@@ -309,7 +313,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                       child: TextButton.icon(
                         onPressed: () => _showTripReceipt(ride),
                         icon: const Icon(Icons.receipt_outlined, size: 16, color: AppColors.primary),
-                        label: const Text('Receipt', style: TextStyle(fontSize: 13)),
+                        label: Text(l10n.receipt, style: const TextStyle(fontSize: 13)),
                       ),
                     ),
                     const Spacer(),
@@ -318,7 +322,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                       child: TextButton.icon(
                         onPressed: () => _rebookTrip(ride),
                         icon: const Icon(Icons.refresh, size: 16, color: AppColors.primary),
-                        label: const Text('Re-book', style: TextStyle(fontSize: 13)),
+                        label: Text(l10n.rideAgain, style: const TextStyle(fontSize: 13)),
                       ),
                     ),
                   ],
@@ -332,6 +336,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   }
 
   void _showTripReceipt(Ride ride) {
+    final l10n = AppLocalizations.of(context);
     final receiptDate = ride.requestedAt != null
         ? DateFormat('MMM dd, yyyy – HH:mm').format(ride.requestedAt!)
         : '';
@@ -349,16 +354,16 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
           children: [
             const Center(child: BottomSheetHandle()),
             AppSpacing.gapLg,
-            const Text('Trip Receipt', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(l10n.receipt, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             AppSpacing.gapLg,
-            _receiptRow('Status', _statusLabel(ride.status)),
-            _receiptRow('Date', receiptDate),
-            _receiptRow('Pickup', ride.pickupAddress),
-            _receiptRow('Dropoff', ride.dropoffAddress),
-            if (ride.estimatedDistance != null) _receiptRow('Distance', '${ride.estimatedDistance!.toStringAsFixed(1)} km'),
-            if (ride.rideType.isNotEmpty) _receiptRow('Type', RideTypeSelector.toDisplayName(ride.rideType)),
+            _receiptRow(l10n.status, _statusLabel(ride.status, l10n)),
+            _receiptRow(AppLocalizations.of(context).date, receiptDate),
+            _receiptRow(l10n.pickup, ride.pickupAddress),
+            _receiptRow(l10n.dropoff, ride.dropoffAddress),
+            if (ride.estimatedDistance != null) _receiptRow(l10n.distance, '${ride.estimatedDistance!.toStringAsFixed(1)} km'),
+            if (ride.rideType.isNotEmpty) _receiptRow(l10n.type, RideTypeSelector.toDisplayName(ride.rideType)),
             const Divider(height: 24),
-            _receiptRow('Total', CurrencyService.format(receiptFare ?? 0.0), isBold: true),
+            _receiptRow(l10n.total, CurrencyService.format(receiptFare ?? 0.0), isBold: true),
             AppSpacing.gapXl,
           ],
         ),

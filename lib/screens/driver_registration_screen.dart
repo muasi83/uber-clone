@@ -8,6 +8,7 @@ import '../theme/app_radius.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_text_field.dart';
 import '../services/recorded_screen_mixin.dart';
+import '../l10n/app_localizations.dart';
 
 class DriverRegistrationScreen extends StatefulWidget {
   final int userId;
@@ -85,7 +86,7 @@ Future<void> _checkExistingProfile() async {
       _vehicleNumberController.text.isEmpty ||
       _vehicleModelController.text.isEmpty ||
       _vehicleColorController.text.isEmpty) {
-    _showError('Please fill all fields');
+    _showError(AppLocalizations.of(context).pleaseFillAllFields);
     return;
   }
 
@@ -109,7 +110,7 @@ Future<void> _checkExistingProfile() async {
     addDebugMessage('Registration result: $result');
 
     if (result) {
-      _showSuccess('Driver profile registered!');
+      _showSuccess(AppLocalizations.of(context).driverProfileRegistered);
 
       await Future.delayed(const Duration(seconds: 1));
 
@@ -126,7 +127,7 @@ Future<void> _checkExistingProfile() async {
       }
     } else {
       addDebugMessage('❌ Registration failed - profile might already exist');
-      _showError('Driver profile registration failed. You may already be registered.');
+      _showError(AppLocalizations.of(context).driverProfileRegistrationFailedYouMayAlreadyBeRegistered);
 
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) {
@@ -176,7 +177,7 @@ Future<void> _checkExistingProfile() async {
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: Semantics(
-          label: 'Go back',
+          label: AppLocalizations.of(context).goBack2,
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
             onPressed: _isFirstStep
@@ -185,9 +186,9 @@ Future<void> _checkExistingProfile() async {
           ),
         ),
         title: Semantics(
-          label: 'Registration step ${_currentStepIndex + 1} of 3',
-          child: const Text(
-            'Become a Driver',
+          label: AppLocalizations.of(context).registrationStepOf('${_currentStepIndex + 1}', '3'),
+          child: Text(
+            AppLocalizations.of(context).becomeADriver,
             style: TextStyle(
               color: AppColors.primary,
               fontWeight: FontWeight.w600,
@@ -240,7 +241,7 @@ Future<void> _checkExistingProfile() async {
 
   Widget _buildStepIndicator() {
     return Semantics(
-      label: 'Step ${_currentStepIndex + 1} of 3',
+      label: AppLocalizations.of(context).stepOf('${_currentStepIndex + 1}', '3'),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl, vertical: AppSpacing.lg),
         child: Row(
@@ -313,9 +314,9 @@ Future<void> _checkExistingProfile() async {
 
   Widget _buildStepTitle() {
     final title = switch (_currentStep) {
-      _RegStep.personalInfo => 'Personal Information',
-      _RegStep.vehicleInfo => 'Vehicle Information',
-      _RegStep.review => 'Review & Submit',
+      _RegStep.personalInfo => AppLocalizations.of(context).personalInformation,
+      _RegStep.vehicleInfo => AppLocalizations.of(context).vehicleInformation,
+      _RegStep.review => AppLocalizations.of(context).reviewSubmit,
     };
     return Semantics(
       label: title,
@@ -333,9 +334,9 @@ Future<void> _checkExistingProfile() async {
 
   Widget _buildStepSubtitle() {
     final subtitle = switch (_currentStep) {
-      _RegStep.personalInfo => 'Enter your driving license details',
-      _RegStep.vehicleInfo => 'Tell us about your vehicle',
-      _RegStep.review => 'Verify your information before submitting',
+      _RegStep.personalInfo => AppLocalizations.of(context).enterYourDrivingLicenseDetails,
+      _RegStep.vehicleInfo => AppLocalizations.of(context).tellUsAboutYourVehicle,
+      _RegStep.review => AppLocalizations.of(context).verifyYourInformationBeforeSubmitting,
     };
     return Text(
       subtitle,
@@ -362,8 +363,8 @@ Future<void> _checkExistingProfile() async {
           label: 'License number input',
           child: PremiumTextField(
             controller: _licenseController,
-            label: 'License Number',
-            hint: 'e.g., DL123456789',
+            label: AppLocalizations.of(context).licenseNumber,
+            hint: AppLocalizations.of(context).egDl123456789,
             prefixIcon: Icons.credit_card,
           ),
         ),
@@ -378,8 +379,8 @@ Future<void> _checkExistingProfile() async {
           label: 'Vehicle number input',
           child: PremiumTextField(
             controller: _vehicleNumberController,
-            label: 'Vehicle Number',
-            hint: 'e.g., ABC-1234',
+            label: AppLocalizations.of(context).vehicleNumber,
+            hint: AppLocalizations.of(context).egAbc1234,
             prefixIcon: Icons.directions_car,
           ),
         ),
@@ -397,16 +398,16 @@ Future<void> _checkExistingProfile() async {
             ),
             child: DropdownButtonFormField<String>(
               initialValue: _selectedVehicleType,
-              items: const [
-                DropdownMenuItem(value: 'CAR', child: Text('Car')),
-                DropdownMenuItem(value: 'BIKE', child: Text('Bike')),
-                DropdownMenuItem(value: 'VAN', child: Text('Van')),
+              items: [
+                DropdownMenuItem(value: 'CAR', child: Text(AppLocalizations.of(context).car)),
+                DropdownMenuItem(value: 'BIKE', child: Text(AppLocalizations.of(context).bike)),
+                DropdownMenuItem(value: 'VAN', child: Text(AppLocalizations.of(context).van)),
               ],
               onChanged: (value) {
                 setState(() => _selectedVehicleType = value ?? 'CAR');
               },
-              decoration: const InputDecoration(
-                labelText: 'Vehicle Type',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).vehicleType,
                 prefixIcon: Icon(
                   Icons.category,
                   color: AppColors.textTertiary,
@@ -426,8 +427,8 @@ Future<void> _checkExistingProfile() async {
           label: 'Vehicle model input',
           child: PremiumTextField(
             controller: _vehicleModelController,
-            label: 'Vehicle Model',
-            hint: 'e.g., Toyota Camry',
+            label: AppLocalizations.of(context).vehicleModel,
+            hint: AppLocalizations.of(context).egToyotaCamry,
             prefixIcon: Icons.info_outline,
           ),
         ),
@@ -436,8 +437,8 @@ Future<void> _checkExistingProfile() async {
           label: 'Vehicle color input',
           child: PremiumTextField(
             controller: _vehicleColorController,
-            label: 'Vehicle Color',
-            hint: 'e.g., White',
+            label: AppLocalizations.of(context).vehicleColor,
+            hint: AppLocalizations.of(context).egWhite,
             prefixIcon: Icons.palette_outlined,
           ),
         ),
@@ -447,7 +448,7 @@ Future<void> _checkExistingProfile() async {
 
   Widget _buildReviewStep() {
     return Semantics(
-      label: 'Review your details',
+      label: AppLocalizations.of(context).reviewYourDetails,
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -459,15 +460,15 @@ Future<void> _checkExistingProfile() async {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildReviewRow('License', _licenseController.text),
+              _buildReviewRow(AppLocalizations.of(context).license, _licenseController.text),
               const Divider(height: 1, color: AppColors.outline),
-              _buildReviewRow('Vehicle Number', _vehicleNumberController.text),
+              _buildReviewRow(AppLocalizations.of(context).vehicleNumber, _vehicleNumberController.text),
               const Divider(height: 1, color: AppColors.outline),
-              _buildReviewRow('Vehicle Type', _selectedVehicleType),
+              _buildReviewRow(AppLocalizations.of(context).vehicleType, _selectedVehicleType),
               const Divider(height: 1, color: AppColors.outline),
-              _buildReviewRow('Vehicle Model', _vehicleModelController.text),
+              _buildReviewRow(AppLocalizations.of(context).vehicleModel, _vehicleModelController.text),
               const Divider(height: 1, color: AppColors.outline),
-              _buildReviewRow('Vehicle Color', _vehicleColorController.text),
+              _buildReviewRow(AppLocalizations.of(context).vehicleColor, _vehicleColorController.text),
             ],
           ),
         ),
@@ -506,18 +507,18 @@ Future<void> _checkExistingProfile() async {
       children: [
         if (!_isLastStep)
           Semantics(
-            label: 'Next step',
+            label: AppLocalizations.of(context).nextStep,
             child: PremiumButton(
-              label: 'Continue',
+              label: AppLocalizations.of(context).continueText,
               onPressed: _goToNextStep,
               icon: Icons.arrow_forward,
             ),
           )
         else
           Semantics(
-            label: 'Submit registration',
+            label: AppLocalizations.of(context).submitRegistration,
             child: PremiumButton(
-              label: 'Submit Registration',
+              label: AppLocalizations.of(context).submitRegistration2,
               onPressed: _isLoading ? null : _registerDriver,
               isLoading: _isLoading,
               icon: Icons.check_circle_outline,
@@ -526,12 +527,12 @@ Future<void> _checkExistingProfile() async {
         if (!_isFirstStep) ...[
           AppSpacing.gapMd,
           Semantics(
-            label: 'Previous step',
+            label: AppLocalizations.of(context).previousStep,
             child: TextButton(
               onPressed: () => setState(() => _currentStep = _RegStep.values[_currentStepIndex - 1]),
-              child: const Text(
-                'Back',
-                style: TextStyle(color: AppColors.textTertiary),
+              child: Text(
+                AppLocalizations.of(context).goBack,
+                style: const TextStyle(color: AppColors.textTertiary),
               ),
             ),
           ),
@@ -542,14 +543,14 @@ Future<void> _checkExistingProfile() async {
 
   void _goToNextStep() {
     if (_currentStep == _RegStep.personalInfo && _licenseController.text.isEmpty) {
-      _showError('Please enter your license number');
+      _showError(AppLocalizations.of(context).pleaseEnterYourLicenseNumber);
       return;
     }
     if (_currentStep == _RegStep.vehicleInfo) {
       if (_vehicleNumberController.text.isEmpty ||
           _vehicleModelController.text.isEmpty ||
           _vehicleColorController.text.isEmpty) {
-        _showError('Please fill all vehicle fields');
+        _showError(AppLocalizations.of(context).pleaseFillAllVehicleFields);
         return;
       }
     }

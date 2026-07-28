@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../l10n/app_localizations.dart';
 
 class CancelRideResult {
   final String reason;
@@ -11,6 +12,7 @@ class CancelRideResult {
 Future<CancelRideResult?> showCancelRideDialog(BuildContext context,
     {String title = 'Cancel Ride?', String message = 'Are you sure you want to cancel this ride?'}) async {
   final reasonController = TextEditingController();
+  final l10n = AppLocalizations.of(context);
 
   try {
     final result = await showDialog<Map<String, String>>(
@@ -26,9 +28,9 @@ Future<CancelRideResult?> showCancelRideDialog(BuildContext context,
             const SizedBox(height: 12),
             TextField(
               controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: 'Reason (optional)',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: l10n.reasonOptional,
+                border: const OutlineInputBorder(),
               ),
               maxLines: 2,
             ),
@@ -37,7 +39,7 @@ Future<CancelRideResult?> showCancelRideDialog(BuildContext context,
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, {'action': 'no'}),
-            child: const Text('No'),
+            child: Text(l10n.no),
           ),
           TextButton(
             onPressed: () {
@@ -46,7 +48,7 @@ Future<CancelRideResult?> showCancelRideDialog(BuildContext context,
                 'reason': reasonController.text.trim(),
               });
             },
-            child: const Text('Yes, Cancel', style: TextStyle(color: AppColors.error)),
+            child: Text(l10n.yesCancel, style: const TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -56,7 +58,7 @@ Future<CancelRideResult?> showCancelRideDialog(BuildContext context,
 
     return CancelRideResult(
       confirmed: true,
-      reason: result['reason'] ?? 'Rider cancelled ride',
+      reason: result['reason'] ?? l10n.riderCancelledRide,
     );
   } finally {
     reasonController.dispose();

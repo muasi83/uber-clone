@@ -14,6 +14,7 @@ import '../theme/app_spacing.dart';
 import '../utils/map_style_loader.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/cancel_ride_dialog.dart';
+import '../l10n/app_localizations.dart';
 
 class RiderSearchingDriverScreen extends StatefulWidget {
   final int rideId;
@@ -294,7 +295,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
         buttons: ['Back to Home'],
         builder: (context) => AlertDialog(
           icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 48),
-          title: const Text('Ride Cancelled'),
+          title: Text(AppLocalizations.of(context).rideCancelled),
           content: Text(event['reason'] ?? 'Your ride was cancelled'),
           actions: [
             TextButton(
@@ -306,7 +307,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
                   (route) => false,
     );
               },
-              child: const Text('Back to Home'),
+              child: Text(AppLocalizations.of(context).backToHome),
             ),
           ],
         ),
@@ -346,8 +347,8 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
                 Navigator.pop(context, 'cancel');
                 _cancelSearch();
               },
-              child: const Text(
-                'Cancel',
+              child: Text(
+                AppLocalizations.of(context).cancel,
                 style: TextStyle(color: AppColors.error),
               ),
             ),
@@ -359,7 +360,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
               ),
-              child: const Text('Continue'),
+              child: Text(AppLocalizations.of(context).continueText),
             ),
           ],
         ),
@@ -400,8 +401,8 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
                 Navigator.pop(context);
                 _cancelSearch();
               },
-              child: const Text(
-                'Cancel',
+              child: Text(
+                AppLocalizations.of(context).cancel,
                 style: TextStyle(color: AppColors.error),
               ),
             ),

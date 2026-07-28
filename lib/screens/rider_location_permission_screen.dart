@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import '../l10n/app_localizations.dart';
 import '../services/location_service.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
@@ -108,30 +109,29 @@ class _RiderLocationPermissionScreenState
   }
 
   void _showSettingsDialog() {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Location Permission Required'),
-        content: const Text(
-          'Location permission was denied permanently. Please enable it in app settings to use RideNow.',
-        ),
+        title: Text(l10n.locationPermissionRequired),
+        content: Text(l10n.locationPermissionPermanentlyDeniedEnableInSettings),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               widget.onPermissionResult(false);
             },
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               LocationService.openAppSettings();
             },
-            child: const Text(
-              'Open Settings',
-              style: TextStyle(color: AppColors.primary),
+            child: Text(
+              l10n.openSettings,
+              style: const TextStyle(color: AppColors.primary),
             ),
           ),
         ],
@@ -161,6 +161,7 @@ class _RiderLocationPermissionScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
@@ -196,9 +197,9 @@ class _RiderLocationPermissionScreenState
                   ),
                 ),
                 AppSpacing.gapXxxl,
-                const Text(
-                  'Enable Location',
-                  style: TextStyle(
+                Text(
+                  l10n.enableLocation,
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
@@ -224,7 +225,7 @@ class _RiderLocationPermissionScreenState
                     ),
                   ),
                   child: PremiumButton(
-                    label: 'Enable Location',
+                    label: l10n.enableLocation,
                     onPressed:
                         _isLoading ? null : _requestLocationPermission,
                     isLoading: _isLoading,
@@ -237,9 +238,9 @@ class _RiderLocationPermissionScreenState
                     addDebugMessage('⏭️ User skipped location permission');
                     widget.onPermissionResult(false);
                   },
-                  child: const Text(
-                    'Not Now',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.notNow,
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -8,14 +9,15 @@ class SupportScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Support'), centerTitle: true),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).support), centerTitle: true),
       body: ListView(
         padding: AppSpacing.screenPadding,
         children: [
           _buildSupportCard(
             icon: Icons.chat_outlined,
-            title: 'Live Chat',
+            title: l10n.liveChat,
             subtitle: 'Chat with our support team',
             onTap: () {},
           ),
@@ -27,13 +29,13 @@ class SupportScreen extends StatelessWidget {
           ),
           _buildSupportCard(
             icon: Icons.phone_outlined,
-            title: 'Call Us',
+            title: l10n.callUs,
             subtitle: '+1 (555) 123-4567',
             onTap: () {},
           ),
           AppSpacing.gapXl,
-          const Text(
-            'Frequently Asked Questions',
+          Text(
+            l10n.frequentlyAskedQuestions,
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
           ),
           AppSpacing.gapMd,

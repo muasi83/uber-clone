@@ -24,6 +24,7 @@ import '../widgets/cancel_ride_dialog.dart';
 import '../widgets/payment_dialog.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../services/event_recorder_service.dart';
+import '../l10n/app_localizations.dart';
 
 class RiderActiveRideScreen extends StatefulWidget {
   final int rideId;
@@ -370,8 +371,8 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
               ),
               const SizedBox(height: 8),
               Text(
-                'Total Fare',
-                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                AppLocalizations.of(context).totalFare3,
+                style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -383,7 +384,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('OK'),
+              child: Text(AppLocalizations.of(context).ok),
             ),
           ],
         ),
@@ -460,7 +461,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -797,7 +798,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         elevation: 0,
         leading: Semantics(
           button: true,
-          label: 'Cancel ride',
+          label: AppLocalizations.of(context).cancelRide,
           child: IconButton(
             icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
             onPressed: _showCancelRideDialog,
@@ -816,10 +817,10 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
             children: [
               Semantics(
                 button: true,
-                label: 'Chat with driver',
+                  label: AppLocalizations.of(context).chatWithRider,
                 child: IconButton(
                   icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
-                  tooltip: 'Chat with Driver',
+                  tooltip: AppLocalizations.of(context).chatWithRider,
                   onPressed: _openChat,
                 ),
               ),
@@ -883,7 +884,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                     child: Column(
                       children: [
                         Text(
-                          'Estimated arrival',
+                          AppLocalizations.of(context).estimatedArrival,
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: AppColors.textSecondary,
                             fontWeight: FontWeight.w500,
@@ -1032,7 +1033,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                               ),
                               child: Semantics(
                                 button: true,
-                                label: 'Chat with driver',
+                label: AppLocalizations.of(context).chatWithRider,
                                 child: IconButton(
                                   icon: const Icon(Icons.chat_rounded,
                                       color: AppColors.primary, size: 20),
@@ -1107,7 +1108,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+            child: Text(AppLocalizations.of(context).ok, style: const TextStyle(color: AppColors.primary)),
           ),
         ],
       ),

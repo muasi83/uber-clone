@@ -25,6 +25,7 @@ import '../utils/bearing_utils.dart';
 import '../utils/address_utils.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../services/event_recorder_service.dart';
+import '../l10n/app_localizations.dart';
 
 class DriverActiveRideScreen extends StatefulWidget {
   final int rideId;
@@ -338,7 +339,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
       if (mounted) {
         showRecordedSnackBar(
           context: context,
-          message: 'Ride started!',
+          message: AppLocalizations.of(context).rideStarted2,
           type: 'success',
         );
       }
@@ -373,21 +374,21 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.cancel, color: AppColors.error, size: 24),
-                SizedBox(width: 8),
-                Text('Ride Cancelled'),
+                const Icon(Icons.cancel, color: AppColors.error, size: 24),
+                const SizedBox(width: 8),
+                Text(AppLocalizations.of(context).rideCancelled2),
               ],
             ),
-            content: Text('The rider cancelled the ride.\nReason: $reason'),
+            content: Text(AppLocalizations.of(context).rideCancelled3(reason)),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.pop(ctx);
                   Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
                 },
-                child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+                child: Text(AppLocalizations.of(context).ok, style: const TextStyle(color: AppColors.primary)),
               ),
             ],
           ),
@@ -607,7 +608,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
           const SizedBox(width: AppSpacing.md),
           _PulseAnimation(
             child: Text(
-              'Waiting for payment...',
+              AppLocalizations.of(context).waitingForPayment,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w500,
@@ -642,7 +643,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          _rideStarted ? 'Active Ride' : 'Ready to Start',
+          _rideStarted ? AppLocalizations.of(context).activeRide : AppLocalizations.of(context).readyToStart,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.primary),
         ),
         actions: [
@@ -651,10 +652,10 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
             children: [
               Semantics(
                 button: true,
-                label: 'Chat with rider',
+                label: AppLocalizations.of(context).chatWithRider,
                 child: IconButton(
                   icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
-                  tooltip: 'Chat with Rider',
+                  tooltip: AppLocalizations.of(context).chatWithRider2,
                   onPressed: _openChat,
                 ),
               ),
@@ -682,7 +683,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
             end: 16,
             child:             Semantics(
               button: true,
-              label: 'Toggle driver marker',
+              label: AppLocalizations.of(context).toggleDriverMarker,
               child: FloatingActionButton(
                 heroTag: 'toggle_marker_driver_active',
                 mini: true,
@@ -744,7 +745,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                           ),
                           const SizedBox(height: AppSpacing.xs),
                           Text(
-                            'Ride in progress',
+                            AppLocalizations.of(context).rideInProgress,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: AppColors.textOnPrimary.withValues(alpha: 0.8),
                                 ),
@@ -780,7 +781,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'DESTINATION',
+                                AppLocalizations.of(context).destination,
                                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                       color: AppColors.textTertiary,
                                       fontWeight: FontWeight.w600,
@@ -900,7 +901,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                 Text(
-                  'Did the customer pay in cash?',
+                  AppLocalizations.of(context).didTheCustomerPayInCash,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary,
@@ -909,10 +910,10 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                                     const SizedBox(height: 16),
                                     Semantics(
                                       button: true,
-                                      label: 'Confirm cash received',
+                                      label: AppLocalizations.of(context).cashReceived,
                                       child: SwipeButton(
-                                        label: 'Cash Received',
-                                        processingLabel: 'Processing...',
+                                        label: AppLocalizations.of(context).cashReceived,
+                                        processingLabel: AppLocalizations.of(context).processing,
                                         icon: Icons.check_circle,
                                         onConfirmed: _onCashReceived,
                                         isDisabled: _cashActionInProgress,
@@ -924,8 +925,8 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                                       button: true,
                                       label: 'Mark as unpaid',
                                       child: SwipeButton(
-                                        label: 'Did Not Pay',
-                                        processingLabel: 'Processing...',
+                                        label: AppLocalizations.of(context).didNotPay,
+                                        processingLabel: AppLocalizations.of(context).processing,
                                         icon: Icons.cancel,
                                         onConfirmed: _onCashUnpaid,
                                         isDisabled: _cashActionInProgress,
@@ -940,8 +941,8 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                               label: 'Complete ride',
                               child: SwipeButton(
                                 key: const ValueKey('complete_ride'),
-                                label: 'Complete Ride',
-                                processingLabel: 'Completing...',
+                                label: AppLocalizations.of(context).completeRide,
+                                processingLabel: AppLocalizations.of(context).completing,
                                 icon: Icons.flag,
                                 onConfirmed: _completeRide,
                                 isDisabled: _isCompleting,
@@ -953,7 +954,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                           label: 'Start ride',
                           child: SwipeButton(
                             key: const ValueKey('start_ride'),
-                            label: 'Start Ride',
+                            label: AppLocalizations.of(context).startRide,
                             icon: Icons.play_arrow,
                             onConfirmed: _startRide,
                             backgroundColor: AppColors.success,
@@ -965,7 +966,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
                     child: OutlinedButton.icon(
                       onPressed: () async { await _openGoogleMapsToDestination(); },
                       icon: const Icon(Icons.map, size: 18),
-                      label: const Text('Navigate to Destination'),
+                      label: Text(AppLocalizations.of(context).navigateToDestination),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
                         side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
@@ -1029,9 +1030,9 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
         await Clipboard.setData(ClipboardData(text: uri.toString()));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not open Maps — link copied to clipboard'),
-              duration: Duration(seconds: 3),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).couldNotOpenMapsLinkCopiedToClipboard),
+              duration: const Duration(seconds: 3),
             ),
           );
         }

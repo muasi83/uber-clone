@@ -17,6 +17,7 @@ import '../widgets/premium_button.dart';
 import '../widgets/premium_card.dart';
 import '../widgets/ride_type_selector.dart';
 import '../models/location_model.dart';
+import '../l10n/app_localizations.dart';
 
 class RiderTripDetailsScreen extends StatefulWidget {
   final double pickupLat;
@@ -135,7 +136,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
 
       final token = StorageService.getToken();
       if (token == null) {
-        _showError('Authentication error');
+        _showError(AppLocalizations.of(context).authenticationError);
         return;
       }
 
@@ -169,11 +170,11 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
           ),
         );
       } else {
-        _showError('Failed to request ride');
+        _showError(AppLocalizations.of(context).failedToRequestRide);
       }
     } catch (e) {
       addDebugMessage('❌ Error: $e');
-      _showError('Error: $e');
+      _showError(AppLocalizations.of(context).error2('$e'));
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -191,7 +192,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Payment Method',
+              AppLocalizations.of(context).paymentMethod,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             AppSpacing.gapLg,
@@ -236,9 +237,9 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'Choose Ride',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context).chooseRide,
+          style: const TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 18,
@@ -361,9 +362,9 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Pickup',
-                                style: TextStyle(
+                              Text(
+                                AppLocalizations.of(context).pickup,
+                                style: const TextStyle(
                                   fontSize: 11,
                                   color: AppColors.textTertiary,
                                   fontWeight: FontWeight.w500,
@@ -427,9 +428,9 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Dropoff',
-                                style: TextStyle(
+                              Text(
+                                AppLocalizations.of(context).dropoff,
+                                style: const TextStyle(
                                   fontSize: 11,
                                   color: AppColors.textTertiary,
                                   fontWeight: FontWeight.w500,
@@ -466,9 +467,9 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Select ride type',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context).selectRideType,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
@@ -499,9 +500,9 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Payment method',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context).paymentMethod,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
@@ -564,15 +565,15 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                 shadows: AppShadows.small,
                 child: Column(
                   children: [
-                    _priceRow('Base fare', CurrencyService.format(2.0)),
+                    _priceRow(AppLocalizations.of(context).baseFare, CurrencyService.format(2.0)),
                     AppSpacing.gapMd,
                     _priceRow(
-                      'Distance (${widget.estimatedDistance.toStringAsFixed(1)} km)',
+                      AppLocalizations.of(context).distanceKm(widget.estimatedDistance.toStringAsFixed(1)),
                       '${CurrencyService.format(widget.estimatedDistance * (_selectedRideType == 'ECONOMY' ? 0.20 : 0.35))}',
                     ),
                     const Divider(height: 32, color: AppColors.outline),
                     _priceRow(
-                      'Total',
+                      AppLocalizations.of(context).total,
                       '${CurrencyService.format(_selectedFare)}',
                       isTotal: true,
                     ),
@@ -586,7 +587,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: PremiumButton(
-                label: _isSubmitting ? 'Requesting...' : 'Confirm Ride',
+                label: _isSubmitting ? AppLocalizations.of(context).requesting : AppLocalizations.of(context).confirmRide,
                 isLoading: _isSubmitting,
                 onPressed: _isSubmitting ? null : _submitRideRequest,
                 icon: _isSubmitting ? null : Icons.check_circle_outline,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../services/currency_service.dart';
 import '../theme/app_colors.dart';
 
@@ -19,13 +20,15 @@ Future<ReceivedPaymentResult?> showReceivedPaymentDialog(
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx);
+        return AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Column(
           children: [
             Icon(Icons.payments, size: 48, color: AppColors.success),
             const SizedBox(height: 12),
-            const Text('Payment Received?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            Text(l10n.paymentReceived, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
           ],
         ),
         content: Column(
@@ -40,13 +43,13 @@ Future<ReceivedPaymentResult?> showReceivedPaymentDialog(
               ),
             ),
             const SizedBox(height: 8),
-            const Text('Did you receive this payment?'),
+            Text(l10n.didYouReceiveThisPayment),
             const SizedBox(height: 16),
             TextField(
               controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: 'Reason (required if No)',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: l10n.reasonRequiredIfNo,
+                border: const OutlineInputBorder(),
               ),
               maxLines: 2,
             ),
@@ -58,8 +61,8 @@ Future<ReceivedPaymentResult?> showReceivedPaymentDialog(
               final reason = reasonController.text.trim();
               if (reason.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please provide a reason'),
+                  SnackBar(
+                    content: Text(l10n.pleaseProvideAReason),
                     backgroundColor: AppColors.error,
                   ),
                 );
@@ -67,7 +70,7 @@ Future<ReceivedPaymentResult?> showReceivedPaymentDialog(
               }
               Navigator.pop(ctx, {'received': false, 'reason': reason});
             },
-            child: const Text("No, I didn't", style: TextStyle(color: AppColors.error)),
+            child: Text(l10n.noIDidnt, style: const TextStyle(color: AppColors.error)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -76,10 +79,11 @@ Future<ReceivedPaymentResult?> showReceivedPaymentDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () => Navigator.pop(ctx, {'received': true}),
-            child: const Text('Yes, Received'),
+            child: Text(l10n.yesReceived),
           ),
         ],
-      ),
+      );
+      },
     );
 
     if (result == null) return null;

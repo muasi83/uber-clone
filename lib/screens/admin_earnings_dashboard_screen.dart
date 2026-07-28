@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/currency_service.dart';
 import '../services/admin_earnings_service.dart';
@@ -43,14 +44,14 @@ class _AdminEarningsDashboardScreenState extends State<AdminEarningsDashboardScr
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Earnings Dashboard'),
+        title: Text(AppLocalizations.of(context).earningsDashboard),
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.payments),
-            tooltip: 'Settlement Ledger',
+            tooltip: AppLocalizations.of(context).settlementLedger,
             onPressed: () {
               Navigator.push(
                 context,
@@ -82,12 +83,12 @@ class _AdminEarningsDashboardScreenState extends State<AdminEarningsDashboardScr
         children: [
           Icon(Icons.error_outline, size: 48, color: AppColors.error.withValues(alpha: 0.7)),
           const SizedBox(height: 12),
-          const Text('Failed to load earnings data', style: TextStyle(color: AppColors.textSecondary)),
+          Text(AppLocalizations.of(context).failedToLoadEarningsData, style: const TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 12),
           TextButton.icon(
             onPressed: _loadSummary,
             icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('Retry'),
+            label: Text(AppLocalizations.of(context).retry),
           ),
         ],
       ),
@@ -95,6 +96,7 @@ class _AdminEarningsDashboardScreenState extends State<AdminEarningsDashboardScr
   }
 
   Widget _buildContent() {
+    final l10n = AppLocalizations.of(context);
     final s = _summary!;
     final totalGross = (s['totalGross'] as num?) ?? 0;
     final totalAppFees = (s['totalAppFees'] as num?) ?? 0;
@@ -115,13 +117,13 @@ class _AdminEarningsDashboardScreenState extends State<AdminEarningsDashboardScr
             const SizedBox(height: 12),
             _buildStatsRow(totalRides, totalDrivers),
             const SizedBox(height: 16),
-            const Text('Top Drivers', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            Text(l10n.topDrivers, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             const SizedBox(height: 8),
             if (topDrivers.isEmpty)
               Container(
                 padding: const EdgeInsets.all(24),
                 alignment: Alignment.center,
-                child: const Text('No earnings data yet', style: TextStyle(color: AppColors.textTertiary)),
+                child: Text(l10n.noEarningsDataYet, style: const TextStyle(color: AppColors.textTertiary)),
               )
             else
               ...topDrivers.map((d) => _buildDriverRankCard(d)),
@@ -134,6 +136,7 @@ class _AdminEarningsDashboardScreenState extends State<AdminEarningsDashboardScr
   String _fmt(num v) => CurrencyService.format(v.toDouble());
 
   Widget _buildSummaryCard(num totalGross, num totalAppFees, num totalNet) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       color: AppColors.surface,
       elevation: 0,
@@ -149,15 +152,15 @@ class _AdminEarningsDashboardScreenState extends State<AdminEarningsDashboardScr
               children: [
                 Icon(Icons.account_balance, size: 18, color: AppColors.primary),
                 const SizedBox(width: 8),
-                const Text('Revenue Overview', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                Text(l10n.revenueOverview, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               ],
             ),
             const SizedBox(height: 16),
-            _buildMetricRow('Gross Revenue', _fmt(totalGross), AppColors.textPrimary),
+            _buildMetricRow(l10n.grossRevenue, _fmt(totalGross), AppColors.textPrimary),
             const Divider(height: 20, color: AppColors.outline),
-            _buildMetricRow('Platform Fees (15%)', _fmt(totalAppFees), AppColors.primary),
+            _buildMetricRow(l10n.platformFees15, _fmt(totalAppFees), AppColors.primary),
             const Divider(height: 20, color: AppColors.outline),
-            _buildMetricRow('Driver Payouts', _fmt(totalNet), AppColors.success),
+            _buildMetricRow(l10n.driverPayouts, _fmt(totalNet), AppColors.success),
           ],
         ),
       ),
@@ -175,11 +178,12 @@ class _AdminEarningsDashboardScreenState extends State<AdminEarningsDashboardScr
   }
 
   Widget _buildStatsRow(int totalRides, int totalDrivers) {
+    final l10n = AppLocalizations.of(context);
     return Row(
       children: [
-        Expanded(child: _buildStatCard(Icons.route, totalRides.toString(), 'Total Rides', AppColors.primary)),
+        Expanded(child: _buildStatCard(Icons.route, totalRides.toString(), l10n.totalRides, AppColors.primary)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard(Icons.person, totalDrivers.toString(), 'Drivers', AppColors.success)),
+        Expanded(child: _buildStatCard(Icons.person, totalDrivers.toString(), l10n.drivers, AppColors.success)),
       ],
     );
   }
@@ -207,6 +211,7 @@ class _AdminEarningsDashboardScreenState extends State<AdminEarningsDashboardScr
   }
 
   Widget _buildDriverRankCard(Map<String, dynamic> driver) {
+    final l10n = AppLocalizations.of(context);
     final name = driver['driverName'] as String? ?? 'Unknown';
     final net = (driver['totalNet'] as num?) ?? 0;
     final rideCount = driver['rideCount'] as int? ?? 0;
@@ -238,7 +243,7 @@ class _AdminEarningsDashboardScreenState extends State<AdminEarningsDashboardScr
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                  Text('$rideCount rides', style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                  Text(l10n.rides2(rideCount.toString()), style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
                 ],
               ),
             ),

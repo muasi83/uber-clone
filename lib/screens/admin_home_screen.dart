@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/admin_service.dart';
 import '../services/currency_service.dart';
@@ -216,7 +217,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin \u2014 Trip Investigation'),
+        title: Text(AppLocalizations.of(context).adminTripInvestigation),
         actions: [
           IconButton(
             icon: Icon(_showFilters ? Icons.filter_list_off : Icons.filter_list),
@@ -247,7 +248,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
           Expanded(
             child: _navButton(
               icon: Icons.people,
-              label: 'Drivers',
+              label: AppLocalizations.of(context).drivers,
               onTap: () {
                 Navigator.push(
                   context,
@@ -260,7 +261,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
           Expanded(
             child: _navButton(
               icon: Icons.account_balance,
-              label: 'Earnings',
+              label: AppLocalizations.of(context).earnings,
               onTap: () {
                 Navigator.push(
                   context,
@@ -300,8 +301,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
               Expanded(
                 child: TextField(
                   controller: _rideIdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ride ID',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).rideId,
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   ),
@@ -312,14 +313,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
               Expanded(
                 child: DropdownButtonFormField<String?>(
                   value: _statusFilter,
-                  decoration: const InputDecoration(
-                    labelText: 'Status',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).status,
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   ),
                   items: _statusOptions.map((s) => DropdownMenuItem(
                     value: s,
-                    child: Text(s ?? 'All'),
+                    child: Text(s ?? AppLocalizations.of(context).all),
                   )).toList(),
                   onChanged: (v) => setState(() => _statusFilter = v),
                 ),
@@ -332,8 +333,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
               Expanded(
                 child: TextField(
                   controller: _riderNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Rider Name',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).riderName,
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   ),
@@ -343,8 +344,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
               Expanded(
                 child: TextField(
                   controller: _driverNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Driver Name',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).driverName,
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   ),
@@ -358,8 +359,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
               Expanded(
                 child: TextField(
                   controller: _dateFromController,
-                  decoration: const InputDecoration(
-                    labelText: 'From Date',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).fromDate,
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     suffixIcon: Icon(Icons.calendar_today, size: 18),
@@ -372,8 +373,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
               Expanded(
                 child: TextField(
                   controller: _dateToController,
-                  decoration: const InputDecoration(
-                    labelText: 'To Date',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).toDate,
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     suffixIcon: Icon(Icons.calendar_today, size: 18),
@@ -390,14 +391,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
               Expanded(
                 child: DropdownButtonFormField<String?>(
                   value: _paymentStatusFilter,
-                  decoration: const InputDecoration(
-                    labelText: 'Payment',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).payment,
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   ),
                   items: _paymentStatusOptions.map((s) => DropdownMenuItem(
                     value: s,
-                    child: Text(s ?? 'All'),
+                    child: Text(s ?? AppLocalizations.of(context).all),
                   )).toList(),
                   onChanged: (v) => setState(() => _paymentStatusFilter = v),
                 ),
@@ -409,7 +410,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
                     Expanded(
                       child: ElevatedButton(
                         onPressed: _loadTrips,
-                        child: const Text('Search'),
+                        child: Text(AppLocalizations.of(context).search2),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -427,7 +428,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
                           });
                           _loadTrips();
                         },
-                        child: const Text('Clear'),
+                        child: Text(AppLocalizations.of(context).clear),
                       ),
                     ),
                   ],
@@ -457,7 +458,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
             const SizedBox(height: 16),
             Text(_error!, style: const TextStyle(color: AppColors.error)),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _loadTrips, child: const Text('Retry')),
+            ElevatedButton(onPressed: _loadTrips, child: Text(AppLocalizations.of(context).retry)),
           ],
         ),
       );
@@ -470,7 +471,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
           children: [
             Icon(Icons.search_off, size: 48, color: AppColors.textTertiary),
             const SizedBox(height: 16),
-            const Text('No trips found',
+            Text(AppLocalizations.of(context).noTripsFound,
                 style: TextStyle(color: AppColors.textSecondary)),
           ],
         ),

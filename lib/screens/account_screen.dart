@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
@@ -60,21 +61,24 @@ class _AccountScreenState extends State<AccountScreen> {
   Future<void> _logout() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.lgRadius),
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Logout', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+          final l10n = AppLocalizations.of(ctx);
+          return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.lgRadius),
+          title: Text(l10n.logOut),
+          content: Text(l10n.areYouSureYouWantToLogOut),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel, style: const TextStyle(color: AppColors.textSecondary)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.logOut, style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        );
+        },
     );
     if (confirmed != true) return;
 
@@ -100,13 +104,14 @@ class _AccountScreenState extends State<AccountScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final token = StorageService.getToken() ?? '';
     final userId = StorageService.getUserId() ?? 0;
     final username = StorageService.getUsername() ?? _user?.username ?? '';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Account'),
+        title: Text(AppLocalizations.of(context).account),
         centerTitle: true,
       ),
       body: _isLoading
@@ -118,7 +123,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 AppSpacing.gapXl,
                 _buildMenuItem(
                   icon: Icons.person_outline,
-                  title: 'Profile',
+                  title: l10n.myProfile,
                   subtitle: 'Manage your personal information',
                   onTap: () => Navigator.push(
                     context,
@@ -133,7 +138,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 _buildMenuItem(
                   icon: Icons.verified_outlined,
                   title: 'Email Verification',
-                  subtitle: _user?.isVerified == true ? 'Verified' : 'Verify your email',
+                  subtitle: _user?.isVerified == true ? l10n.verified : l10n.verifyYourEmail,
                   trailing: _user?.isVerified == true
                       ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
                       : null,
@@ -145,7 +150,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 _buildMenuItem(
                   icon: Icons.phone_outlined,
                   title: 'Phone Verification',
-                  subtitle: _user?.phoneVerified == true ? 'Verified' : 'Verify your phone number',
+                  subtitle: _user?.phoneVerified == true ? l10n.verified : 'Verify your phone number',
                   trailing: _user?.phoneVerified == true
                       ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
                       : null,
@@ -156,7 +161,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
                 _buildMenuItem(
                   icon: Icons.credit_card_outlined,
-                  title: 'Payment Methods',
+                  title: l10n.paymentMethods,
                   subtitle: 'Manage your payment options',
                   onTap: () => Navigator.push(
                     context,
@@ -167,7 +172,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
                 _buildMenuItem(
                   icon: Icons.headset_mic_outlined,
-                  title: 'Support',
+                  title: l10n.support,
                   subtitle: 'Get help and contact us',
                   onTap: () => Navigator.push(
                     context,
@@ -176,7 +181,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
                 _buildMenuItem(
                   icon: Icons.shield_outlined,
-                  title: 'Safety',
+                  title: l10n.safety,
                   subtitle: 'Safety features and preferences',
                   onTap: () => Navigator.push(
                     context,
@@ -185,7 +190,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
                 _buildMenuItem(
                   icon: Icons.settings_outlined,
-                  title: 'Settings',
+                  title: l10n.settings,
                   subtitle: 'App settings and server configuration',
                   onTap: () => Navigator.push(
                     context,
@@ -201,7 +206,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 AppSpacing.gapLg,
                 _buildMenuItem(
                   icon: Icons.logout_rounded,
-                  title: 'Logout',
+                  title: l10n.logOut,
                   subtitle: 'Sign out of your account',
                   isDestructive: true,
                   onTap: _logout,
@@ -269,7 +274,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Rider',
+                  AppLocalizations.of(context).rider,
                         style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                       ),
                     ],

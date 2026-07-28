@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'dart:math' as math;
+import '../l10n/app_localizations.dart';
 import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -289,8 +290,9 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
   double _toRad(double degree) => degree * (math.pi / 180);
 
   void _confirmPickup() {
+    final l10n = AppLocalizations.of(context);
     if (_pickupLocation == null) {
-      _showError('Please select a pickup location');
+      _showError(l10n.pleaseSelectAPickupLocation);
       return;
     }
     
@@ -310,13 +312,14 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
   }
 
   Future<void> _confirmDropoff() async {
+    final l10n = AppLocalizations.of(context);
     if (_dropoffLocation == null) {
-      _showError('Please select a dropoff location');
+      _showError(l10n.pleaseSelectADropoffLocation);
       return;
     }
     
     if (_estimatedDistance == null || _estimatedFare == null) {
-      _showError('Error calculating fare');
+      _showError(l10n.anErrorOccurredPleaseTryAgain);
       return;
     }
     
@@ -359,6 +362,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: Stack(
         children: [
@@ -421,7 +425,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                     _stepDot(0),
                     const SizedBox(width: 6),
                     Text(
-                      'Pickup',
+                      l10n.pickup,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: _step == 0 ? AppColors.primary : AppColors.textTertiary,
@@ -434,7 +438,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                     _stepDot(1),
                     const SizedBox(width: 6),
                     Text(
-                      'Dropoff',
+                      l10n.dropoff,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: _step >= 1 ? AppColors.primary : AppColors.textTertiary,
@@ -476,16 +480,16 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                     child: TextField(
                       controller: _pickupSearchController,
                       readOnly: true,
-                      decoration: const InputDecoration(
-                        hintText: 'Pickup location',
-                        prefixIcon: Icon(
+                      decoration: InputDecoration(
+                        hintText: l10n.pickupLocation,
+                        prefixIcon: const Icon(
                           Icons.circle,
                           size: 10,
                           color: AppColors.success,
                         ),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 14),
-                        hintStyle: TextStyle(color: AppColors.textTertiary),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                        hintStyle: const TextStyle(color: AppColors.textTertiary),
                       ),
                       style: const TextStyle(
                         fontSize: 14,
@@ -516,8 +520,8 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                     child: TextField(
                       controller: _dropoffSearchController,
                       readOnly: true,
-                      decoration: const InputDecoration(
-                        hintText: 'Dropoff location',
+                      decoration: InputDecoration(
+                        hintText: l10n.dropoffLocation,
                         prefixIcon: Icon(
                           Icons.location_on,
                           size: 18,
@@ -625,7 +629,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
             right: 16,
             child: _step == 0
                 ? PremiumButton(
-                    label: 'Confirm Pickup',
+                    label: l10n.confirmPickupLocation,
                     icon: Icons.check_circle_outline,
                     onPressed: _confirmPickup,
                   )
@@ -633,7 +637,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                     children: [
                       Expanded(
                         child: PremiumButton(
-                          label: 'Back',
+                          label: l10n.back,
                           variant: ButtonVariant.outline,
                           onPressed: _backToPickup,
                         ),
@@ -642,7 +646,7 @@ class _RideLocationPickerScreenState extends State<RideLocationPickerScreen> {
                       Expanded(
                         flex: 2,
                         child: PremiumButton(
-                          label: 'Request Ride',
+                          label: l10n.requestRide,
                           icon: Icons.rocket_launch_outlined,
                           onPressed: _confirmDropoff,
                         ),

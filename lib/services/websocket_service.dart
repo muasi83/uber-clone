@@ -166,6 +166,7 @@ class WebSocketService {
         addDebugMessage('❌ WebSocket connection error: $e');
         _isConnected = false;
         _connectionStateController.add('error');
+        _scheduleReconnect();
       }
       
       addDebugMessage('═══════════════════════════════════════');

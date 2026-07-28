@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../services/crash_reporter.dart';
 
@@ -31,10 +32,11 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
 
   void _copyToClipboard(String text) {
     Clipboard.setData(ClipboardData(text: text));
+    final l10n = AppLocalizations.of(context);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Copied to clipboard!'),
+        SnackBar(
+          content: Text(l10n.logsCopiedToClipboard),
           backgroundColor: AppColors.success,
           duration: Duration(seconds: 2),
         ),
@@ -64,15 +66,16 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Debug & Feedback'),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Debug Logs'),
-            Tab(text: 'Crash Reports'),
+          tabs: [
+            Tab(text: AppLocalizations.of(context).debugLogs),
+            const Tab(text: 'Crash Reports'),
           ],
         ),
         actions: [
@@ -83,7 +86,7 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
           ),
           IconButton(
             icon: const Icon(Icons.delete),
-            tooltip: 'Clear All',
+            tooltip: l10n.clearLogs,
             onPressed: _clearAll,
           ),
         ],
@@ -99,6 +102,7 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
   }
 
   Widget _buildDebugLogs() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       color: AppColors.textPrimary,
       child: Column(
@@ -123,7 +127,7 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
           ),
           Expanded(
             child: debugMessages.isEmpty
-                ? const Center(child: Text('No debug messages', style: TextStyle(color: AppColors.textTertiary)))
+                ? Center(child: Text(l10n.noLogs, style: const TextStyle(color: AppColors.textTertiary)))
                 : ListView.builder(
                     controller: _scrollController,
                     itemCount: debugMessages.length,
@@ -155,6 +159,7 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
   }
 
   Widget _buildCrashReports() {
+    final l10n = AppLocalizations.of(context);
     final crashLogs = CrashReporter.logs;
     return Container(
       color: AppColors.textPrimary,
@@ -186,9 +191,9 @@ class _DebugScreenState extends State<DebugScreen> with SingleTickerProviderStat
                       children: [
                         Icon(Icons.check_circle, color: AppColors.success, size: 48),
                         SizedBox(height: 16),
-                        Text('No crashes recorded', style: TextStyle(color: AppColors.textTertiary)),
+                        const Text('No crashes recorded', style: TextStyle(color: AppColors.textTertiary)),
                         SizedBox(height: 8),
-                        Text('If the app crashes, the error will appear here', style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                        Text('If the app crashes, the error will appear here', style: const TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                       ],
                     ),
                   )

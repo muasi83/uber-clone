@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import 'home_screen.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -124,6 +125,7 @@ class _OtpScreenState extends State<OtpScreen> with RecordedScreenMixin<OtpScree
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isExpired = _remainingSeconds <= 0;
 
     return Scaffold(
@@ -198,7 +200,7 @@ class _OtpScreenState extends State<OtpScreen> with RecordedScreenMixin<OtpScree
                 ),
                 AppSpacing.gapXxl,
                 PremiumButton(
-                  label: 'Verify',
+                  label: l10n.verify,
                   isLoading: _isLoading,
                   onPressed: _isLoading ? null : _verifyOtp,
                 ),
@@ -229,6 +231,7 @@ class _OtpScreenState extends State<OtpScreen> with RecordedScreenMixin<OtpScree
   }
 
   Widget _buildTimerOrResend(bool isExpired) {
+    final l10n = AppLocalizations.of(context);
     if (isExpired) {
       return TextButton(
         onPressed: _isLoading
@@ -243,9 +246,9 @@ class _OtpScreenState extends State<OtpScreen> with RecordedScreenMixin<OtpScree
                 });
                 _startTimer();
               },
-        child: const Text(
-          'Resend code',
-          style: TextStyle(
+        child: Text(
+          l10n.resendCode,
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: AppColors.primary,

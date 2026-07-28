@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../services/place_search_service.dart';
 import '../screens/rider_dropoff_location_screen.dart';
 import '../widgets/location_picker.dart';
@@ -213,6 +214,7 @@ class _RideCollectorScreenState extends State<RideCollectorScreen> {
   }
 
   Future<void> _onMapButton(_FieldType field) async {
+    final l10n = AppLocalizations.of(context);
     final initialLat = field == _FieldType.pickup ? _pickupLat : _dropoffLat;
     final initialLng = field == _FieldType.pickup ? _pickupLng : _dropoffLng;
     final mode = field == _FieldType.pickup ? LocationPickerMode.pickup : LocationPickerMode.dropoff;
@@ -230,7 +232,7 @@ class _RideCollectorScreenState extends State<RideCollectorScreen> {
     if (result != null && mounted) {
       final lat = result['lat'] as double?;
       final lng = result['lng'] as double?;
-      final address = result['address'] as String? ?? 'Selected Location';
+      final address = result['address'] as String? ?? l10n.selectedLocation;
 
       _isProgrammaticChange = true;
       try {
@@ -307,6 +309,7 @@ class _RideCollectorScreenState extends State<RideCollectorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -316,9 +319,9 @@ class _RideCollectorScreenState extends State<RideCollectorScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'New Ride',
-          style: TextStyle(color: AppColors.primary),
+        title: Text(
+          l10n.requestANewRide,
+          style: const TextStyle(color: AppColors.primary),
         ),
         centerTitle: true,
       ),
@@ -343,6 +346,7 @@ class _RideCollectorScreenState extends State<RideCollectorScreen> {
   }
 
   Widget _buildPickupField() {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -357,7 +361,7 @@ class _RideCollectorScreenState extends State<RideCollectorScreen> {
                 controller: _pickupController,
                 focusNode: _pickupFocus,
                 decoration: InputDecoration(
-                  hintText: 'Pickup location',
+                  hintText: l10n.pickupLocation,
                   hintStyle: TextStyle(color: AppColors.textTertiary),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -429,6 +433,7 @@ class _RideCollectorScreenState extends State<RideCollectorScreen> {
   }
 
   Widget _buildDropoffField() {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -443,7 +448,7 @@ class _RideCollectorScreenState extends State<RideCollectorScreen> {
                 controller: _dropoffController,
                 focusNode: _dropoffFocus,
                 decoration: InputDecoration(
-                  hintText: 'Dropoff location',
+                  hintText: l10n.dropoffLocation,
                   hintStyle: TextStyle(color: AppColors.textTertiary),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -519,15 +524,16 @@ class _RideCollectorScreenState extends State<RideCollectorScreen> {
   }
 
   Widget _buildSearchResults() {
+    final l10n = AppLocalizations.of(context);
     if (_searchResults.isEmpty && !_isSearching) {
       return Container(
         constraints: const BoxConstraints(maxHeight: 200),
         child: Center(
           child: Text(
             _searchedOnce
-                ? 'No locations found'
+                ? l10n.noLocationsFound
                 : (_activeField != null
-                    ? 'Start typing to search locations'
+                    ? l10n.startTypingToSearchLocations
                     : ''),
             style: const TextStyle(
               fontSize: 14,

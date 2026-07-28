@@ -1,0 +1,1599 @@
+{
+  "$$locale": "ar",
+  "ridenow": "رايد ناو",
+  "navigationError": "خطأ في التنقل",
+  "ok": "حسناً",
+  "rideAccepted": "تم قبول الرحلة",
+  "aDriverIsOnTheirWayToPickYouUp": "سائق في طريقه لاستلامك",
+  "rideConfirmed": "تم تأكيد الرحلة",
+  "yourRideHasBeenConfirmed": "تم تأكيد رحلتك",
+  "driverArrived": "وصل السائق",
+  "yourDriverHasArrivedAtThePickupLocation": "وصل سائقك إلى موقع الاستلام",
+  "rideStarted": "بدأت الرحلة",
+  "yourRideHasStarted": "بدأت رحلتك",
+  "rideCompleted": "اكتملت الرحلة",
+  "youHaveReachedYourDestination": "لقد وصلت إلى وجهتك",
+  "rideCancelled": "تم إلغاء الرحلة",
+  "theRideHasBeenCancelled": "تم إلغاء الرحلة",
+  "noDriversFound": "لم يتم العثور على سائقين",
+  "noDriversAreAvailableNearbyRightNow": "لا توجد سيارات متاحة بالقرب منك الآن",
+  "paymentConfirmed": "تم تأكيد الدفع",
+  "paymentHasBeenConfirmed": "تم تأكيد دفعك",
+  "paymentFinalized": "تم إتمام الدفع",
+  "yourPaymentHasBeenFinalized": "تم إتمام دفعك",
+  "paymentRefunded": "تم استرجاع المبلغ",
+  "yourPaymentHasBeenRefunded": "تم استرجاع مبلغك",
+  "someone": "شخص ما",
+  "missingArgumentsFor": "معاملات مفقودة لـ {route}",
+  "@missingArgumentsFor": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "invalidArguments": "معاملات غير صحيحة لـ {route}",
+  "@invalidArguments": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "missingDriverRegistrationData": "بيانات تسجيل السائق مفقودة",
+  "missingDriverSessionData": "بيانات جلسة السائق مفقودة",
+  "rideAlerts": "تنبيهات الرحلة",
+  "highpriorityRideRequestNotifications": "إشعارات طلبات الرحلة ذات الأولوية العالية",
+  "chatMessages": "رسائل المحادثة",
+  "newChatMessagesDuringYourRide": "رسائل محادثة جديدة أثناء رحلتك",
+  "dollar": "$",
+  "sar": "ر.س",
+  "syp": "ل.س",
+  "newRideRequest": "طلب رحلة جديد",
+  "aPassengerNeedsARide": "يحتاج أحد الركاب إلى رحلة!",
+  "pleaseEnterAValidEmailAddress": "يرجى إدخال عنوان بريد إلكتروني صحيح",
+  "passwordMustBeAtLeast6Characters": "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+  "passwordsDoNotMatch": "كلمات المرور غير متطابقة",
+  "login": "تسجيل الدخول",
+  "signUp": "إنشاء حساب",
+  "getStartedCreateYourAccount": "ابدأ الآن — أنشئ حسابك",
+  "welcomeBack": "أهلاً بعودتك",
+  "emailAddress": "عنوان البريد الإلكتروني",
+  "password": "كلمة المرور",
+  "fullName": "الاسم الكامل",
+  "phoneNumber": "رقم الهاتف",
+  "confirmPassword": "تأكيد كلمة المرور",
+  "rider": "راكب",
+  "driver": "سائق",
+  "male": "ذكر",
+  "female": "أنثى",
+  "preferNotToSay": "أفضل عدم الإفصاح",
+  "forgotPassword": "هل نسيت كلمة المرور؟",
+  "dontHaveAnAccount": "ليس لديك حساب؟",
+  "alreadyHaveAnAccount": "هل لديك حساب بالفعل؟",
+  "anErrorOccurredPleaseTryAgain": "حدث خطأ. يرجى المحاولة مرة أخرى.",
+  "pleaseEnterAPassword": "يرجى إدخال كلمة المرور",
+  "anErrorOccurredDuringRegistrationPleaseTryAgain": "حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى.",
+  "loginFailedPleaseCheckYourCredentialsAndTryAgain": "فشل تسجيل الدخول. يرجى التحقق من بيانات اعتمادك والمحاولة مرة أخرى.",
+  "registrationSuccessfulPleaseCheckYourEmailForVerification": "تم التسجيل بنجاح! يرجى التحقق من بريدك الإلكتروني للتحقق.",
+  "enterYourPassword": "أدخل كلمة المرور",
+  "passwordCannotBeEmpty": "لا يمكن ترك كلمة المرور فارغة",
+  "enterPassword": "أدخل كلمة المرور",
+  "submit": "إرسال",
+  "goBack": "العودة",
+  "forgotYourPassword": "هل نسيت كلمة المرور؟",
+  "useOtpInstead": "استخدم رمز التحقق بدلاً من ذلك",
+  "loading": "جاري التحميل...",
+  "forgotPassword2": "نسيان كلمة المرور",
+  "enterYourEmailAddressAndWellSendYouAResetLink": "أدخل عنوان بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين",
+  "sendResetLink": "إرسال رابط إعادة التعيين",
+  "sending": "جاري الإرسال...",
+  "backToLogin": "العودة إلى تسجيل الدخول",
+  "resetLinkSentCheckYourEmail": "تم إرسال رابط إعادة التعيين! تحقق من بريدك الإلكتروني",
+  "emailNotFound": "لم يتم العثور على البريد الإلكتروني",
+  "errorSendingResetLinkPleaseTryAgain": "حدث خطأ في إرسال رابط إعادة التعيين. يرجى المحاولة مرة أخرى.",
+  "pleaseEnterAValidEmail": "يرجى إدخال بريد إلكتروني صحيح",
+  "resetPassword": "إعادة تعيين كلمة المرور",
+  "enterYourNewPassword": "أدخل كلمة المرور الجديدة",
+  "newPassword": "كلمة المرور الجديدة",
+  "confirmNewPassword": "تأكيد كلمة المرور الجديدة",
+  "resetting": "جاري إعادة التعيين...",
+  "passwordResetSuccessful": "تم إعادة تعيين كلمة المرور بنجاح",
+  "errorResettingPassword": "حدث خطأ في إعادة تعيين كلمة المرور",
+  "verifyYourEmail": "تحقق من بريدك الإلكتروني",
+  "aVerificationEmailHasBeenSentTo": "تم إرسال بريد تحقق إلى {email}",
+  "@aVerificationEmailHasBeenSentTo": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseCheckYourInboxAndClickTheVerificationLink": "يرجى التحقق من صندوق الوارد وانقر على رابط التحقق",
+  "resendEmail": "إعادة إرسال البريد",
+  "emailResent": "تم إعادة إرسال البريد",
+  "verifiedRedirecting": "تم التحقق! جاري إعادة التوجيه...",
+  "skipForNow": "تخطي الآن",
+  "iveVerifiedMyEmail": "لقد تحققت من بريدي الإلكتروني",
+  "checking": "جاري التحقق...",
+  "didntReceiveTheEmailCheckYourSpamFolder": "لم تتلق البريد؟ تحقق من مجلد البريد العشوائي",
+  "changeEmailAddress": "تغيير عنوان البريد الإلكتروني",
+  "verifyYourPhone": "تحقق من رقم هاتفك",
+  "enterYourPhoneNumber": "أدخل رقم هاتفك",
+  "wellSendYouAVerificationCodeViaSms": "سنرسل لك رمز تحقق عبر الرسائل النصية",
+  "sendCode": "إرسال الرمز",
+  "codeSentTo": "تم إرسال الرمز إلى {phone}",
+  "@codeSentTo": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "changePhoneNumber": "تغيير رقم الهاتف",
+  "phoneVerifiedSuccessfully": "تم التحقق من الهاتف بنجاح",
+  "invalidPhoneNumber": "رقم هاتف غير صحيح",
+  "errorSendingCode": "حدث خطأ في إرسال الرمز",
+  "enterVerificationCode": "أدخل رمز التحقق",
+  "enterTheCodeSentTo": "أدخل الرمز المرسل إلى {phone_or_email}",
+  "@enterTheCodeSentTo": {
+    "placeholders": {
+      "phone_or_email": {
+        "type": "String"
+      }
+    }
+  },
+  "didntReceiveTheCode": "لم تتلق الرمز؟",
+  "resendCode": "إعادة إرسال الرمز",
+  "verify": "تحقق",
+  "verifying": "جاري التحقق...",
+  "invalidCodePleaseTryAgain": "رمز غير صحيح. يرجى المحاولة مرة أخرى.",
+  "codeVerifiedSuccessfully": "تم التحقق من الرمز بنجاح",
+  "codeExpiredRequestANewOne": "انتهت صلاحية الرمز. اطلب واحداً جديداً",
+  "resendCodeIn": "إعادة إرسال الرمز في {seconds} ثانية",
+  "@resendCodeIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "setADestinationToGetStarted": "حدد وجهة للبدء",
+  "whereTo": "إلى أين؟",
+  "enterDestination": "أدخل الوجهة...",
+  "searchResultsFor": "نتائج البحث عن:",
+  "noResultsFound": "لم يتم العثور على نتائج",
+  "requestANewRide": "طلب رحلة جديدة",
+  "ride": "رحلة",
+  "scheduleARideForLater": "جدولة رحلة لاحقاً",
+  "schedule": "جدولة",
+  "connectionLostRetrying": "فُقد الاتصال — إعادة المحاولة...",
+  "myLocation": "موقعي",
+  "pickupLocation": "موقع الاستلام",
+  "dropoffLocation": "موقع الإنزال",
+  "currentLocation": "الموقع الحالي",
+  "min": "{min} دقيقة",
+  "@min": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "km": "{distance} كم",
+  "@km": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "findingYourLocation": "جاري البحث عن موقعك...",
+  "locationPermissionDenied": "تم رفض إذن الموقع",
+  "locationPermissionPermanentlyDeniedEnableInSettings": "تم رفض إذن الموقع بشكل دائم — فعّله في الإعدادات",
+  "enableLocation": "فعّل الموقع",
+  "enableLocationServices": "فعّل خدمات الموقع",
+  "locationServicesAreDisabled": "خدمات الموقع معطلة",
+  "noInternetConnectionShowingOfflineMap": "لا توجد اتصال إنترنت — عرض الخريطة بدون اتصال",
+  "networkError": "خطأ في الشبكة",
+  "setPickupLocation": "حدد موقع الاستلام",
+  "searchAddress": "ابحث عن عنوان...",
+  "useCurrentLocation": "استخدم الموقع الحالي",
+  "confirmPickupLocation": "تأكيد موقع الاستلام",
+  "searchResults": "نتائج البحث:",
+  "noResults": "لا توجد نتائج",
+  "dragTheMapToSetPickupPoint": "اسحب الخريطة لتحديد نقطة الاستلام",
+  "locationAccessDenied": "تم رفض الوصول إلى الموقع",
+  "gettingCurrentLocation": "جاري الحصول على الموقع الحالي...",
+  "pickupPoint": "نقطة الاستلام",
+  "searchDestination": "ابحث عن الوجهة...",
+  "setDestination": "حدد الوجهة",
+  "confirmDestination": "تأكيد الوجهة",
+  "paymentMethod": "طريقة الدفع",
+  "promoApplied": "تم تطبيق الترويج",
+  "baseFare": "الأجرة الأساسية",
+  "distanceKm": "المسافة ({distance} كم)",
+  "@distanceKm": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "total": "المجموع",
+  "confirmRide": "تأكيد الرحلة",
+  "requesting": "جاري الطلب...",
+  "promoCode": "رمز الترويج",
+  "enterPromoCode": "أدخل رمز الترويج",
+  "apply": "تطبيق",
+  "invalidPromoCode": "رمز ترويج غير صحيح",
+  "noRideTypesAvailableInYourArea": "لا توجد أنواع رحلات متاحة في منطقتك",
+  "routeNotAvailableNoRoadsNearPickup": "الطريق غير متاح — لا توجد طرق بالقرب من الاستلام",
+  "noPriceAvailable": "لا توجد أسعار متاحة",
+  "wallet": "المحفظة",
+  "cash": "نقداً",
+  "card": "بطاقة",
+  "tripDetails": "تفاصيل الرحلة",
+  "from": "من",
+  "to": "إلى",
+  "distance": "المسافة",
+  "duration": "المدة",
+  "fare": "الأجرة",
+  "requestRide": "طلب رحلة",
+  "rideType": "نوع الرحلة: {type}",
+  "@rideType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "estimatedArrival": "الوصول المتوقع",
+  "priceBreakdown": "تفصيل السعر",
+  "serviceFee": "رسوم الخدمة",
+  "totalFare": "الأجرة الإجمالية",
+  "payment": "الدفع",
+  "pickup": "الاستلام",
+  "selectRideType": "اختر نوع الرحلة",
+  "chooseRide": "اختر رحلة",
+  "authenticationError": "خطأ في المصادقة",
+  "failedToRequestRide": "فشل طلب الرحلة",
+  "searchingForADriver": "جاري البحث عن سائق...",
+  "searchingForNearbyDrivers": "جاري البحث عن سائقين قريبين...",
+  "cancelling": "جاري الإلغاء...",
+  "cancelRequest": "إلغاء الطلب",
+  "findingYourDriver": "جاري البحث عن سائقك...",
+  "estimatedWaitTime": "وقت الانتظار المتوقع: {time}",
+  "@estimatedWaitTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "driverFound": "تم العثور على سائق!",
+  "yourDriverIsOnTheWay": "سائقك في الطريق",
+  "arrivingIn": "سيصل في {time}",
+  "@arrivingIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "driverArrived2": "وصل السائق",
+  "tripStartedHeadingToDestination": "بدأت الرحلة — جاري التوجه إلى الوجهة",
+  "arrivingInMin": "سيصل في {min} دقيقة",
+  "@arrivingInMin": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "callDriver": "اتصل بالسائق",
+  "messageDriver": "راسل السائق",
+  "shareTripStatus": "شارك حالة الرحلة",
+  "emergency": "طوارئ",
+  "cancelRide": "إلغاء الرحلة",
+  "cancelTrip": "إلغاء الرحلة",
+  "contactSupport": "تواصل مع الدعم",
+  "areYouSureYouWantToCancelThisRide": "هل أنت متأكد أنك تريد إلغاء هذه الرحلة؟",
+  "no": "لا",
+  "yes": "نعم",
+  "enterYourMessage": "أدخل رسالتك",
+  "send": "إرسال",
+  "chatWith": "محادثة مع {name}",
+  "@chatWith": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "typeAMessage": "اكتب رسالة...",
+  "pickupInMin": "سيتم الاستلام في {min} دقيقة",
+  "@pickupInMin": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "arrivingAtDestination": "الوصول إلى الوجهة",
+  "paymentMethod2": "طريقة الدفع: {method}",
+  "@paymentMethod2": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "totalFare2": "الأجرة الإجمالية: {amount}",
+  "@totalFare2": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "viewOnMap": "عرض على الخريطة",
+  "rideCancelled2": "تم إلغاء الرحلة",
+  "cancelReason": "سبب الإلغاء",
+  "trackingYourDriver": "تتبع سائقك",
+  "driverIsMetersAway": "السائق على بعد {distance} متر",
+  "@driverIsMetersAway": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "driverIsKmAway": "السائق على بعد {distance} كم",
+  "@driverIsKmAway": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "driverArrivingInMin": "سيصل السائق في {min} دقيقة",
+  "@driverArrivingInMin": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "pickupLocationReached": "وصل موقع الاستلام",
+  "driverHasArrived": "وصل السائق",
+  "tripInProgress": "الرحلة جارية",
+  "driverIsHeadingToDestination": "السائق في طريقه إلى الوجهة",
+  "estimatedArrivalInMin": "الوصول المتوقع في {min} دقيقة",
+  "@estimatedArrivalInMin": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "call": "اتصال",
+  "message": "رسالة",
+  "share": "مشاركة",
+  "shareYourTrip": "شارك رحلتك",
+  "imOnARideWithTrackMyTrip": "أنا في رحلة مع {name}. تتبع رحلتي: {link}",
+  "@imOnARideWithTrackMyTrip": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "link": {
+        "type": "String"
+      }
+    }
+  },
+  "tripCompleted": "اكتملت الرحلة",
+  "youHaveArrived": "لقد وصلت",
+  "payment2": "الدفع: {method}",
+  "@payment2": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "rideCompleted2": "اكتملت الرحلة!",
+  "thanksForRidingWithUs": "شكراً لك على الركوب معنا",
+  "rateYourDriver": "قيّم سائقك",
+  "howWasYourTrip": "كيف كانت رحلتك؟",
+  "addAComment": "أضف تعليقاً",
+  "leaveAReview": "اترك تقييماً...",
+  "submitRating": "إرسال التقييم",
+  "skip": "تخطي",
+  "done": "تم",
+  "yourDriverWas": "سائقك كان",
+  "tripFare": "أجرة الرحلة: {amount}",
+  "@tripFare": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "receipt": "الإيصال",
+  "viewReceipt": "عرض الإيصال",
+  "reportAnIssue": "الإبلاغ عن مشكلة",
+  "rideAgain": "اركب مرة أخرى",
+  "editProfile": "تعديل الملف الشخصي",
+  "email": "البريد الإلكتروني",
+  "profilePhoto": "صورة الملف الشخصي",
+  "changePhoto": "تغيير الصورة",
+  "takePhoto": "التقط صورة",
+  "chooseFromGallery": "اختر من المعرض",
+  "removePhoto": "إزالة الصورة",
+  "save": "حفظ",
+  "cancel": "إلغاء",
+  "profileUpdated": "تم تحديث الملف الشخصي",
+  "failedToUpdateProfile": "فشل تحديث الملف الشخصي",
+  "enterYourName": "أدخل اسمك",
+  "enterYourEmail": "أدخل بريدك الإلكتروني",
+  "locationPermissionRequired": "إذن الموقع مطلوب",
+  "weNeedYourLocationToFindNearbyDriversAndProvideAccuratePickup": "نحتاج موقعك للعثور على سائقين قريبين وتوفير استلام دقيق",
+  "allowLocationAccess": "السماح بالوصول إلى الموقع",
+  "notNow": "ليس الآن",
+  "openSettings": "فتح الإعدادات",
+  "locationPermissionIsRequiredToUseThisApp": "إذن الموقع مطلوب لاستخدام هذا التطبيق",
+  "enableLocationServicesToRequestRides": "فعّل خدمات الموقع لطلب رحلات",
+  "account": "الحساب",
+  "myProfile": "ملفي الشخصي",
+  "paymentMethods": "طرق الدفع",
+  "rideHistory": "سجل الرحلات",
+  "safety": "الأمان",
+  "support": "الدعم",
+  "settings": "الإعدادات",
+  "logOut": "تسجيل الخروج",
+  "areYouSureYouWantToLogOut": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+  "loggingOut": "جاري تسجيل الخروج...",
+  "version": "الإصدار {version}",
+  "@version": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "switchToDriver": "التبديل إلى سائق",
+  "switchToRider": "التبديل إلى راكب",
+  "addPaymentMethod": "إضافة طريقة دفع",
+  "creditCard": "بطاقة ائتمان",
+  "debitCard": "بطاقة خصم",
+  "cardNumber": "رقم البطاقة",
+  "expiryDate": "تاريخ الانتهاء",
+  "cvv": "CVV",
+  "cardholderName": "اسم صاحب البطاقة",
+  "saveCard": "حفظ البطاقة",
+  "remove": "إزالة",
+  "setAsDefault": "تعيين كافتراضي",
+  "defaultText": "افتراضي",
+  "noPaymentMethodsAdded": "لم تتم إضافة طرق دفع",
+  "addAPaymentMethodToGetStarted": "أضف طريقة دفع للبدء",
+  "cardExpired": "انتهت صلاحية البطاقة",
+  "invalidCardNumber": "رقم بطاقة غير صحيح",
+  "enterYourCardDetails": "أدخل تفاصيل بطاقتك",
+  "adding": "جاري الإضافة...",
+  "cardAddedSuccessfully": "تمت إضافة البطاقة بنجاح",
+  "failedToAddCard": "فشل إضافة البطاقة",
+  "areYouSureYouWantToRemoveThisCard": "هل أنت متأكد أنك تريد إزالة هذه البطاقة؟",
+  "notifications": "الإشعارات",
+  "privacy": "الخصوصية",
+  "language": "اللغة",
+  "theme": "المظهر",
+  "light": "فاتح",
+  "dark": "داكن",
+  "systemDefault": "النظام الافتراضي",
+  "about": "حول",
+  "termsOfService": "شروط الخدمة",
+  "privacyPolicy": "سياسة الخصوصية",
+  "licenses": "الرخص",
+  "appVersion": "إصدار التطبيق: {version}",
+  "@appVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "rateTheApp": "قيّم التطبيق",
+  "shareTheApp": "شارك التطبيق",
+  "deleteAccount": "حذف الحساب",
+  "areYouSureYouWantToDeleteYourAccountThisCannotBeUndone": "هل أنت متأكد أنك تريد حذف حسابك؟ لا يمكن التراجع عن هذا",
+  "pushNotifications": "الإشعارات الفورية",
+  "smsNotifications": "إشعارات الرسائل النصية",
+  "emailNotifications": "إشعارات البريد الإلكتروني",
+  "rideUpdates": "تحديثات الرحلة",
+  "promotionsAndOffers": "العروض الترويجية",
+  "chatMessages2": "رسائل المحادثة",
+  "sound": "الصوت",
+  "vibration": "الاهتزاز",
+  "english": "الإنجليزية",
+  "arabic": "العربية",
+  "contactUs": "تواصل معنا",
+  "helpCenter": "مركز المساعدة",
+  "frequentlyAskedQuestions": "الأسئلة الشائعة",
+  "reportAProblem": "الإبلاغ عن مشكلة",
+  "howCanWeHelpYou": "كيف يمكننا مساعدتك؟",
+  "describeYourIssue": "صف مشكلتك...",
+  "submitting": "جاري الإرسال...",
+  "messageSentSuccessfully": "تم إرسال الرسالة بنجاح",
+  "failedToSendMessagePleaseTryAgain": "فشل إرسال الرسالة. يرجى المحاولة مرة أخرى.",
+  "emailUsAt": "راسلنا على {email}",
+  "@emailUsAt": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "callUs": "اتصل بنا",
+  "liveChat": "محادثة مباشرة",
+  "supportHours": "ساعات الدعم: {hours}",
+  "@supportHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "wellGetBackToYouWithin24Hours": "سنرد عليك خلال 24 ساعة",
+  "safetyFeatures": "ميزات الأمان",
+  "shareMyTrip": "شارك رحلتي",
+  "emergencyContacts": "جهات الاتصال الطارئة",
+  "reportAnIncident": "الإبلاغ عن حادثة",
+  "n247Support": "دعم 24/7",
+  "locationSharing": "مشاركة الموقع",
+  "trustedContacts": "جهات اتصال موثوقة",
+  "addEmergencyContact": "إضافة جهة اتصال طارئة",
+  "callEmergencyServices": "اتصل بخدمات الطوارئ",
+  "yourSafetyIsOurPriority": "سلامتك هي أولويتنا",
+  "rideCheck": "فحص الرحلة",
+  "shareYourRideStatusWithTrustedContacts": "شارك حالة رحلتك مع جهات اتصال موثوقة",
+  "audioRecordingDuringTrip": "تسجيل صوتي أثناء الرحلة",
+  "speedAlerts": "تنبيهات السرعة",
+  "driverIdentityVerification": "التحقق من هوية السائق",
+  "inappEmergencyButton": "زر الطوارئ في التطبيق",
+  "manageEmergencyContacts": "إدارة جهات الاتصال الطارئة",
+  "noEmergencyContactsAdded": "لم تتم إضافة جهات اتصال طارئة",
+  "addContact": "إضافة جهة اتصال",
+  "removeContact": "إزالة جهة اتصال",
+  "areYouSureYouWantToRemoveThisEmergencyContact": "هل أنت متأكد أنك تريد إزالة جهة الاتصال الطارئة هذه؟",
+  "enterYourDestination": "أدخل وجهتك",
+  "chooseOnMap": "اختر على الخريطة",
+  "setPickupOnMap": "حدد الاستلام على الخريطة",
+  "setDropoffOnMap": "حدد الإنزال على الخريطة",
+  "pleaseSelectAPickupLocation": "يرجى تحديد موقع الاستلام",
+  "pleaseSelectADropoffLocation": "يرجى تحديد موقع الإنزال",
+  "continueText": "متابعة",
+  "recentPlaces": "الأماكن الأخيرة",
+  "savedPlaces": "الأماكن المحفوظة",
+  "home": "منزل",
+  "work": "عمل",
+  "addAPlace": "إضافة مكان",
+  "search": "ابحث...",
+  "gettingAddress": "جاري الحصول على العنوان...",
+  "noRecentPlaces": "لا توجد أماكن أخيرة",
+  "setLocation": "حدد الموقع",
+  "confirmLocation": "تأكيد الموقع",
+  "map": "الخريطة",
+  "searchResults2": "نتائج البحث",
+  "dragTheMapToSetLocation": "اسحب الخريطة لتحديد الموقع",
+  "rideMap": "خريطة الرحلة",
+  "loadingMap": "جاري تحميل الخريطة...",
+  "mapError": "خطأ في الخريطة",
+  "locationUnavailable": "الموقع غير متاح",
+  "tripPreview": "معاينة الرحلة",
+  "distance2": "المسافة: {distance}",
+  "@distance2": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "duration2": "المدة: {duration}",
+  "@duration2": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "fareEstimate": "تقدير الأجرة: {fare}",
+  "@fareEstimate": {
+    "placeholders": {
+      "fare": {
+        "type": "String"
+      }
+    }
+  },
+  "accept": "قبول",
+  "decline": "رفض",
+  "dropoff": "الإنزال",
+  "rider2": "الراكب: {name}",
+  "@rider2": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "rating": "التقييم: {rating}",
+  "@rating": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "yourRides": "رحلاتك",
+  "past": "السابقة",
+  "upcoming": "القادمة",
+  "scheduled": "المجدولة",
+  "noPastRides": "لا توجد رحلات سابقة",
+  "noUpcomingRides": "لا توجد رحلات قادمة",
+  "noScheduledRides": "لا توجد رحلات مجدولة",
+  "fromTo": "من {pickup} إلى {dropoff}",
+  "@fromTo": {
+    "placeholders": {
+      "pickup": {
+        "type": "String"
+      },
+      "dropoff": {
+        "type": "String"
+      }
+    }
+  },
+  "completed": "مكتملة",
+  "cancelled": "ملغاة",
+  "scheduledFor": "مجدولة لـ {date}",
+  "@scheduledFor": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "viewDetails": "عرض التفاصيل",
+  "passengers": "{count} راكب",
+  "@passengers": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "rideOn": "رحلة في {date}",
+  "@rideOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "redirecting": "جاري إعادة التوجيه...",
+  "welcome": "أهلاً وسهلاً",
+  "continueAsRider": "متابعة كراكب",
+  "continueAsDriver": "متابعة كسائق",
+  "selectLocation": "اختر موقعاً",
+  "confirm": "تأكيد",
+  "gettingLocation": "جاري الحصول على الموقع...",
+  "debugLogs": "سجلات تصحيح الأخطاء",
+  "clearLogs": "مسح السجلات",
+  "copyLogs": "نسخ السجلات",
+  "logsCopiedToClipboard": "تم نسخ السجلات إلى الحافظة",
+  "logsCleared": "تم مسح السجلات",
+  "noLogs": "لا توجد سجلات",
+  "shareLogs": "شارك السجلات",
+  "filter": "تصفية",
+  "all": "الكل",
+  "info": "معلومات",
+  "warning": "تحذير",
+  "error": "خطأ",
+  "toggleServerUrl": "تبديل عنوان الخادم",
+  "serverUrl": "عنوان الخادم",
+  "update": "تحديث",
+  "enterServerUrl": "أدخل عنوان الخادم",
+  "showDebugBanner": "عرض لافتة التصحيح",
+  "hideDebugBanner": "إخفاء لافتة التصحيح",
+  "simulateRideEvents": "محاكاة أحداث الرحلة",
+  "exportLogs": "تصدير السجلات",
+  "downloadingLogs": "جاري تحميل السجلات...",
+  "tripHistory": "سجل الرحلات",
+  "noTripsYet": "لا توجد رحلات حتى الآن",
+  "yourCompletedTripsWillAppearHere": "ستظهر رحلاتك المكتملة هنا",
+  "completedOn": "مكتملة في {date}",
+  "@completedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "fare2": "الأجرة: {amount}",
+  "@fare2": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "viewTrip": "عرض الرحلة",
+  "driver2": "السائق: {name}",
+  "@driver2": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "filterBy": "تصفية حسب",
+  "today": "اليوم",
+  "thisWeek": "هذا الأسبوع",
+  "thisMonth": "هذا الشهر",
+  "customRange": "نطاق مخصص",
+  "searchTrips": "ابحث عن الرحلات...",
+  "noTripsFound": "لم يتم العثور على رحلات",
+  "failedToLoadTrips": "فشل تحميل الرحلات",
+  "tripBehaviour": "سلوك الرحلة",
+  "startRecording": "بدء التسجيل",
+  "stopRecording": "إيقاف التسجيل",
+  "recording": "جاري التسجيل...",
+  "recordingStarted": "بدأ التسجيل",
+  "recordingStopped": "توقف التسجيل",
+  "recordedEvents": "الأحداث المسجلة: {count}",
+  "@recordedEvents": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "clearEvents": "مسح الأحداث",
+  "exportEvents": "تصدير الأحداث",
+  "eventsExported": "تم تصدير الأحداث",
+  "noEventsRecorded": "لم يتم تسجيل أحداث",
+  "eventType": "نوع الحدث",
+  "timestamp": "الطابع الزمني",
+  "details": "التفاصيل",
+  "playbackSpeed": "سرعة التشغيل",
+  "replay": "إعادة تشغيل",
+  "eventLog": "سجل الحدث",
+  "recordingSaved": "تم حفظ التسجيل",
+  "failedToSaveRecording": "فشل حفظ التسجيل",
+  "tripReplay": "إعادة تشغيل الرحلة",
+  "play": "تشغيل",
+  "pause": "إيقاف مؤقت",
+  "restart": "إعادة تشغيل",
+  "speedX": "السرعة: {speed}x",
+  "@speedX": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "replaySpeed": "سرعة الإعادة",
+  "tripTimeline": "جدول الرحلة الزمني",
+  "noTripDataToReplay": "لا توجد بيانات رحلة لإعادة تشغيلها",
+  "loadingReplay": "جاري تحميل الإعادة...",
+  "replayComplete": "اكتملت الإعادة",
+  "tripDuration": "مدة الرحلة: {duration}",
+  "@tripDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "mapView": "عرض الخريطة",
+  "listView": "عرض القائمة",
+  "eventAt": "الحدث: {type} في {time}",
+  "@eventAt": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "close": "إغلاق",
+  "scheduledRideIn30Min": "رحلة مجدولة في 30 دقيقة",
+  "scheduledRideWasCancelled": "تم إلغاء الرحلة المجدولة",
+  "aScheduledRideWasCancelledByTheRider": "تم إلغاء رحلة مجدولة من قبل الراكب",
+  "aScheduledRideHasExpired": "انتهت صلاحية رحلة مجدولة",
+  "rideHasBeenCancelled": "تم إلغاء الرحلة",
+  "pleaseEnableGpslocationServices": "يرجى تفعيل GPS/خدمات الموقع",
+  "locationPermissionIsRequired": "إذن الموقع مطلوب",
+  "locationPermissionDeniedPleaseEnableInSettings": "تم رفض إذن الموقع. يرجى تفعيله في الإعدادات.",
+  "recenterMap": "إعادة تمركز الخريطة",
+  "activeRide": "رحلة نشطة",
+  "pickupEtaMin": "وقت الوصول إلى الاستلام: -- دقيقة",
+  "navigate": "ملاحة",
+  "menu": "القائمة",
+  "toggleOnlineStatus": "تبديل حالة الاتصال بالإنترنت",
+  "goOffline": "انقطع الإنترنت",
+  "goOnline": "متصل بالإنترنت",
+  "noNearbyRides": "لا توجد رحلات قريبة",
+  "rideNearby": "{count} رحلة قريبة",
+  "@rideNearby": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "ridesNearby": "{count} رحلة قريبة",
+  "@ridesNearby": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "availableRides": "الرحلات المتاحة",
+  "noRidesAvailable": "لا توجد رحلات متاحة",
+  "newRideRequestsWillAppearHere": "ستظهر طلبات الرحلات الجديدة هنا",
+  "availableNow": "متاح الآن",
+  "scheduledRides": "الرحلات المجدولة",
+  "myUpcoming": "قادماتي",
+  "todaysEarnings": "أرباح اليوم",
+  "financialSummary": "ملخص مالي",
+  "lifetimeEarnings": "الأرباح مدى الحياة",
+  "platformFees15": "رسوم المنصة (15%)",
+  "amountSettled": "المبلغ المستحق",
+  "outstandingBalance": "الرصيد المعلق",
+  "lastSettlement": "آخر تسوية: {date}",
+  "@lastSettlement": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "profile": "الملف الشخصي",
+  "rating2": "التقييم",
+  "totalRides": "إجمالي الرحلات",
+  "vehicle": "المركبة",
+  "na": "غير متاح",
+  "view": "عرض",
+  "arrived": "وصلت",
+  "verifyCode": "التحقق من الرمز",
+  "acceptScheduledRide": "قبول الرحلة المجدولة",
+  "acceptRideScheduledFor": "قبول الرحلة المجدولة لـ {date}؟",
+  "@acceptRideScheduledFor": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "ignore": "تجاهل",
+  "scheduledRideAccepted": "تم قبول الرحلة المجدولة",
+  "cancelScheduledRide": "إلغاء الرحلة المجدولة",
+  "releaseThisRideSoOtherDriversCanAcceptIt": "إطلاق هذه الرحلة حتى يتمكن سائقون آخرون من قبولها؟",
+  "keep": "الاحتفاظ",
+  "release": "إطلاق",
+  "scheduledRideReleased": "تم إطلاق الرحلة المجدولة",
+  "markedAsArrivedAskRiderForPickupCode": "تم تحديد الوصول — اطلب من الراكب رمز الاستلام",
+  "enterPickupCode": "أدخل رمز الاستلام",
+  "askTheRiderForThe6digitPickupCode": "اطلب من الراكب رمز الاستلام المكون من 6 أرقام",
+  "verifyStart": "التحقق والبدء",
+  "invalidCodePleaseTryAgain2": "رمز غير صحيح — يرجى المحاولة مرة أخرى",
+  "rideStartedNavigatingToTrip": "بدأت الرحلة — جاري الملاحة إلى الرحلة",
+  "debug": "تصحيح الأخطاء",
+  "logout": "تسجيل الخروج",
+  "available": "متاح",
+  "readyToStart": "جاهز للبدء",
+  "chatWithRider": "محادثة مع الراكب",
+  "chatWithRider2": "محادثة مع الراكب",
+  "toggleDriverMarker": "تبديل علامة السائق",
+  "rideStarted2": "بدأت الرحلة!",
+  "theRiderCancelledTheRide": "ألغى الراكب الرحلة.",
+  "reason": "السبب: {reason}",
+  "@reason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "waitingForPayment": "في انتظار الدفع...",
+  "destination": "الوجهة",
+  "didTheCustomerPayInCash": "هل دفع العميل نقداً؟",
+  "cashReceived": "تم استقبال النقود",
+  "processing": "جاري المعالجة...",
+  "didNotPay": "لم يدفع",
+  "completeRide": "إنهاء الرحلة",
+  "completing": "جاري الإنهاء...",
+  "startRide": "بدء الرحلة",
+  "navigateToDestination": "الملاحة إلى الوجهة",
+  "couldNotOpenMapsLinkCopiedToClipboard": "لم يتمكن من فتح الخرائط — تم نسخ الرابط إلى الحافظة",
+  "rideInProgress": "الرحلة جارية",
+  "back": "رجوع",
+  "navigateToRider": "الملاحة إلى الراكب",
+  "yourLocation": "موقعك",
+  "pickup2": "الاستلام: {address}",
+  "@pickup2": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "riderNotified": "تم إخطار الراكب!",
+  "rideWasCancelled": "تم إلغاء الرحلة",
+  "pickup3": "الاستلام",
+  "iveArrived": "وصلت",
+  "notifying": "جاري الإخطار...",
+  "openGoogleMaps": "فتح خرائط جوجل",
+  "cancelRide2": "إلغاء الرحلة",
+  "youHaveArrived2": "لقد وصلت!",
+  "riderHasBeenNotified": "تم إخطار الراكب",
+  "goBack2": "رجوع",
+  "registrationStepOf": "خطوة التسجيل {current} من {total}",
+  "@registrationStepOf": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "becomeADriver": "كن سائقاً",
+  "personalInformation": "المعلومات الشخصية",
+  "vehicleInformation": "معلومات المركبة",
+  "reviewSubmit": "المراجعة والتقديم",
+  "enterYourDrivingLicenseDetails": "أدخل تفاصيل رخصة القيادة",
+  "tellUsAboutYourVehicle": "أخبرنا عن مركبتك",
+  "verifyYourInformationBeforeSubmitting": "تحقق من معلوماتك قبل التقديم",
+  "licenseNumber": "رقم الرخصة",
+  "egDl123456789": "مثال: DL123456789",
+  "vehicleNumber": "رقم المركبة",
+  "egAbc1234": "مثال: ABC-1234",
+  "vehicleType": "نوع المركبة",
+  "car": "سيارة",
+  "bike": "دراجة نارية",
+  "van": "حافلة صغيرة",
+  "vehicleModel": "موديل المركبة",
+  "egToyotaCamry": "مثال: Toyota Camry",
+  "vehicleColor": "لون المركبة",
+  "egWhite": "مثال: أبيض",
+  "license": "الرخصة",
+  "nextStep": "الخطوة التالية",
+  "submitRegistration": "تقديم التسجيل",
+  "submitRegistration2": "تقديم التسجيل",
+  "previousStep": "الخطوة السابقة",
+  "pleaseFillAllFields": "يرجى ملء جميع الحقول",
+  "driverProfileRegistered": "تم تسجيل ملف السائق!",
+  "driverProfileRegistrationFailedYouMayAlreadyBeRegistered": "فشل تسجيل ملف السائق. قد تكون مسجلاً بالفعل.",
+  "pleaseEnterYourLicenseNumber": "يرجى إدخال رقم رخصتك",
+  "pleaseFillAllVehicleFields": "يرجى ملء جميع حقول المركبة",
+  "reviewYourDetails": "راجع تفاصيلك",
+  "stepOf": "خطوة {current} من {total}",
+  "@stepOf": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "rideSummary": "ملخص الرحلة",
+  "rideCompletedSuccessfully": "اكتملت الرحلة بنجاح",
+  "rideComplete": "اكتملت الرحلة!",
+  "minutes": "{duration} دقيقة",
+  "@minutes": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "totalFare3": "الأجرة الإجمالية",
+  "pending": "قيد الانتظار",
+  "yourEarnings": "أرباحك",
+  "platformFee": "رسوم المنصة",
+  "rateYourRider": "قيّم الراكب",
+  "additionalFeedbackOptional": "تعليقات إضافية (اختياري)",
+  "submitRating2": "إرسال التقييم",
+  "ratingSubmittedThankYou": "تم إرسال التقييم — شكراً لك!",
+  "backToHome": "العودة إلى الرئيسية",
+  "pleaseSelectARating": "يرجى تحديد تقييم",
+  "adminTripInvestigation": "الإدارة — تحقيق الرحلات",
+  "drivers": "السائقون",
+  "earnings": "الأرباح",
+  "rideId": "معرّف الرحلة",
+  "status": "الحالة",
+  "riderName": "اسم الراكب",
+  "driverName": "اسم السائق",
+  "fromDate": "من التاريخ",
+  "toDate": "إلى التاريخ",
+  "search2": "بحث",
+  "clear": "مسح",
+  "retry": "إعادة المحاولة",
+  "unknown": "غير معروف",
+  "failedToLoadDriverDetails": "فشل تحميل تفاصيل السائق",
+  "online": "متصل",
+  "offline": "غير متصل",
+  "active": "نشط",
+  "blocked": "محظور",
+  "verified": "موثق",
+  "unverified": "غير موثق",
+  "onRide": "أثناء الرحلة",
+  "unverify": "إلغاء التحقق",
+  "block": "حظر",
+  "unblock": "إلغاء الحظر",
+  "model": "الموديل",
+  "color": "اللون",
+  "plate": "اللوحة",
+  "type": "النوع",
+  "statistics": "الإحصائيات",
+  "rides": "الرحلات",
+  "latitude": "خط العرض",
+  "longitude": "خط الطول",
+  "lastSeen": "آخر ظهور",
+  "currentRide": "الرحلة الحالية",
+  "ride2": "رحلة رقم",
+  "recentRides": "الرحلات الأخيرة",
+  "blockThisDriverTheyWillBeUnableToLoginOrAcceptRides": "حظر هذا السائق؟ لن يتمكن من تسجيل الدخول أو قبول رحلات.",
+  "unblockThisDriver": "إلغاء حظر هذا السائق؟",
+  "allDrivers": "جميع السائقين",
+  "searchByNameVehiclePlate": "ابحث حسب الاسم أو المركبة أو اللوحة...",
+  "failedToLoadDrivers": "فشل تحميل السائقين",
+  "noDriversFound2": "لم يتم العثور على سائقين",
+  "earningsDashboard": "لوحة الأرباح",
+  "settlementLedger": "دفتر التسوية",
+  "failedToLoadEarningsData": "فشل تحميل بيانات الأرباح",
+  "topDrivers": "أفضل السائقين",
+  "noEarningsDataYet": "لا توجد بيانات أرباح حتى الآن",
+  "revenueOverview": "نظرة عامة على الإيرادات",
+  "grossRevenue": "إجمالي الإيرادات",
+  "driverPayouts": "دفعات السائقين",
+  "rides2": "{count} رحلة",
+  "@rides2": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "createSettlement": "إنشاء تسوية",
+  "noSettlementsRecorded": "لم يتم تسجيل تسويات",
+  "settled": "مستحق",
+  "gross": "إجمالي",
+  "fee": "رسوم",
+  "net": "صافي",
+  "ref": "المرجع: {ref}",
+  "@ref": {
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "receipt2": "الإيصال: {receipt}",
+  "@receipt2": {
+    "placeholders": {
+      "receipt": {
+        "type": "String"
+      }
+    }
+  },
+  "driverId": "معرّف السائق",
+  "enterDriverUserId": "أدخل معرّف مستخدم السائق",
+  "grossAmount": "المبلغ الإجمالي",
+  "appFee": "رسوم التطبيق",
+  "netAmount": "المبلغ الصافي",
+  "settlementReference": "مرجع التسوية",
+  "egStl001": "مثال: STL-001",
+  "receiptNumberOptional": "رقم الإيصال (اختياري)",
+  "create": "إنشاء",
+  "trip": "الرحلة #{id}",
+  "@trip": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "enableRetention": "تفعيل الاحتفاظ",
+  "disableRetention": "تعطيل الاحتفاظ",
+  "overview": "نظرة عامة",
+  "tripNotFound": "لم يتم العثور على الرحلة",
+  "errorLoadingTrip": "خطأ في تحميل الرحلة",
+  "failedToLoadEventsTapToRetry": "فشل تحميل الأحداث. اضغط لإعادة المحاولة.",
+  "noTimelineEvents": "لا توجد أحداث جدول زمني",
+  "addAnInvestigationNote": "إضافة ملاحظة تحقيق...",
+  "failedToLoadRetry": "فشل التحميل. أعد المحاولة.",
+  "noMessages": "لا توجد رسائل",
+  "adminNotes": "ملاحظات الإدارة",
+  "timeline": "الجدول الزمني",
+  "chat": "المحادثة",
+  "chatMessages3": "رسائل المحادثة ({count})",
+  "@chatMessages3": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "requested": "مطلوبة",
+  "reason2": "السبب",
+  "method": "الطريقة",
+  "rideInfo": "معلومات الرحلة",
+  "pickupCoord": "إحداثيات الاستلام",
+  "dropoffCoord": "إحداثيات الإنزال",
+  "min2": "{duration} دقيقة",
+  "@min2": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "estFare": "الأجرة المتوقعة",
+  "finalFare": "الأجرة النهائية",
+  "retentionEnabledForThisRide": "تم تفعيل الاحتفاظ لهذه الرحلة",
+  "retentionDisabledForThisRide": "تم تعطيل الاحتفاظ لهذه الرحلة",
+  "failedToUpdateRetention": "فشل تحديث الاحتفاظ",
+  "noteAdded": "تمت إضافة ملاحظة",
+  "failedToAddNote": "فشلت إضافة ملاحظة",
+  "other": "أخرى",
+  "typing": "يكتب",
+  "noMessagesYet": "لا توجد رسائل حتى الآن",
+  "sendAMessageToStartChatting": "أرسل رسالة لبدء المحادثة",
+  "yesterday": "أمس",
+  "isTyping": "{name} يكتب...",
+  "@isTyping": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToSendMessage": "فشل إرسال الرسالة",
+  "onMyWay": "أنا في الطريق",
+  "beThereSoon": "سأكون هناك قريباً",
+  "thanks": "شكراً!",
+  "sendMessage": "إرسال الرسالة",
+  "rideDetails": "تفاصيل الرحلة",
+  "yesCancel": "نعم، ألغِ",
+  "pickupCode": "رمز الاستلام",
+  "shareThisCodeWithYourDriverToStartTheRide": "شارك هذا الرمز مع سائقك لبدء الرحلة",
+  "cancelRide3": "إلغاء الرحلة؟",
+  "reasonOptional": "السبب (اختياري)",
+  "riderCancelledRide": "ألغى الراكب الرحلة",
+  "somethingWentWrong": "حدث شيء خاطئ",
+  "turnOnLocationItWillHelpUsFindYourRider": "فعّل الموقع — سيساعدنا في العثور على الراكب.",
+  "turnOnLocationItWillHelpUsFindYourDriver": "فعّل الموقع — سيساعدنا في العثور على السائق.",
+  "allowLocation": "السماح بالموقع",
+  "allowLocation2": "السماح بالموقع",
+  "maybeLater": "ربما لاحقاً",
+  "setDropoffLocation": "حدد موقع الإنزال",
+  "findingAddress": "جاري البحث عن العنوان...",
+  "moveTheMapToSelectLocation": "حرّك الخريطة لتحديد الموقع",
+  "moveTheMap": "حرّك الخريطة",
+  "confirmLocation2": "تأكيد الموقع",
+  "noPastRidesYet": "لا توجد رحلات سابقة حتى الآن",
+  "yourTripHasBeenCompleted": "اكتملت رحلتك.",
+  "payNow": "ادفع الآن",
+  "paymentReceived": "تم استقبال الدفع؟",
+  "didYouReceiveThisPayment": "هل استقبلت هذا الدفع؟",
+  "reasonRequiredIfNo": "السبب (مطلوب إذا كان لا)",
+  "pleaseProvideAReason": "يرجى تقديم سبب",
+  "noIDidnt": "لا، لم أستقبله",
+  "yesReceived": "نعم، استقبلته",
+  "scheduleYourLaterRide": "جدولة رحلتك لاحقاً",
+  "scheduleRideAt": "جدولة الرحلة — {date} في {time}",
+  "@scheduleRideAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAFutureDateAndTime": "يرجى تحديد تاريخ ووقت مستقبلي",
+  "rideScheduledSuccessfully": "تمت جدولة الرحلة بنجاح!",
+  "failedToScheduleRide": "فشلت جدولة الرحلة",
+  "anUnexpectedErrorOccurred": "حدث خطأ غير متوقع",
+  "noLocationsFound": "لم يتم العثور على مواقع",
+  "startTypingToSearchLocations": "ابدأ بالكتابة للبحث عن المواقع",
+  "selectedLocation": "الموقع المحدد",
+  "jan": "يناير",
+  "feb": "فبراير",
+  "mar": "مارس",
+  "apr": "أبريل",
+  "may": "مايو",
+  "jun": "يونيو",
+  "jul": "يوليو",
+  "aug": "أغسطس",
+  "sep": "سبتمبر",
+  "oct": "أكتوبر",
+  "nov": "نوفمبر",
+  "dec": "ديسمبر",
+  "confirmed": "موثقة",
+  "pending2": "قيد الانتظار",
+  "arriving": "وصول",
+  "laterRide": "رحلة لاحقة",
+  "scheduleARideUsingTheButtonAbove": "جدولة رحلة باستخدام الزر أعلاه",
+  "january": "يناير",
+  "february": "فبراير",
+  "march": "مارس",
+  "april": "أبريل",
+  "june": "يونيو",
+  "july": "يوليو",
+  "august": "أغسطس",
+  "september": "سبتمبر",
+  "october": "أكتوبر",
+  "november": "نوفمبر",
+  "december": "ديسمبر",
+  "sun": "الأحد",
+  "mon": "الاثنين",
+  "tue": "الثلاثاء",
+  "wed": "الأربعاء",
+  "thu": "الخميس",
+  "fri": "الجمعة",
+  "sat": "السبت",
+  "emailIsRequired": "البريد الإلكتروني مطلوب",
+  "invalidEmailFormat": "صيغة البريد الإلكتروني غير صحيحة",
+  "countryCodeIsRequired": "رمز الدولة مطلوب",
+  "phoneNumberIsRequired": "رقم الهاتف مطلوب",
+  "emailAlreadyRegistered": "البريد الإلكتروني مسجل بالفعل",
+  "phoneNumberAlreadyRegistered": "رقم الهاتف مسجل بالفعل",
+  "registrationSuccessful": "تم التسجيل بنجاح!",
+  "emailAndPasswordAreRequired": "البريد الإلكتروني وكلمة المرور مطلوبان",
+  "invalidEmailOrPassword": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+  "accountIsBlockedContactAdmin": "الحساب محظور. اتصل بالإدارة.",
+  "loginSuccessful": "تم تسجيل الدخول بنجاح",
+  "loginFailed": "فشل تسجيل الدخول: {error}",
+  "@loginFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unauthorized": "غير مصرح",
+  "deviceTokenUpdated": "تم تحديث رمز الجهاز",
+  "error2": "خطأ: {error}",
+  "@error2": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noAccountFoundWithThatEmail": "لم يتم العثور على حساب بهذا البريد الإلكتروني",
+  "tooManyRequestsPleaseTryAgainLater": "عدد كبير جداً من الطلبات. يرجى المحاولة لاحقاً.",
+  "failedToSendOtpPleaseTryAgain": "فشل إرسال OTP. يرجى المحاولة مرة أخرى.",
+  "otpSentSuccessfully": "تم إرسال OTP بنجاح",
+  "emailAndCodeAreRequired": "البريد الإلكتروني والرمز مطلوبان",
+  "invalidOrExpiredOtp": "OTP غير صحيح أو منتهي الصلاحية",
+  "otpHasExpired": "انتهت صلاحية OTP",
+  "userNotFound": "لم يتم العثور على المستخدم",
+  "tooManyAttemptsPleaseTryAgainLater": "محاولات كثيرة جداً. يرجى المحاولة لاحقاً.",
+  "ifAnAccountWithThatEmailExistsAnOtpHasBeenSent": "إذا كان هناك حساب بهذا البريد الإلكتروني، فتم إرسال OTP.",
+  "emailCodeAndNewPasswordAreRequired": "البريد الإلكتروني والرمز وكلمة المرور الجديدة مطلوبة",
+  "passwordHasBeenResetSuccessfully": "تم إعادة تعيين كلمة المرور بنجاح",
+  "otpIsValid": "OTP صحيح",
+  "yourLoginCode": "رمز تسجيل الدخول",
+  "passwordResetYourOtpCode": "إعادة تعيين كلمة المرور - رمز OTP",
+  "hello": "مرحباً،",
+  "yourVerificationCodeIs": "رمز التحقق الخاص بك: {otp}",
+  "@yourVerificationCodeIs": {
+    "placeholders": {
+      "otp": {
+        "type": "String"
+      }
+    }
+  },
+  "thisCodeWillExpireIn10Minutes": "سينتهي هذا الرمز خلال 10 دقائق.",
+  "ifYouDidntRequestThisCodePleaseIgnoreThisEmail": "إذا لم تطلب هذا الرمز، يرجى تجاهل هذا البريد الإلكتروني.",
+  "bestRegards": "مع أطيب التحيات،",
+  "ridenowTeam": "فريق رايد ناو",
+  "yourPasswordResetCodeIs": "رمز إعادة تعيين كلمة المرور: {otp}",
+  "@yourPasswordResetCodeIs": {
+    "placeholders": {
+      "otp": {
+        "type": "String"
+      }
+    }
+  },
+  "ifYouDidntRequestAPasswordResetPleaseIgnoreThisEmail": "إذا لم تطلب إعادة تعيين كلمة المرور، يرجى تجاهل هذا البريد الإلكتروني.",
+  "ridetypeIsRequired": "نوع الرحلة مطلوب",
+  "latitudeAndLongitudeRequired": "خطوط العرض والطول مطلوبة",
+  "noActiveRide": "لا توجد رحلة نشطة",
+  "locationUpdated": "تم تحديث الموقع",
+  "adminAccessRequired": "الوصول الإداري مطلوب",
+  "emailAlreadyInUse": "البريد الإلكتروني قيد الاستخدام",
+  "logoutSuccessful": "تم تسجيل الخروج بنجاح",
+  "alreadyRegisteredAsDriver": "مسجل بالفعل كسائق",
+  "driverProfileCreatedSuccessfully": "تم إنشاء ملف السائق بنجاح.",
+  "driverProfileNotFound": "ملف السائق غير موجود",
+  "onlineStatusUpdated": "تم تحديث حالة الاتصال بالإنترنت",
+  "profileUpdatedSuccessfully": "تم تحديث الملف الشخصي بنجاح",
+  "invalidStatusValue": "قيمة حالة غير صحيحة: {status}",
+  "@invalidStatusValue": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "retentionEnabledForRide": "تم تفعيل الاحتفاظ للرحلة {id}",
+  "@retentionEnabledForRide": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "retentionDisabledForRide": "تم تعطيل الاحتفاظ للرحلة {id}",
+  "@retentionDisabledForRide": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAddedToRide": "تمت إضافة ملاحظة للرحلة {id}",
+  "@noteAddedToRide": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "settlementCreated": "تم إنشاء التسوية",
+  "paymentConfirmed2": "تم تأكيد الدفع",
+  "paymentReceived2": "تم استقبال الدفع",
+  "cashPaymentConfirmed": "تم تأكيد دفع النقد",
+  "markedAsUnpaid": "تم تحديد كعدم السداد",
+  "paymentDisputedAmountRefundedToRider": "الدفع موضع نزاع، تم استرجاع المبلغ للراكب",
+  "ratingMustBeBetween1And5": "يجب أن يكون التقييم بين 1 و 5",
+  "youHaveAlreadyRatedThisRide": "لقد قيمت هذه الرحلة بالفعل",
+  "invalidRideOrUser": "رحلة أو مستخدم غير صحيح",
+  "youWereNotPartOfThisRide": "لم تكن جزءاً من هذه الرحلة",
+  "noDriverToRateOnThisRide": "لا يوجد سائق للتقييم في هذه الرحلة",
+  "rateeNotFound": "لم يتم العثور على المصنف",
+  "ratingSubmittedSuccessfully": "تم إرسال التقييم بنجاح",
+  "fileIsEmpty": "الملف فارغ",
+  "missingAuthorizationHeader": "رأس المصادقة مفقود",
+  "invalidToken": "رمز غير صحيح",
+  "notificationMarkedAsRead": "تم تحديد الإشعار كمقروء",
+  "allNotificationsMarkedAsRead": "تم تحديد جميع الإشعارات كمقروءة",
+  "allNotificationsDeleted": "تم حذف جميع الإشعارات",
+  "messageContentCannotBeEmpty": "محتوى الرسالة لا يمكن أن يكون فارغاً",
+  "messageIsTooLongMax10000Characters": "الرسالة طويلة جداً (الحد الأقصى 10000 حرف)",
+  "senderOrReceiverNotFound": "المرسل أو المستقبل غير موجود",
+  "messageSent": "تم إرسال الرسالة",
+  "newMessageFrom": "رسالة جديدة من {username}",
+  "@newMessageFrom": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "codeIsRequired": "الرمز مطلوب",
+  "eventtypeIsRequired": "نوع الحدث مطلوب",
+  "youAlreadyHaveAnActiveRide": "لديك رحلة نشطة بالفعل",
+  "rideNotFound": "لم يتم العثور على الرحلة",
+  "rideIsNoLongerAvailable": "الرحلة لم تعد متاحة",
+  "rideAlreadyAccepted": "تم قبول الرحلة بالفعل",
+  "driverNotFound": "لم يتم العثور على السائق",
+  "onlyDriversCanAcceptRides": "فقط السائقون يمكنهم قبول الرحلات",
+  "cannotTransitionFromTo": "لا يمكن الانتقال من {current} إلى {next}",
+  "@cannotTransitionFromTo": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "next": {
+        "type": "String"
+      }
+    }
+  },
+  "rideNotInRequestedStatus": "الرحلة ليست بحالة مطلوبة",
+  "onlyTheDriverCanUpdateRideLocation": "فقط السائق يمكنه تحديث موقع الرحلة",
+  "rideIsNotActive": "الرحلة غير نشطة",
+  "youHaveAcceptedARideNavigateToPickupLocation": "لقد قبلت رحلة. انتقل إلى موقع الاستلام.",
+  "noDriversAvailableYetContinueSearching": "لا توجد سائقون متاحون حتى الآن. هل تريد المتابعة في البحث؟",
+  "noWomenDriversFoundSwitchToAnotherRideType": "لم يتم العثور على سائقات. هل تريد التبديل إلى نوع رحلة آخر؟",
+  "yourScheduledRideIsIn30Minutes": "رحلتك المجدولة في 30 دقيقة",
+  "scheduledRideHasExpired": "انتهت صلاحية الرحلة المجدولة",
+  "driverHasCancelledTheScheduledRide": "ألغى السائق الرحلة المجدولة",
+  "xxx1234": "XXX-1234",
+  "rideAcceptedADriverIsOnTheWayToPickYouUp": "تم قبول الرحلة - سائق في طريقه لاستلامك",
+  "rideConfirmedYouHaveAcceptedARideNavigateToPickup": "تم تأكيد الرحلة - لقد قبلت رحلة. انتقل إلى الاستلام.",
+  "driverArrivedYourDriverHasArrivedAtThePickupLocation": "وصل السائق - وصل السائق إلى موقع الاستلام",
+  "rideStartedYourRideHasStartedEnjoyTheTrip": "بدأت الرحلة - بدأت رحلتك. استمتع بالرحلة!",
+  "rideCompletedYouHaveReachedYourDestination": "اكتملت الرحلة - لقد وصلت إلى وجهتك",
+  "rideCancelled3": "تم إلغاء الرحلة - {reason}",
+  "@rideCancelled3": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "noWomenDriversFoundNoWomenDriversAvailableSwitchRideType": "لم يتم العثور على سائقات - لا توجد سائقات متاحات. هل تريد التبديل إلى نوع رحلة آخر؟",
+  "noDriversFoundNoDriversAvailableYetContinueSearching": "لم يتم العثور على سائقين - لا توجد سائقون متاحون حتى الآن. هل تريد المتابعة في البحث؟",
+  "paymentConfirmedPaymentHasBeenConfirmed": "تم تأكيد الدفع - تم تأكيد دفعك",
+  "paymentFinalizedYourPaymentHasBeenFinalized": "تم إتمام الدفع - تم إتمام دفعك",
+  "paymentRefundedYourPaymentHasBeenRefunded": "تم استرجاع المبلغ - تم استرجاع مبلغك",
+  "driverAssignedADriverHasAcceptedYourScheduledRide": "تم تعيين السائق - قبل السائق رحلتك المجدولة",
+  "driverArrivedYourDriverHasArrivedForYourScheduledRide": "وصل السائق - وصل السائق لرحلتك المجدولة",
+  "rideStartedYourScheduledRideHasStarted": "بدأت الرحلة - بدأت رحلتك المجدولة",
+  "rideReminderYourScheduledRideIsIn30Minutes": "تذكر الرحلة - رحلتك المجدولة في 30 دقيقة",
+  "scheduledRideCancelled": "تم إلغاء الرحلة المجدولة - {reason}",
+  "@scheduledRideCancelled": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentNotFoundForRide": "لم يتم العثور على دفع للرحلة: {rideId}",
+  "@paymentNotFoundForRide": {
+    "placeholders": {
+      "rideId": {
+        "type": "String"
+      }
+    }
+  },
+  "onlyTheRiderCanConfirmPayment": "فقط الراكب يمكنه تأكيد الدفع",
+  "paymentCannotBeConfirmedInStatus": "لا يمكن تأكيد الدفع في الحالة: {status}",
+  "@paymentCannotBeConfirmedInStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "insufficientWalletBalance": "رصيد المحفظة غير كافي",
+  "tripFareForRide": "أجرة الرحلة للرحلة #{rideId}",
+  "@tripFareForRide": {
+    "placeholders": {
+      "rideId": {
+        "type": "String"
+      }
+    }
+  },
+  "onlyTheDriverCanConfirmCashReceipt": "فقط السائق يمكنه تأكيد استقبال النقد",
+  "thisEndpointIsOnlyForCashPayments": "هذا الرابط للدفع النقدي فقط",
+  "onlyTheDriverCanReportCashUnpaid": "فقط السائق يمكنه الإبلاغ عن عدم دفع النقد",
+  "customerDidNotPayCash": "العميل لم يدفع نقداً",
+  "onlyTheDriverCanConfirmReceipt": "فقط السائق يمكنه تأكيد الاستقبال",
+  "onlyTheDriverCanDisputePayment": "فقط السائق يمكنه الاعتراض على الدفع",
+  "refundForRide": "استرجاع الرحلة #{rideId} - {reason}",
+  "@refundForRide": {
+    "placeholders": {
+      "rideId": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "onlyTheRiderOrDriverCanViewPaymentStatus": "فقط الراكب أو السائق يمكنه عرض حالة الدفع",
+  "scheduledTimeMustBeInTheFuture": "يجب أن يكون وقت الجدولة في المستقبل",
+  "scheduledRideNotFound": "لم يتم العثور على الرحلة المجدولة",
+  "canOnlyCancelScheduledOrAssignedScheduledRides": "يمكن فقط إلغاء الرحلات المجدولة أو المجدولة المعينة",
+  "cancelledByUser": "ملغاة من قبل المستخدم",
+  "cancelledByRider": "ملغاة من قبل الراكب",
+  "canOnlyCompleteStartedScheduledRides": "يمكن فقط إكمال الرحلات المجدولة التي بدأت",
+  "latitudeAndLongitudeAreRequired": "خطوط العرض والطول مطلوبة",
+  "thisRideIsNoLongerAvailable": "هذه الرحلة لم تعد متاحة",
+  "thisRideIsNotAssignedToYou": "هذه الرحلة غير معينة لك",
+  "canOnlyUnassignARideThatIsInAssignedStatus": "يمكن فقط إلغاء تعيين رحلة بحالة معينة",
+  "accessDenied": "تم رفض الوصول",
+  "rideMustBeAssignedBeforeArriving": "يجب تعيين الرحلة قبل الوصول",
+  "onlyTheAssignedDriverCanVerifyThePickupCode": "فقط السائق المعين يمكنه التحقق من رمز الاستلام",
+  "pickupCodeCanOnlyBeVerifiedAfterTheDriverHasArrived": "يمكن التحقق من رمز الاستلام فقط بعد وصول السائق",
+  "driverMustArriveBeforeStartingTheRide": "يجب أن يصل السائق قبل بدء الرحلة",
+  "pickupCodeMustBeVerifiedBeforeStartingTheRide": "يجب التحقق من رمز الاستلام قبل بدء الرحلة",
+  "pickupCodeVerificationHasExpiredPleaseVerifyAgain": "انتهت صلاحية التحقق من رمز الاستلام. يرجى التحقق مرة أخرى.",
+  "paymentStartedButNeverCompleted": "بدأ الدفع لكن لم يتم إكماله",
+  "rideCompletedButPaymentStillPending": "اكتملت الرحلة لكن الدفع معلق",
+  "eventOccurredTimes": "حدث '{name}' {count} مرات",
+  "@eventOccurredTimes": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "retryLoopDetectedRetries": "تم اكتشاف حلقة إعادة محاولة: {count} إعادة محاولة",
+  "@retryLoopDetectedRetries": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "apiTimeoutOccurred": "حدث انقطاع API",
+  "serverException": "استثناء الخادم: {message}",
+  "@serverException": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "websocketDisconnectedTimes": "WebSocket انقطع {count} مرات",
+  "@websocketDisconnectedTimes": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "driverAcceptedButPassengerMayNotHaveReceivedUpdate": "قبل السائق لكن قد لا يكون الراكب قد استقبل التحديث",
+  "tripRemainedInForS": "بقيت الرحلة في '{state}' لمدة {seconds} ثانية",
+  "@tripRemainedInForS": {
+    "placeholders": {
+      "state": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "gpsUpdatingForS": "تحديث GPS لمدة {seconds} ثانية",
+  "@gpsUpdatingForS": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "coordinatesCannotBeNull": "الإحداثيات لا يمكن أن تكون فارغة",
+  "geocodingFailed": "فشل التشفير الجغرافي: {status}",
+  "@geocodingFailed": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "usingEstimatedRouteActualRouteMayDiffer": "باستخدام الطريق المتوقع - قد يختلف الطريق الفعلي",
+  "noDriversAvailableAutoCancelled": "لا توجد سائقون متاحون - تم الإلغاء التلقائي",
+  "autocancelledDriverNeverMovedToPickupFor2Hours": "تم الإلغاء التلقائي - السائق لم ينتقل إلى الاستلام لمدة ساعتين أو أكثر",
+  "autocancelledDriverNeverStartedRideFor2Hours": "تم الإلغاء التلقائي - السائق لم يبدأ الرحلة لمدة ساعتين أو أكثر",
+  "noDriversAvailable": "لا توجد سائقون متاحون",
+  "urlCannotBeEmpty": "عنوان URL لا يمكن أن يكون فارغاً",
+  "serverUrlUpdated": "تم تحديث عنوان الخادم",
+  "rideUpdatesAndOffers": "تلقي تحديثات الرحلة والعروض",
+  "receiveTextMessagesForRides": "تلقي رسائل نصية للرحلات",
+  "receivePromotionalEmails": "تلقي رسائل بريد إلكتروني ترويجية",
+  "displayCurrency": "عملة العرض",
+  "saveServerUrl": "حفظ عنوان الخادم",
+  "currency": "العملة",
+  "premiumRideSharing": "مشاركة الرحلة المميزة",
+  "grantLocationAccess": "منح إذن الموقع",
+  "date": "التاريخ"
+}

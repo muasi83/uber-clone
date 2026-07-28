@@ -9,6 +9,7 @@ import '../services/currency_service.dart';
 import '../services/directions_service.dart';
 import '../services/websocket_service.dart';
 import '../services/location_service.dart';
+import '../services/place_search_service.dart';
 import '../services/driver_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
@@ -29,6 +30,7 @@ import '../widgets/ride_type_selector.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
+import '../l10n/app_localizations.dart';
 
 class RiderDropoffLocationScreen extends StatefulWidget {
   final double pickupLat;
@@ -62,6 +64,13 @@ class _RiderDropoffLocationScreenState
 
   LatLng? _dropoffLocation;
   String _dropoffAddress = '';
+
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  List<PlaceSearchResult> _searchResults = [];
+  bool _isSearching = false;
+  bool _showSearchResults = false;
+  Timer? _searchDebounce;
 
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
@@ -206,6 +215,63 @@ class _RiderDropoffLocationScreenState
     }
   }
 
+  void _onSearchChanged(String query) {
+    _searchDebounce?.cancel();
+    if (query.trim().length < 3) {
+      setState(() {
+        _searchResults = [];
+        _showSearchResults = false;
+      });
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(query.trim());
+    });
+  }
+
+  Future<void> _performSearch(String query) async {
+    setState(() => _isSearching = true);
+    try {
+      final results = await PlaceSearchService.search(query, language: 'en');
+      if (!mounted) return;
+      setState(() {
+        _searchResults = results;
+        _showSearchResults = results.isNotEmpty;
+        _isSearching = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  Future<void> _selectSearchResult(PlaceSearchResult result) async {
+    PlaceDetails? details;
+    try {
+      details = await PlaceSearchService.getPlaceDetails(result.placeId, language: 'en');
+    } catch (_) {
+      details = null;
+    }
+    if (!mounted) return;
+    final loc = LatLng(details?.lat ?? 0, details?.lng ?? 0);
+    setState(() {
+      _dropoffLocation = loc;
+      _showSearchResults = false;
+      _searchController.text = details?.address ?? result.description;
+    });
+    _searchFocusNode.unfocus();
+    mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(loc, 17),
+    );
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _searchResults = [];
+      _showSearchResults = false;
+    });
+  }
+
   void _updateMarkers() {
     _markers.clear();
 
@@ -216,7 +282,7 @@ class _RiderDropoffLocationScreenState
           position: LatLng(widget.pickupLat, widget.pickupLng),
           icon: _stickPickupIcon,
           anchor: const Offset(0.5, 0.85),
-          infoWindow: const InfoWindow(title: 'Pickup'),
+          infoWindow: InfoWindow(title: AppLocalizations.of(context).pickup),
         ),
       );
     }
@@ -611,7 +677,7 @@ class _RiderDropoffLocationScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Payment Method',
+              AppLocalizations.of(context).paymentMethod,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             AppSpacing.gapLg,
@@ -704,12 +770,12 @@ class _RiderDropoffLocationScreenState
 
       final token = StorageService.getToken();
       if (token == null) {
-        _showError('Authentication error');
+        _showError(AppLocalizations.of(context).authenticationError);
         return;
       }
 
       final dropoffAddress = _dropoffAddress.isEmpty
-          ? 'Dropoff location'
+          ? AppLocalizations.of(context).dropoffLocation
           : _dropoffAddress;
 
       final ride = await RideService.requestRide(
@@ -743,11 +809,11 @@ class _RiderDropoffLocationScreenState
           ),
         );
       } else {
-        _showError('Failed to request ride');
+        _showError(AppLocalizations.of(context).failedToRequestRide);
       }
     } catch (e) {
       addDebugMessage('❌ Error: $e');
-      _showError('Error: $e');
+      _showError(AppLocalizations.of(context).error2('$e'));
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -806,7 +872,7 @@ class _RiderDropoffLocationScreenState
                   position: _dropoffLocation!,
                   icon: _stickDropoffIcon,
                   anchor: const Offset(0.5, 0.85),
-                  infoWindow: const InfoWindow(title: 'Dropoff'),
+                  infoWindow: InfoWindow(title: AppLocalizations.of(context).dropoff),
                 ),
               if (_showTripDetails && _currentPolylinePoints.length > 1 && _dotProgress <= 1.0)
                 Marker(
@@ -841,14 +907,101 @@ class _RiderDropoffLocationScreenState
                   icon: const Icon(Icons.arrow_back, color: AppColors.primary),
                   onPressed: () => Navigator.pop(context),
                 ),
-                title: const Text(
-                  'Set Destination',
-                  style: TextStyle(color: AppColors.primary),
+                title: Text(
+                  AppLocalizations.of(context).setDestination,
+                  style: const TextStyle(color: AppColors.primary),
                 ),
                 centerTitle: true,
               ),
             ),
           ),
+          if (!_isAutoReviewing && !_isDropoffConfirmed)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + kToolbarHeight,
+              left: 0,
+              right: 0,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      onChanged: _onSearchChanged,
+                      decoration: InputDecoration(
+                        hintText: AppLocalizations.of(context).searchDestination,
+                        hintStyle: const TextStyle(color: AppColors.textTertiary),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: AppRadius.mdRadius,
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.primary),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close, size: 18),
+                                onPressed: _clearSearch,
+                                color: AppColors.textTertiary,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              )
+                            : null,
+                      ),
+                      style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
+                    ),
+                  ),
+                  if (_showSearchResults && _searchResults.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: AppRadius.mdRadius,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: _isSearching
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16),
+                                child: SizedBox(
+                                  width: 20, height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: _searchResults.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.outline),
+                              itemBuilder: (context, index) {
+                                final result = _searchResults[index];
+                                return ListTile(
+                                  dense: true,
+                                  leading: const Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
+                                  title: Text(
+                                    result.description,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                                  ),
+                                  onTap: () => _selectSearchResult(result),
+                                );
+                              },
+                            ),
+                    ),
+                ],
+              ),
+            ),
           if (!_isDropoffConfirmed)
             Center(
               child: Padding(
@@ -946,7 +1099,7 @@ class _RiderDropoffLocationScreenState
                             children: [
                               Text(
                                 _dropoffAddress.isEmpty
-                                    ? 'Move map to set dropoff'
+                                    ? AppLocalizations.of(context).moveTheMapToSelectLocation
                                     : _dropoffAddress,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -990,7 +1143,7 @@ class _RiderDropoffLocationScreenState
                       ),
                     AppSpacing.gapMd,
                     PremiumButton(
-                      label: 'Confirm drop-off point',
+                      label: AppLocalizations.of(context).confirmDestination,
                       onPressed: routeReady ? _confirmDropoffPoint : null,
                       variant: ButtonVariant.gradient,
                     ),
@@ -1006,8 +1159,8 @@ class _RiderDropoffLocationScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Pickup',
-                                  style: TextStyle(
+                              Text(AppLocalizations.of(context).pickup,
+                                  style: const TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
                               const SizedBox(height: 2),
@@ -1040,14 +1193,14 @@ class _RiderDropoffLocationScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Dropoff',
-                                  style: TextStyle(
+                              Text(AppLocalizations.of(context).dropoff,
+                                  style: const TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
                               const SizedBox(height: 2),
                               Text(
                                 _dropoffAddress.isEmpty
-                                    ? 'Dropoff location'
+                                    ? AppLocalizations.of(context).dropoffLocation
                                     : _dropoffAddress,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -1077,9 +1230,9 @@ class _RiderDropoffLocationScreenState
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           _routeInfoChip(Icons.route,
-                              '${_routeDistanceKm!.toStringAsFixed(1)} km'),
+                              AppLocalizations.of(context).km(_routeDistanceKm!.toStringAsFixed(1))),
                           _routeInfoChip(
-                              Icons.access_time, '$_routeDurationMin min'),
+                              Icons.access_time, AppLocalizations.of(context).min('$_routeDurationMin')),
                         ],
                       ),
                     AppSpacing.gapSm,
@@ -1087,13 +1240,13 @@ class _RiderDropoffLocationScreenState
                       alignment: Alignment.centerLeft,
                       child: TextButton(
                         onPressed: _changeDropoff,
-                        child: const Text('Change drop-off',
-                            style: TextStyle(color: AppColors.primary)),
+                        child: Text(AppLocalizations.of(context).setDropoffLocation,
+                            style: const TextStyle(color: AppColors.primary)),
                       ),
                     ),
                     AppSpacing.gapSm,
                     PremiumButton(
-                      label: 'Review Ride',
+                      label: AppLocalizations.of(context).tripPreview,
                       onPressed: () {
                         setState(() => _showTripDetails = true);
                         _startMovingDotAnimation();
@@ -1208,8 +1361,8 @@ class _RiderDropoffLocationScreenState
                       children: [
                         Text(
                           _dropoffAddress.isEmpty
-                              ? 'Dropoff location'
-                              : _dropoffAddress,
+                               ? AppLocalizations.of(context).dropoffLocation
+                               : _dropoffAddress,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
@@ -1228,15 +1381,15 @@ class _RiderDropoffLocationScreenState
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _routeInfoChip(Icons.route, '${_routeDistanceKm!.toStringAsFixed(1)} km'),
-                  _routeInfoChip(Icons.access_time, '$_routeDurationMin min'),
+                  _routeInfoChip(Icons.route, AppLocalizations.of(context).km(_routeDistanceKm!.toStringAsFixed(1))),
+                  _routeInfoChip(Icons.access_time, AppLocalizations.of(context).min('$_routeDurationMin')),
                 ],
               ),
               const Divider(height: 24),
 
               // Ride type selection
-              const Text('Select ride type',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text(AppLocalizations.of(context).selectRideType,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               AppSpacing.gapMd,
               RideTypeSelector(
                 rideTypes: rideTypes,
@@ -1256,8 +1409,8 @@ class _RiderDropoffLocationScreenState
               AppSpacing.gapLg,
 
               // Payment method
-              const Text('Payment method',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text(AppLocalizations.of(context).paymentMethod,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               AppSpacing.gapMd,
               GestureDetector(
                 onTap: _showPaymentMethodSelector,
@@ -1296,14 +1449,14 @@ class _RiderDropoffLocationScreenState
                 padding: AppSpacing.cardPadding,
                 child: Column(
                   children: [
-                    _priceRow('Base fare', CurrencyService.format(2.0)),
+                    _priceRow(AppLocalizations.of(context).baseFare, CurrencyService.format(2.0)),
                     AppSpacing.gapMd,
                     _priceRow(
-                      'Distance (${_routeDistanceKm!.toStringAsFixed(1)} km)',
+                      AppLocalizations.of(context).distanceKm(_routeDistanceKm!.toStringAsFixed(1)),
                       '${CurrencyService.format(_routeDistanceKm! * RideTypeSelector.getRatePerKm(rideTypes, _selectedRideType))}',
                     ),
                     const Divider(height: 24),
-                    _priceRow('Total', '${CurrencyService.format(_selectedFare)}', isTotal: true),
+                    _priceRow(AppLocalizations.of(context).total, '${CurrencyService.format(_selectedFare)}', isTotal: true),
                   ],
                 ),
               ),
@@ -1311,7 +1464,7 @@ class _RiderDropoffLocationScreenState
 
               // Confirm button
               PremiumButton(
-                label: _isSubmitting ? 'Requesting...' : 'Confirm Ride',
+                label: _isSubmitting ? AppLocalizations.of(context).requesting : AppLocalizations.of(context).confirmRide,
                 isLoading: _isSubmitting,
                 onPressed: _isSubmitting ? null : _submitRideRequest,
                 icon: _isSubmitting ? null : Icons.check_circle_outline,
@@ -1375,6 +1528,9 @@ class _RiderDropoffLocationScreenState
     _dotTimer?.cancel();
     _bounceController.dispose();
     _sheetController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _searchDebounce?.cancel();
     if (!kIsWeb) {
       mapController?.dispose();
     }

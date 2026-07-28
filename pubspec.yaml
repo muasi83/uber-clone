@@ -11,6 +11,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.2
 
   # Networking & HTTP
@@ -29,7 +31,7 @@ dependencies:
   country_code_picker: ^3.4.1
 
   # Date & Time
-  intl: ^0.19.0
+  intl: ^0.20.2
 
   # Security
   flutter_secure_storage: ^9.2.0
@@ -73,6 +75,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
 
   assets:
     - assets/images/

@@ -11,6 +11,7 @@ import '../theme/app_shadows.dart';
 import '../widgets/premium_button.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../utils/address_utils.dart';
+import '../l10n/app_localizations.dart';
 
 class DriverRideSummaryScreen extends StatefulWidget {
   final int rideId;
@@ -68,8 +69,8 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
   Future<void> _submitRating() async {
     if (_rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a rating'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).pleaseSelectARating),
           backgroundColor: AppColors.warning,
         ),
       );
@@ -115,8 +116,8 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: const Text(
-          'Ride Summary',
+        title: Text(
+          AppLocalizations.of(context).rideSummary,
           style: TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w600,
@@ -131,7 +132,7 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
           children: [
             AppSpacing.gapXxl,
             Semantics(
-              label: 'Ride completed successfully',
+              label: AppLocalizations.of(context).rideCompletedSuccessfully,
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
@@ -146,8 +147,8 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
               ),
             ),
             AppSpacing.gapXxl,
-            const Text(
-              'Ride Complete!',
+            Text(
+              AppLocalizations.of(context).rideComplete,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -175,17 +176,17 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
                 children: [
                   _buildAddressSection(),
                   const Divider(color: AppColors.outline),
-                  _buildDetailRow('Distance', '${_ride?.estimatedDistance?.toStringAsFixed(1) ?? '0.0'} km'),
+                  _buildDetailRow(AppLocalizations.of(context).distance, '${_ride?.estimatedDistance?.toStringAsFixed(1) ?? '0.0'} km'),
                   const Divider(color: AppColors.outline),
-                  _buildDetailRow('Duration', '${_ride?.estimatedDuration ?? 0} minutes'),
+                  _buildDetailRow(AppLocalizations.of(context).duration, AppLocalizations.of(context).minutes('${_ride?.estimatedDuration ?? 0}')),
                   const Divider(color: AppColors.outline),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Total Fare',
+                        Text(
+                          AppLocalizations.of(context).totalFare3,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -204,12 +205,12 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
                     ),
                   ),
                   const Divider(color: AppColors.outline),
-                  _buildDetailRow('Payment', 'PENDING'),
+                  _buildDetailRow(AppLocalizations.of(context).payment, AppLocalizations.of(context).pending),
                   const Divider(color: AppColors.outline),
-                  _buildDetailRow('Your Earnings', 
+                  _buildDetailRow(AppLocalizations.of(context).yourEarnings, 
                     CurrencyService.format((_ride?.finalFare ?? _ride?.estimatedFare ?? 0) * 0.85),
                   ),
-                  _buildDetailRow('Platform Fee', 
+                  _buildDetailRow(AppLocalizations.of(context).platformFee, 
                     CurrencyService.format((_ride?.finalFare ?? _ride?.estimatedFare ?? 0) * 0.15),
                   ),
                 ],
@@ -217,8 +218,8 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
             ),
             AppSpacing.gapXxl,
             if (!_ratingSubmitted) ...[
-              const Text(
-                'Rate your rider',
+              Text(
+                AppLocalizations.of(context).rateYourRider,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -248,7 +249,7 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
                 controller: _feedbackController,
                 maxLines: 2,
                 decoration: InputDecoration(
-                  hintText: 'Additional feedback (optional)',
+                  hintText: AppLocalizations.of(context).additionalFeedbackOptional,
                   hintStyle: const TextStyle(color: AppColors.textTertiary),
                   filled: true,
                   fillColor: AppColors.surfaceVariant,
@@ -261,17 +262,17 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
               ),
               AppSpacing.gapXxl,
               PremiumButton(
-                label: _isSubmitting ? 'Submitting...' : 'Submit Rating',
+                label: _isSubmitting ? AppLocalizations.of(context).submitting : AppLocalizations.of(context).submitRating2,
                 onPressed: _isSubmitting ? null : _submitRating,
                 isLoading: _isSubmitting,
               ),
               AppSpacing.gapMd,
             ],
             if (_ratingSubmitted)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
                 child: Text(
-                  'Rating submitted — thank you!',
+                  AppLocalizations.of(context).ratingSubmittedThankYou,
                   style: TextStyle(
                     color: AppColors.success,
                     fontWeight: FontWeight.w600,
@@ -279,7 +280,7 @@ class _DriverRideSummaryScreenState extends State<DriverRideSummaryScreen> with 
                 ),
               ),
             PremiumButton(
-              label: 'Back to Home',
+              label: AppLocalizations.of(context).backToHome,
               onPressed: () {
                 recordEvent(
                   eventName: 'BACK_TO_HOME',

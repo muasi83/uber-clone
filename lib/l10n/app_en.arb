@@ -1,0 +1,1599 @@
+{
+  "$$locale": "en",
+  "ridenow": "RideNow",
+  "navigationError": "Navigation Error",
+  "ok": "OK",
+  "rideAccepted": "Ride Accepted",
+  "aDriverIsOnTheirWayToPickYouUp": "A driver is on their way to pick you up",
+  "rideConfirmed": "Ride Confirmed",
+  "yourRideHasBeenConfirmed": "Your ride has been confirmed",
+  "driverArrived": "Driver Arrived",
+  "yourDriverHasArrivedAtThePickupLocation": "Your driver has arrived at the pickup location",
+  "rideStarted": "Ride Started",
+  "yourRideHasStarted": "Your ride has started",
+  "rideCompleted": "Ride Completed",
+  "youHaveReachedYourDestination": "You have reached your destination",
+  "rideCancelled": "Ride Cancelled",
+  "theRideHasBeenCancelled": "The ride has been cancelled",
+  "noDriversFound": "No Drivers Found",
+  "noDriversAreAvailableNearbyRightNow": "No drivers are available nearby right now",
+  "paymentConfirmed": "Payment Confirmed",
+  "paymentHasBeenConfirmed": "Payment has been confirmed",
+  "paymentFinalized": "Payment Finalized",
+  "yourPaymentHasBeenFinalized": "Your payment has been finalized",
+  "paymentRefunded": "Payment Refunded",
+  "yourPaymentHasBeenRefunded": "Your payment has been refunded",
+  "someone": "Someone",
+  "missingArgumentsFor": "Missing arguments for {route}",
+  "@missingArgumentsFor": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "invalidArguments": "Invalid {route} arguments",
+  "@invalidArguments": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "missingDriverRegistrationData": "Missing driver registration data",
+  "missingDriverSessionData": "Missing driver session data",
+  "rideAlerts": "Ride Alerts",
+  "highpriorityRideRequestNotifications": "High-priority ride request notifications",
+  "chatMessages": "Chat Messages",
+  "newChatMessagesDuringYourRide": "New chat messages during your ride",
+  "dollar": "$",
+  "sar": "SAR",
+  "syp": "SYP",
+  "newRideRequest": "New Ride Request",
+  "aPassengerNeedsARide": "A passenger needs a ride!",
+  "pleaseEnterAValidEmailAddress": "Please enter a valid email address",
+  "passwordMustBeAtLeast6Characters": "Password must be at least 6 characters",
+  "passwordsDoNotMatch": "Passwords do not match",
+  "login": "Login",
+  "signUp": "Sign Up",
+  "getStartedCreateYourAccount": "Get started — Create your account",
+  "welcomeBack": "Welcome back",
+  "emailAddress": "Email Address",
+  "password": "Password",
+  "fullName": "Full Name",
+  "phoneNumber": "Phone Number",
+  "confirmPassword": "Confirm Password",
+  "rider": "Rider",
+  "driver": "Driver",
+  "male": "Male",
+  "female": "Female",
+  "preferNotToSay": "Prefer not to say",
+  "forgotPassword": "Forgot Password?",
+  "dontHaveAnAccount": "Don't have an account?",
+  "alreadyHaveAnAccount": "Already have an account?",
+  "anErrorOccurredPleaseTryAgain": "An error occurred. Please try again.",
+  "pleaseEnterAPassword": "Please enter a password",
+  "anErrorOccurredDuringRegistrationPleaseTryAgain": "An error occurred during registration. Please try again.",
+  "loginFailedPleaseCheckYourCredentialsAndTryAgain": "Login failed. Please check your credentials and try again.",
+  "registrationSuccessfulPleaseCheckYourEmailForVerification": "Registration successful! Please check your email for verification.",
+  "enterYourPassword": "Enter your password",
+  "passwordCannotBeEmpty": "Password cannot be empty",
+  "enterPassword": "Enter Password",
+  "submit": "Submit",
+  "goBack": "Go Back",
+  "forgotYourPassword": "Forgot your password?",
+  "useOtpInstead": "Use OTP Instead",
+  "loading": "Loading...",
+  "forgotPassword2": "Forgot Password",
+  "enterYourEmailAddressAndWellSendYouAResetLink": "Enter your email address and we'll send you a reset link",
+  "sendResetLink": "Send Reset Link",
+  "sending": "Sending...",
+  "backToLogin": "Back to Login",
+  "resetLinkSentCheckYourEmail": "Reset link sent! Check your email",
+  "emailNotFound": "Email not found",
+  "errorSendingResetLinkPleaseTryAgain": "Error sending reset link. Please try again.",
+  "pleaseEnterAValidEmail": "Please enter a valid email",
+  "resetPassword": "Reset Password",
+  "enterYourNewPassword": "Enter your new password",
+  "newPassword": "New Password",
+  "confirmNewPassword": "Confirm New Password",
+  "resetting": "Resetting...",
+  "passwordResetSuccessful": "Password reset successful",
+  "errorResettingPassword": "Error resetting password",
+  "verifyYourEmail": "Verify Your Email",
+  "aVerificationEmailHasBeenSentTo": "A verification email has been sent to {email}",
+  "@aVerificationEmailHasBeenSentTo": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseCheckYourInboxAndClickTheVerificationLink": "Please check your inbox and click the verification link",
+  "resendEmail": "Resend Email",
+  "emailResent": "Email resent",
+  "verifiedRedirecting": "Verified! Redirecting...",
+  "skipForNow": "Skip for now",
+  "iveVerifiedMyEmail": "I've verified my email",
+  "checking": "Checking...",
+  "didntReceiveTheEmailCheckYourSpamFolder": "Didn't receive the email? Check your spam folder",
+  "changeEmailAddress": "Change email address",
+  "verifyYourPhone": "Verify Your Phone",
+  "enterYourPhoneNumber": "Enter your phone number",
+  "wellSendYouAVerificationCodeViaSms": "We'll send you a verification code via SMS",
+  "sendCode": "Send Code",
+  "codeSentTo": "Code sent to {phone}",
+  "@codeSentTo": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "changePhoneNumber": "Change phone number",
+  "phoneVerifiedSuccessfully": "Phone verified successfully",
+  "invalidPhoneNumber": "Invalid phone number",
+  "errorSendingCode": "Error sending code",
+  "enterVerificationCode": "Enter Verification Code",
+  "enterTheCodeSentTo": "Enter the code sent to {phone_or_email}",
+  "@enterTheCodeSentTo": {
+    "placeholders": {
+      "phone_or_email": {
+        "type": "String"
+      }
+    }
+  },
+  "didntReceiveTheCode": "Didn't receive the code?",
+  "resendCode": "Resend Code",
+  "verify": "Verify",
+  "verifying": "Verifying...",
+  "invalidCodePleaseTryAgain": "Invalid code. Please try again.",
+  "codeVerifiedSuccessfully": "Code verified successfully",
+  "codeExpiredRequestANewOne": "Code expired. Request a new one",
+  "resendCodeIn": "Resend code in {seconds}",
+  "@resendCodeIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "setADestinationToGetStarted": "Set a destination to get started",
+  "whereTo": "Where to?",
+  "enterDestination": "Enter destination...",
+  "searchResultsFor": "Search results for:",
+  "noResultsFound": "No results found",
+  "requestANewRide": "Request a new ride",
+  "ride": "Ride",
+  "scheduleARideForLater": "Schedule a ride for later",
+  "schedule": "Schedule",
+  "connectionLostRetrying": "Connection lost — retrying...",
+  "myLocation": "My Location",
+  "pickupLocation": "Pickup location",
+  "dropoffLocation": "Dropoff location",
+  "currentLocation": "Current location",
+  "min": "{min} min",
+  "@min": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "km": "{distance} km",
+  "@km": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "findingYourLocation": "Finding your location...",
+  "locationPermissionDenied": "Location permission denied",
+  "locationPermissionPermanentlyDeniedEnableInSettings": "Location permission permanently denied — enable in Settings",
+  "enableLocation": "Enable Location",
+  "enableLocationServices": "Enable location services",
+  "locationServicesAreDisabled": "Location services are disabled",
+  "noInternetConnectionShowingOfflineMap": "No internet connection — showing offline map",
+  "networkError": "Network error",
+  "setPickupLocation": "Set pickup location",
+  "searchAddress": "Search address...",
+  "useCurrentLocation": "Use current location",
+  "confirmPickupLocation": "Confirm pickup location",
+  "searchResults": "Search results:",
+  "noResults": "No results",
+  "dragTheMapToSetPickupPoint": "Drag the map to set pickup point",
+  "locationAccessDenied": "Location access denied",
+  "gettingCurrentLocation": "Getting current location...",
+  "pickupPoint": "Pickup point",
+  "searchDestination": "Search destination...",
+  "setDestination": "Set destination",
+  "confirmDestination": "Confirm destination",
+  "paymentMethod": "Payment method",
+  "promoApplied": "Promo applied",
+  "baseFare": "Base fare",
+  "distanceKm": "Distance ({distance} km)",
+  "@distanceKm": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "total": "Total",
+  "confirmRide": "Confirm Ride",
+  "requesting": "Requesting...",
+  "promoCode": "Promo code",
+  "enterPromoCode": "Enter promo code",
+  "apply": "Apply",
+  "invalidPromoCode": "Invalid promo code",
+  "noRideTypesAvailableInYourArea": "No ride types available in your area",
+  "routeNotAvailableNoRoadsNearPickup": "Route not available — no roads near pickup",
+  "noPriceAvailable": "No price available",
+  "wallet": "Wallet",
+  "cash": "Cash",
+  "card": "Card",
+  "tripDetails": "Trip details",
+  "from": "From",
+  "to": "To",
+  "distance": "Distance",
+  "duration": "Duration",
+  "fare": "Fare",
+  "requestRide": "Request Ride",
+  "rideType": "Ride type: {type}",
+  "@rideType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "estimatedArrival": "Estimated arrival",
+  "priceBreakdown": "Price breakdown",
+  "serviceFee": "Service fee",
+  "totalFare": "Total fare",
+  "payment": "Payment",
+  "pickup": "Pickup",
+  "selectRideType": "Select ride type",
+  "chooseRide": "Choose Ride",
+  "authenticationError": "Authentication error",
+  "failedToRequestRide": "Failed to request ride",
+  "searchingForADriver": "Searching for a driver...",
+  "searchingForNearbyDrivers": "Searching for nearby drivers...",
+  "cancelling": "Cancelling...",
+  "cancelRequest": "Cancel request",
+  "findingYourDriver": "Finding your driver...",
+  "estimatedWaitTime": "Estimated wait time: {time}",
+  "@estimatedWaitTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "driverFound": "Driver found!",
+  "yourDriverIsOnTheWay": "Your driver is on the way",
+  "arrivingIn": "Arriving in {time}",
+  "@arrivingIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "driverArrived2": "Driver arrived",
+  "tripStartedHeadingToDestination": "Trip started — heading to destination",
+  "arrivingInMin": "Arriving in {min} min",
+  "@arrivingInMin": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "callDriver": "Call driver",
+  "messageDriver": "Message driver",
+  "shareTripStatus": "Share trip status",
+  "emergency": "Emergency",
+  "cancelRide": "Cancel ride",
+  "cancelTrip": "Cancel trip",
+  "contactSupport": "Contact support",
+  "areYouSureYouWantToCancelThisRide": "Are you sure you want to cancel this ride?",
+  "no": "No",
+  "yes": "Yes",
+  "enterYourMessage": "Enter your message",
+  "send": "Send",
+  "chatWith": "Chat with {name}",
+  "@chatWith": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "typeAMessage": "Type a message...",
+  "pickupInMin": "Pickup in {min} min",
+  "@pickupInMin": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "arrivingAtDestination": "Arriving at destination",
+  "paymentMethod2": "Payment method: {method}",
+  "@paymentMethod2": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "totalFare2": "Total fare: {amount}",
+  "@totalFare2": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "viewOnMap": "View on map",
+  "rideCancelled2": "Ride cancelled",
+  "cancelReason": "Cancel reason",
+  "trackingYourDriver": "Tracking your driver",
+  "driverIsMetersAway": "Driver is {distance} meters away",
+  "@driverIsMetersAway": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "driverIsKmAway": "Driver is {distance} km away",
+  "@driverIsKmAway": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "driverArrivingInMin": "Driver arriving in {min} min",
+  "@driverArrivingInMin": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "pickupLocationReached": "Pickup location reached",
+  "driverHasArrived": "Driver has arrived",
+  "tripInProgress": "Trip in progress",
+  "driverIsHeadingToDestination": "Driver is heading to destination",
+  "estimatedArrivalInMin": "Estimated arrival in {min} min",
+  "@estimatedArrivalInMin": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "call": "Call",
+  "message": "Message",
+  "share": "Share",
+  "shareYourTrip": "Share your trip",
+  "imOnARideWithTrackMyTrip": "I'm on a ride with {name}. Track my trip: {link}",
+  "@imOnARideWithTrackMyTrip": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "link": {
+        "type": "String"
+      }
+    }
+  },
+  "tripCompleted": "Trip completed",
+  "youHaveArrived": "You have arrived",
+  "payment2": "Payment: {method}",
+  "@payment2": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "rideCompleted2": "Ride completed!",
+  "thanksForRidingWithUs": "Thanks for riding with us",
+  "rateYourDriver": "Rate your driver",
+  "howWasYourTrip": "How was your trip?",
+  "addAComment": "Add a comment",
+  "leaveAReview": "Leave a review...",
+  "submitRating": "Submit rating",
+  "skip": "Skip",
+  "done": "Done",
+  "yourDriverWas": "Your driver was",
+  "tripFare": "Trip fare: {amount}",
+  "@tripFare": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "receipt": "Receipt",
+  "viewReceipt": "View receipt",
+  "reportAnIssue": "Report an issue",
+  "rideAgain": "Ride again",
+  "editProfile": "Edit Profile",
+  "email": "Email",
+  "profilePhoto": "Profile Photo",
+  "changePhoto": "Change photo",
+  "takePhoto": "Take photo",
+  "chooseFromGallery": "Choose from gallery",
+  "removePhoto": "Remove photo",
+  "save": "Save",
+  "cancel": "Cancel",
+  "profileUpdated": "Profile updated",
+  "failedToUpdateProfile": "Failed to update profile",
+  "enterYourName": "Enter your name",
+  "enterYourEmail": "Enter your email",
+  "locationPermissionRequired": "Location Permission Required",
+  "weNeedYourLocationToFindNearbyDriversAndProvideAccuratePickup": "We need your location to find nearby drivers and provide accurate pickup",
+  "allowLocationAccess": "Allow Location Access",
+  "notNow": "Not now",
+  "openSettings": "Open Settings",
+  "locationPermissionIsRequiredToUseThisApp": "Location permission is required to use this app",
+  "enableLocationServicesToRequestRides": "Enable location services to request rides",
+  "account": "Account",
+  "myProfile": "My Profile",
+  "paymentMethods": "Payment Methods",
+  "rideHistory": "Ride History",
+  "safety": "Safety",
+  "support": "Support",
+  "settings": "Settings",
+  "logOut": "Log Out",
+  "areYouSureYouWantToLogOut": "Are you sure you want to log out?",
+  "loggingOut": "Logging out...",
+  "version": "Version {version}",
+  "@version": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "switchToDriver": "Switch to Driver",
+  "switchToRider": "Switch to Rider",
+  "addPaymentMethod": "Add Payment Method",
+  "creditCard": "Credit Card",
+  "debitCard": "Debit Card",
+  "cardNumber": "Card Number",
+  "expiryDate": "Expiry Date",
+  "cvv": "CVV",
+  "cardholderName": "Cardholder Name",
+  "saveCard": "Save Card",
+  "remove": "Remove",
+  "setAsDefault": "Set as Default",
+  "defaultText": "Default",
+  "noPaymentMethodsAdded": "No payment methods added",
+  "addAPaymentMethodToGetStarted": "Add a payment method to get started",
+  "cardExpired": "Card expired",
+  "invalidCardNumber": "Invalid card number",
+  "enterYourCardDetails": "Enter your card details",
+  "adding": "Adding...",
+  "cardAddedSuccessfully": "Card added successfully",
+  "failedToAddCard": "Failed to add card",
+  "areYouSureYouWantToRemoveThisCard": "Are you sure you want to remove this card?",
+  "notifications": "Notifications",
+  "privacy": "Privacy",
+  "language": "Language",
+  "theme": "Theme",
+  "light": "Light",
+  "dark": "Dark",
+  "systemDefault": "System Default",
+  "about": "About",
+  "termsOfService": "Terms of Service",
+  "privacyPolicy": "Privacy Policy",
+  "licenses": "Licenses",
+  "appVersion": "App Version: {version}",
+  "@appVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "rateTheApp": "Rate the App",
+  "shareTheApp": "Share the App",
+  "deleteAccount": "Delete Account",
+  "areYouSureYouWantToDeleteYourAccountThisCannotBeUndone": "Are you sure you want to delete your account? This cannot be undone",
+  "pushNotifications": "Push notifications",
+  "smsNotifications": "SMS notifications",
+  "emailNotifications": "Email notifications",
+  "rideUpdates": "Ride updates",
+  "promotionsAndOffers": "Promotions and offers",
+  "chatMessages2": "Chat messages",
+  "sound": "Sound",
+  "vibration": "Vibration",
+  "english": "English",
+  "arabic": "Arabic",
+  "contactUs": "Contact Us",
+  "helpCenter": "Help Center",
+  "frequentlyAskedQuestions": "Frequently Asked Questions",
+  "reportAProblem": "Report a Problem",
+  "howCanWeHelpYou": "How can we help you?",
+  "describeYourIssue": "Describe your issue...",
+  "submitting": "Submitting...",
+  "messageSentSuccessfully": "Message sent successfully",
+  "failedToSendMessagePleaseTryAgain": "Failed to send message. Please try again.",
+  "emailUsAt": "Email us at {email}",
+  "@emailUsAt": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "callUs": "Call us",
+  "liveChat": "Live Chat",
+  "supportHours": "Support hours: {hours}",
+  "@supportHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "wellGetBackToYouWithin24Hours": "We'll get back to you within 24 hours",
+  "safetyFeatures": "Safety Features",
+  "shareMyTrip": "Share My Trip",
+  "emergencyContacts": "Emergency Contacts",
+  "reportAnIncident": "Report an Incident",
+  "n247Support": "24/7 Support",
+  "locationSharing": "Location Sharing",
+  "trustedContacts": "Trusted Contacts",
+  "addEmergencyContact": "Add emergency contact",
+  "callEmergencyServices": "Call emergency services",
+  "yourSafetyIsOurPriority": "Your safety is our priority",
+  "rideCheck": "Ride Check",
+  "shareYourRideStatusWithTrustedContacts": "Share your ride status with trusted contacts",
+  "audioRecordingDuringTrip": "Audio recording during trip",
+  "speedAlerts": "Speed alerts",
+  "driverIdentityVerification": "Driver identity verification",
+  "inappEmergencyButton": "In-app emergency button",
+  "manageEmergencyContacts": "Manage emergency contacts",
+  "noEmergencyContactsAdded": "No emergency contacts added",
+  "addContact": "Add contact",
+  "removeContact": "Remove contact",
+  "areYouSureYouWantToRemoveThisEmergencyContact": "Are you sure you want to remove this emergency contact?",
+  "enterYourDestination": "Enter your destination",
+  "chooseOnMap": "Choose on map",
+  "setPickupOnMap": "Set pickup on map",
+  "setDropoffOnMap": "Set dropoff on map",
+  "pleaseSelectAPickupLocation": "Please select a pickup location",
+  "pleaseSelectADropoffLocation": "Please select a dropoff location",
+  "continueText": "Continue",
+  "recentPlaces": "Recent places",
+  "savedPlaces": "Saved places",
+  "home": "Home",
+  "work": "Work",
+  "addAPlace": "Add a place",
+  "search": "Search...",
+  "gettingAddress": "Getting address...",
+  "noRecentPlaces": "No recent places",
+  "setLocation": "Set location",
+  "confirmLocation": "Confirm location",
+  "map": "Map",
+  "searchResults2": "Search results",
+  "dragTheMapToSetLocation": "Drag the map to set location",
+  "rideMap": "Ride map",
+  "loadingMap": "Loading map...",
+  "mapError": "Map error",
+  "locationUnavailable": "Location unavailable",
+  "tripPreview": "Trip Preview",
+  "distance2": "Distance: {distance}",
+  "@distance2": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "duration2": "Duration: {duration}",
+  "@duration2": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "fareEstimate": "Fare estimate: {fare}",
+  "@fareEstimate": {
+    "placeholders": {
+      "fare": {
+        "type": "String"
+      }
+    }
+  },
+  "accept": "Accept",
+  "decline": "Decline",
+  "dropoff": "Dropoff",
+  "rider2": "Rider: {name}",
+  "@rider2": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "rating": "Rating: {rating}",
+  "@rating": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "yourRides": "Your Rides",
+  "past": "Past",
+  "upcoming": "Upcoming",
+  "scheduled": "Scheduled",
+  "noPastRides": "No past rides",
+  "noUpcomingRides": "No upcoming rides",
+  "noScheduledRides": "No scheduled rides",
+  "fromTo": "From {pickup} to {dropoff}",
+  "@fromTo": {
+    "placeholders": {
+      "pickup": {
+        "type": "String"
+      },
+      "dropoff": {
+        "type": "String"
+      }
+    }
+  },
+  "completed": "Completed",
+  "cancelled": "Cancelled",
+  "scheduledFor": "Scheduled for {date}",
+  "@scheduledFor": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "viewDetails": "View details",
+  "passengers": "{count} passengers",
+  "@passengers": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "rideOn": "Ride on {date}",
+  "@rideOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "redirecting": "Redirecting...",
+  "welcome": "Welcome",
+  "continueAsRider": "Continue as Rider",
+  "continueAsDriver": "Continue as Driver",
+  "selectLocation": "Select Location",
+  "confirm": "Confirm",
+  "gettingLocation": "Getting location...",
+  "debugLogs": "Debug Logs",
+  "clearLogs": "Clear logs",
+  "copyLogs": "Copy logs",
+  "logsCopiedToClipboard": "Logs copied to clipboard",
+  "logsCleared": "Logs cleared",
+  "noLogs": "No logs",
+  "shareLogs": "Share logs",
+  "filter": "Filter",
+  "all": "All",
+  "info": "Info",
+  "warning": "Warning",
+  "error": "Error",
+  "toggleServerUrl": "Toggle server URL",
+  "serverUrl": "Server URL",
+  "update": "Update",
+  "enterServerUrl": "Enter server URL",
+  "showDebugBanner": "Show debug banner",
+  "hideDebugBanner": "Hide debug banner",
+  "simulateRideEvents": "Simulate ride events",
+  "exportLogs": "Export logs",
+  "downloadingLogs": "Downloading logs...",
+  "tripHistory": "Trip History",
+  "noTripsYet": "No trips yet",
+  "yourCompletedTripsWillAppearHere": "Your completed trips will appear here",
+  "completedOn": "Completed on {date}",
+  "@completedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "fare2": "Fare: {amount}",
+  "@fare2": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "viewTrip": "View trip",
+  "driver2": "Driver: {name}",
+  "@driver2": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "filterBy": "Filter by",
+  "today": "Today",
+  "thisWeek": "This week",
+  "thisMonth": "This month",
+  "customRange": "Custom range",
+  "searchTrips": "Search trips...",
+  "noTripsFound": "No trips found",
+  "failedToLoadTrips": "Failed to load trips",
+  "tripBehaviour": "Trip Behaviour",
+  "startRecording": "Start Recording",
+  "stopRecording": "Stop Recording",
+  "recording": "Recording...",
+  "recordingStarted": "Recording started",
+  "recordingStopped": "Recording stopped",
+  "recordedEvents": "Recorded events: {count}",
+  "@recordedEvents": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "clearEvents": "Clear events",
+  "exportEvents": "Export events",
+  "eventsExported": "Events exported",
+  "noEventsRecorded": "No events recorded",
+  "eventType": "Event Type",
+  "timestamp": "Timestamp",
+  "details": "Details",
+  "playbackSpeed": "Playback speed",
+  "replay": "Replay",
+  "eventLog": "Event log",
+  "recordingSaved": "Recording saved",
+  "failedToSaveRecording": "Failed to save recording",
+  "tripReplay": "Trip Replay",
+  "play": "Play",
+  "pause": "Pause",
+  "restart": "Restart",
+  "speedX": "Speed: {speed}x",
+  "@speedX": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "replaySpeed": "Replay speed",
+  "tripTimeline": "Trip timeline",
+  "noTripDataToReplay": "No trip data to replay",
+  "loadingReplay": "Loading replay...",
+  "replayComplete": "Replay complete",
+  "tripDuration": "Trip duration: {duration}",
+  "@tripDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "mapView": "Map view",
+  "listView": "List view",
+  "eventAt": "Event: {type} at {time}",
+  "@eventAt": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "close": "Close",
+  "scheduledRideIn30Min": "Scheduled ride in 30 min",
+  "scheduledRideWasCancelled": "Scheduled ride was cancelled",
+  "aScheduledRideWasCancelledByTheRider": "A scheduled ride was cancelled by the rider",
+  "aScheduledRideHasExpired": "A scheduled ride has expired",
+  "rideHasBeenCancelled": "Ride has been cancelled",
+  "pleaseEnableGpslocationServices": "Please enable GPS/Location services",
+  "locationPermissionIsRequired": "Location permission is required",
+  "locationPermissionDeniedPleaseEnableInSettings": "Location permission denied. Please enable in settings.",
+  "recenterMap": "Recenter map",
+  "activeRide": "Active Ride",
+  "pickupEtaMin": "Pickup ETA: -- min",
+  "navigate": "Navigate",
+  "menu": "Menu",
+  "toggleOnlineStatus": "Toggle online status",
+  "goOffline": "Go Offline",
+  "goOnline": "Go Online",
+  "noNearbyRides": "No nearby rides",
+  "rideNearby": "{count} ride nearby",
+  "@rideNearby": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "ridesNearby": "{count} rides nearby",
+  "@ridesNearby": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "availableRides": "Available Rides",
+  "noRidesAvailable": "No rides available",
+  "newRideRequestsWillAppearHere": "New ride requests will appear here",
+  "availableNow": "Available Now",
+  "scheduledRides": "Scheduled Rides",
+  "myUpcoming": "My Upcoming",
+  "todaysEarnings": "Today's earnings",
+  "financialSummary": "Financial Summary",
+  "lifetimeEarnings": "Lifetime Earnings",
+  "platformFees15": "Platform Fees (15%)",
+  "amountSettled": "Amount Settled",
+  "outstandingBalance": "Outstanding Balance",
+  "lastSettlement": "Last Settlement: {date}",
+  "@lastSettlement": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "profile": "Profile",
+  "rating2": "Rating",
+  "totalRides": "Total Rides",
+  "vehicle": "Vehicle",
+  "na": "N/A",
+  "view": "View",
+  "arrived": "Arrived",
+  "verifyCode": "Verify Code",
+  "acceptScheduledRide": "Accept Scheduled Ride",
+  "acceptRideScheduledFor": "Accept ride scheduled for {date}?",
+  "@acceptRideScheduledFor": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "ignore": "Ignore",
+  "scheduledRideAccepted": "Scheduled ride accepted",
+  "cancelScheduledRide": "Cancel Scheduled Ride",
+  "releaseThisRideSoOtherDriversCanAcceptIt": "Release this ride so other drivers can accept it?",
+  "keep": "Keep",
+  "release": "Release",
+  "scheduledRideReleased": "Scheduled ride released",
+  "markedAsArrivedAskRiderForPickupCode": "Marked as arrived — ask rider for pickup code",
+  "enterPickupCode": "Enter Pickup Code",
+  "askTheRiderForThe6digitPickupCode": "Ask the rider for the 6-digit pickup code",
+  "verifyStart": "Verify & Start",
+  "invalidCodePleaseTryAgain2": "Invalid code — please try again",
+  "rideStartedNavigatingToTrip": "Ride started — navigating to trip",
+  "debug": "Debug",
+  "logout": "Logout",
+  "available": "Available",
+  "readyToStart": "Ready to Start",
+  "chatWithRider": "Chat with rider",
+  "chatWithRider2": "Chat with Rider",
+  "toggleDriverMarker": "Toggle driver marker",
+  "rideStarted2": "Ride started!",
+  "theRiderCancelledTheRide": "The rider cancelled the ride.",
+  "reason": "Reason: {reason}",
+  "@reason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "waitingForPayment": "Waiting for payment...",
+  "destination": "DESTINATION",
+  "didTheCustomerPayInCash": "Did the customer pay in cash?",
+  "cashReceived": "Cash Received",
+  "processing": "Processing...",
+  "didNotPay": "Did Not Pay",
+  "completeRide": "Complete Ride",
+  "completing": "Completing...",
+  "startRide": "Start Ride",
+  "navigateToDestination": "Navigate to Destination",
+  "couldNotOpenMapsLinkCopiedToClipboard": "Could not open Maps — link copied to clipboard",
+  "rideInProgress": "Ride in progress",
+  "back": "Back",
+  "navigateToRider": "Navigate to Rider",
+  "yourLocation": "Your Location",
+  "pickup2": "Pickup: {address}",
+  "@pickup2": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "riderNotified": "Rider notified!",
+  "rideWasCancelled": "Ride was cancelled",
+  "pickup3": "PICKUP",
+  "iveArrived": "I've Arrived",
+  "notifying": "Notifying...",
+  "openGoogleMaps": "Open Google Maps",
+  "cancelRide2": "Cancel Ride",
+  "youHaveArrived2": "You have arrived!",
+  "riderHasBeenNotified": "Rider has been notified",
+  "goBack2": "Go back",
+  "registrationStepOf": "Registration step {current} of {total}",
+  "@registrationStepOf": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "becomeADriver": "Become a Driver",
+  "personalInformation": "Personal Information",
+  "vehicleInformation": "Vehicle Information",
+  "reviewSubmit": "Review & Submit",
+  "enterYourDrivingLicenseDetails": "Enter your driving license details",
+  "tellUsAboutYourVehicle": "Tell us about your vehicle",
+  "verifyYourInformationBeforeSubmitting": "Verify your information before submitting",
+  "licenseNumber": "License Number",
+  "egDl123456789": "e.g., DL123456789",
+  "vehicleNumber": "Vehicle Number",
+  "egAbc1234": "e.g., ABC-1234",
+  "vehicleType": "Vehicle Type",
+  "car": "Car",
+  "bike": "Bike",
+  "van": "Van",
+  "vehicleModel": "Vehicle Model",
+  "egToyotaCamry": "e.g., Toyota Camry",
+  "vehicleColor": "Vehicle Color",
+  "egWhite": "e.g., White",
+  "license": "License",
+  "nextStep": "Next step",
+  "submitRegistration": "Submit registration",
+  "submitRegistration2": "Submit Registration",
+  "previousStep": "Previous step",
+  "pleaseFillAllFields": "Please fill all fields",
+  "driverProfileRegistered": "Driver profile registered!",
+  "driverProfileRegistrationFailedYouMayAlreadyBeRegistered": "Driver profile registration failed. You may already be registered.",
+  "pleaseEnterYourLicenseNumber": "Please enter your license number",
+  "pleaseFillAllVehicleFields": "Please fill all vehicle fields",
+  "reviewYourDetails": "Review your details",
+  "stepOf": "Step {current} of {total}",
+  "@stepOf": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "rideSummary": "Ride Summary",
+  "rideCompletedSuccessfully": "Ride completed successfully",
+  "rideComplete": "Ride Complete!",
+  "minutes": "{duration} minutes",
+  "@minutes": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "totalFare3": "Total Fare",
+  "pending": "PENDING",
+  "yourEarnings": "Your Earnings",
+  "platformFee": "Platform Fee",
+  "rateYourRider": "Rate your rider",
+  "additionalFeedbackOptional": "Additional feedback (optional)",
+  "submitRating2": "Submit Rating",
+  "ratingSubmittedThankYou": "Rating submitted — thank you!",
+  "backToHome": "Back to Home",
+  "pleaseSelectARating": "Please select a rating",
+  "adminTripInvestigation": "Admin — Trip Investigation",
+  "drivers": "Drivers",
+  "earnings": "Earnings",
+  "rideId": "Ride ID",
+  "status": "Status",
+  "riderName": "Rider Name",
+  "driverName": "Driver Name",
+  "fromDate": "From Date",
+  "toDate": "To Date",
+  "search2": "Search",
+  "clear": "Clear",
+  "retry": "Retry",
+  "unknown": "Unknown",
+  "failedToLoadDriverDetails": "Failed to load driver details",
+  "online": "Online",
+  "offline": "Offline",
+  "active": "Active",
+  "blocked": "Blocked",
+  "verified": "Verified",
+  "unverified": "Unverified",
+  "onRide": "On Ride",
+  "unverify": "Unverify",
+  "block": "Block",
+  "unblock": "Unblock",
+  "model": "Model",
+  "color": "Color",
+  "plate": "Plate",
+  "type": "Type",
+  "statistics": "Statistics",
+  "rides": "Rides",
+  "latitude": "Latitude",
+  "longitude": "Longitude",
+  "lastSeen": "Last Seen",
+  "currentRide": "Current Ride",
+  "ride2": "Ride #",
+  "recentRides": "Recent Rides",
+  "blockThisDriverTheyWillBeUnableToLoginOrAcceptRides": "Block this driver? They will be unable to login or accept rides.",
+  "unblockThisDriver": "Unblock this driver?",
+  "allDrivers": "All Drivers",
+  "searchByNameVehiclePlate": "Search by name, vehicle, plate...",
+  "failedToLoadDrivers": "Failed to load drivers",
+  "noDriversFound2": "No drivers found",
+  "earningsDashboard": "Earnings Dashboard",
+  "settlementLedger": "Settlement Ledger",
+  "failedToLoadEarningsData": "Failed to load earnings data",
+  "topDrivers": "Top Drivers",
+  "noEarningsDataYet": "No earnings data yet",
+  "revenueOverview": "Revenue Overview",
+  "grossRevenue": "Gross Revenue",
+  "driverPayouts": "Driver Payouts",
+  "rides2": "{count} rides",
+  "@rides2": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "createSettlement": "Create Settlement",
+  "noSettlementsRecorded": "No settlements recorded",
+  "settled": "SETTLED",
+  "gross": "Gross",
+  "fee": "Fee",
+  "net": "Net",
+  "ref": "Ref: {ref}",
+  "@ref": {
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "receipt2": "Receipt: {receipt}",
+  "@receipt2": {
+    "placeholders": {
+      "receipt": {
+        "type": "String"
+      }
+    }
+  },
+  "driverId": "Driver ID",
+  "enterDriverUserId": "Enter driver user ID",
+  "grossAmount": "Gross Amount",
+  "appFee": "App Fee",
+  "netAmount": "Net Amount",
+  "settlementReference": "Settlement Reference",
+  "egStl001": "e.g. STL-001",
+  "receiptNumberOptional": "Receipt Number (optional)",
+  "create": "Create",
+  "trip": "Trip #{id}",
+  "@trip": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "enableRetention": "Enable retention",
+  "disableRetention": "Disable retention",
+  "overview": "Overview",
+  "tripNotFound": "Trip not found",
+  "errorLoadingTrip": "Error loading trip",
+  "failedToLoadEventsTapToRetry": "Failed to load events. Tap to retry.",
+  "noTimelineEvents": "No timeline events",
+  "addAnInvestigationNote": "Add an investigation note...",
+  "failedToLoadRetry": "Failed to load. Retry.",
+  "noMessages": "No messages",
+  "adminNotes": "Admin Notes",
+  "timeline": "Timeline",
+  "chat": "Chat",
+  "chatMessages3": "Chat Messages ({count})",
+  "@chatMessages3": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "requested": "Requested",
+  "reason2": "Reason",
+  "method": "Method",
+  "rideInfo": "Ride Info",
+  "pickupCoord": "Pickup Coord",
+  "dropoffCoord": "Dropoff Coord",
+  "min2": "{duration} min",
+  "@min2": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "estFare": "Est. Fare",
+  "finalFare": "Final Fare",
+  "retentionEnabledForThisRide": "Retention enabled for this ride",
+  "retentionDisabledForThisRide": "Retention disabled for this ride",
+  "failedToUpdateRetention": "Failed to update retention",
+  "noteAdded": "Note added",
+  "failedToAddNote": "Failed to add note",
+  "other": "Other",
+  "typing": "typing",
+  "noMessagesYet": "No messages yet",
+  "sendAMessageToStartChatting": "Send a message to start chatting",
+  "yesterday": "Yesterday",
+  "isTyping": "{name} is typing...",
+  "@isTyping": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToSendMessage": "Failed to send message",
+  "onMyWay": "On my way",
+  "beThereSoon": "Be there soon",
+  "thanks": "Thanks!",
+  "sendMessage": "Send message",
+  "rideDetails": "Ride Details",
+  "yesCancel": "Yes, Cancel",
+  "pickupCode": "Pickup Code",
+  "shareThisCodeWithYourDriverToStartTheRide": "Share this code with your driver to start the ride",
+  "cancelRide3": "Cancel Ride?",
+  "reasonOptional": "Reason (optional)",
+  "riderCancelledRide": "Rider cancelled ride",
+  "somethingWentWrong": "Something went wrong",
+  "turnOnLocationItWillHelpUsFindYourRider": "Turn on location — it will help us find your rider.",
+  "turnOnLocationItWillHelpUsFindYourDriver": "Turn on location — it will help us find your driver.",
+  "allowLocation": "Allow location",
+  "allowLocation2": "Allow Location",
+  "maybeLater": "Maybe Later",
+  "setDropoffLocation": "Set drop-off location",
+  "findingAddress": "Finding address...",
+  "moveTheMapToSelectLocation": "Move the map to select location",
+  "moveTheMap": "Move the map",
+  "confirmLocation2": "Confirm Location",
+  "noPastRidesYet": "No past rides yet",
+  "yourTripHasBeenCompleted": "Your trip has been completed.",
+  "payNow": "Pay Now",
+  "paymentReceived": "Payment Received?",
+  "didYouReceiveThisPayment": "Did you receive this payment?",
+  "reasonRequiredIfNo": "Reason (required if No)",
+  "pleaseProvideAReason": "Please provide a reason",
+  "noIDidnt": "No, I didn't",
+  "yesReceived": "Yes, Received",
+  "scheduleYourLaterRide": "Schedule your later ride",
+  "scheduleRideAt": "Schedule Ride — {date} at {time}",
+  "@scheduleRideAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAFutureDateAndTime": "Please select a future date and time",
+  "rideScheduledSuccessfully": "Ride scheduled successfully!",
+  "failedToScheduleRide": "Failed to schedule ride",
+  "anUnexpectedErrorOccurred": "An unexpected error occurred",
+  "noLocationsFound": "No locations found",
+  "startTypingToSearchLocations": "Start typing to search locations",
+  "selectedLocation": "Selected Location",
+  "jan": "Jan",
+  "feb": "Feb",
+  "mar": "Mar",
+  "apr": "Apr",
+  "may": "May",
+  "jun": "Jun",
+  "jul": "Jul",
+  "aug": "Aug",
+  "sep": "Sep",
+  "oct": "Oct",
+  "nov": "Nov",
+  "dec": "Dec",
+  "confirmed": "Confirmed",
+  "pending2": "Pending",
+  "arriving": "Arriving",
+  "laterRide": "Later Ride",
+  "scheduleARideUsingTheButtonAbove": "Schedule a ride using the button above",
+  "january": "January",
+  "february": "February",
+  "march": "March",
+  "april": "April",
+  "june": "June",
+  "july": "July",
+  "august": "August",
+  "september": "September",
+  "october": "October",
+  "november": "November",
+  "december": "December",
+  "sun": "Sun",
+  "mon": "Mon",
+  "tue": "Tue",
+  "wed": "Wed",
+  "thu": "Thu",
+  "fri": "Fri",
+  "sat": "Sat",
+  "emailIsRequired": "Email is required",
+  "invalidEmailFormat": "Invalid email format",
+  "countryCodeIsRequired": "Country code is required",
+  "phoneNumberIsRequired": "Phone number is required",
+  "emailAlreadyRegistered": "Email already registered",
+  "phoneNumberAlreadyRegistered": "Phone number already registered",
+  "registrationSuccessful": "Registration successful!",
+  "emailAndPasswordAreRequired": "Email and password are required",
+  "invalidEmailOrPassword": "Invalid email or password",
+  "accountIsBlockedContactAdmin": "Account is blocked. Contact admin.",
+  "loginSuccessful": "Login successful",
+  "loginFailed": "Login failed: {error}",
+  "@loginFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unauthorized": "Unauthorized",
+  "deviceTokenUpdated": "Device token updated",
+  "error2": "Error: {error}",
+  "@error2": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noAccountFoundWithThatEmail": "No account found with that email",
+  "tooManyRequestsPleaseTryAgainLater": "Too many requests. Please try again later.",
+  "failedToSendOtpPleaseTryAgain": "Failed to send OTP. Please try again.",
+  "otpSentSuccessfully": "OTP sent successfully",
+  "emailAndCodeAreRequired": "Email and code are required",
+  "invalidOrExpiredOtp": "Invalid or expired OTP",
+  "otpHasExpired": "OTP has expired",
+  "userNotFound": "User not found",
+  "tooManyAttemptsPleaseTryAgainLater": "Too many attempts. Please try again later.",
+  "ifAnAccountWithThatEmailExistsAnOtpHasBeenSent": "If an account with that email exists, an OTP has been sent.",
+  "emailCodeAndNewPasswordAreRequired": "Email, code, and new password are required",
+  "passwordHasBeenResetSuccessfully": "Password has been reset successfully",
+  "otpIsValid": "OTP is valid",
+  "yourLoginCode": "Your Login Code",
+  "passwordResetYourOtpCode": "Password Reset - Your OTP Code",
+  "hello": "Hello,",
+  "yourVerificationCodeIs": "Your verification code is: {otp}",
+  "@yourVerificationCodeIs": {
+    "placeholders": {
+      "otp": {
+        "type": "String"
+      }
+    }
+  },
+  "thisCodeWillExpireIn10Minutes": "This code will expire in 10 minutes.",
+  "ifYouDidntRequestThisCodePleaseIgnoreThisEmail": "If you didn't request this code, please ignore this email.",
+  "bestRegards": "Best regards,",
+  "ridenowTeam": "RideNow Team",
+  "yourPasswordResetCodeIs": "Your password reset code is: {otp}",
+  "@yourPasswordResetCodeIs": {
+    "placeholders": {
+      "otp": {
+        "type": "String"
+      }
+    }
+  },
+  "ifYouDidntRequestAPasswordResetPleaseIgnoreThisEmail": "If you didn't request a password reset, please ignore this email.",
+  "ridetypeIsRequired": "rideType is required",
+  "latitudeAndLongitudeRequired": "latitude and longitude required",
+  "noActiveRide": "No active ride",
+  "locationUpdated": "Location updated",
+  "adminAccessRequired": "Admin access required",
+  "emailAlreadyInUse": "Email already in use",
+  "logoutSuccessful": "Logout successful",
+  "alreadyRegisteredAsDriver": "Already registered as driver",
+  "driverProfileCreatedSuccessfully": "Driver profile created successfully.",
+  "driverProfileNotFound": "Driver profile not found",
+  "onlineStatusUpdated": "Online status updated",
+  "profileUpdatedSuccessfully": "Profile updated successfully",
+  "invalidStatusValue": "Invalid status value: {status}",
+  "@invalidStatusValue": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "retentionEnabledForRide": "Retention enabled for ride {id}",
+  "@retentionEnabledForRide": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "retentionDisabledForRide": "Retention disabled for ride {id}",
+  "@retentionDisabledForRide": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAddedToRide": "Note added to ride {id}",
+  "@noteAddedToRide": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "settlementCreated": "Settlement created",
+  "paymentConfirmed2": "Payment confirmed",
+  "paymentReceived2": "Payment received",
+  "cashPaymentConfirmed": "Cash payment confirmed",
+  "markedAsUnpaid": "Marked as unpaid",
+  "paymentDisputedAmountRefundedToRider": "Payment disputed, amount refunded to rider",
+  "ratingMustBeBetween1And5": "Rating must be between 1 and 5",
+  "youHaveAlreadyRatedThisRide": "You have already rated this ride",
+  "invalidRideOrUser": "Invalid ride or user",
+  "youWereNotPartOfThisRide": "You were not part of this ride",
+  "noDriverToRateOnThisRide": "No driver to rate on this ride",
+  "rateeNotFound": "Ratee not found",
+  "ratingSubmittedSuccessfully": "Rating submitted successfully",
+  "fileIsEmpty": "File is empty",
+  "missingAuthorizationHeader": "Missing authorization header",
+  "invalidToken": "Invalid token",
+  "notificationMarkedAsRead": "Notification marked as read",
+  "allNotificationsMarkedAsRead": "All notifications marked as read",
+  "allNotificationsDeleted": "All notifications deleted",
+  "messageContentCannotBeEmpty": "Message content cannot be empty",
+  "messageIsTooLongMax10000Characters": "Message is too long (max 10000 characters)",
+  "senderOrReceiverNotFound": "Sender or receiver not found",
+  "messageSent": "Message sent",
+  "newMessageFrom": "New message from {username}",
+  "@newMessageFrom": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "codeIsRequired": "Code is required",
+  "eventtypeIsRequired": "eventType is required",
+  "youAlreadyHaveAnActiveRide": "You already have an active ride",
+  "rideNotFound": "Ride not found",
+  "rideIsNoLongerAvailable": "Ride is no longer available",
+  "rideAlreadyAccepted": "Ride already accepted",
+  "driverNotFound": "Driver not found",
+  "onlyDriversCanAcceptRides": "Only drivers can accept rides",
+  "cannotTransitionFromTo": "Cannot transition from {current} to {next}",
+  "@cannotTransitionFromTo": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "next": {
+        "type": "String"
+      }
+    }
+  },
+  "rideNotInRequestedStatus": "Ride not in REQUESTED status",
+  "onlyTheDriverCanUpdateRideLocation": "Only the driver can update ride location",
+  "rideIsNotActive": "Ride is not active",
+  "youHaveAcceptedARideNavigateToPickupLocation": "You have accepted a ride. Navigate to pickup location.",
+  "noDriversAvailableYetContinueSearching": "No drivers available yet. Continue searching?",
+  "noWomenDriversFoundSwitchToAnotherRideType": "No women drivers found. Switch to another ride type?",
+  "yourScheduledRideIsIn30Minutes": "Your scheduled ride is in 30 minutes",
+  "scheduledRideHasExpired": "Scheduled ride has expired",
+  "driverHasCancelledTheScheduledRide": "Driver has cancelled the scheduled ride",
+  "xxx1234": "XXX-1234",
+  "rideAcceptedADriverIsOnTheWayToPickYouUp": "Ride Accepted - A driver is on the way to pick you up",
+  "rideConfirmedYouHaveAcceptedARideNavigateToPickup": "Ride Confirmed - You have accepted a ride. Navigate to pickup.",
+  "driverArrivedYourDriverHasArrivedAtThePickupLocation": "Driver Arrived - Your driver has arrived at the pickup location",
+  "rideStartedYourRideHasStartedEnjoyTheTrip": "Ride Started - Your ride has started. Enjoy the trip!",
+  "rideCompletedYouHaveReachedYourDestination": "Ride Completed - You have reached your destination",
+  "rideCancelled3": "Ride Cancelled - {reason}",
+  "@rideCancelled3": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "noWomenDriversFoundNoWomenDriversAvailableSwitchRideType": "No Women Drivers Found - No women drivers available. Switch ride type?",
+  "noDriversFoundNoDriversAvailableYetContinueSearching": "No Drivers Found - No drivers available yet. Continue searching?",
+  "paymentConfirmedPaymentHasBeenConfirmed": "Payment Confirmed - Payment has been confirmed",
+  "paymentFinalizedYourPaymentHasBeenFinalized": "Payment Finalized - Your payment has been finalized",
+  "paymentRefundedYourPaymentHasBeenRefunded": "Payment Refunded - Your payment has been refunded",
+  "driverAssignedADriverHasAcceptedYourScheduledRide": "Driver Assigned - A driver has accepted your scheduled ride",
+  "driverArrivedYourDriverHasArrivedForYourScheduledRide": "Driver Arrived - Your driver has arrived for your scheduled ride",
+  "rideStartedYourScheduledRideHasStarted": "Ride Started - Your scheduled ride has started",
+  "rideReminderYourScheduledRideIsIn30Minutes": "Ride Reminder - Your scheduled ride is in 30 minutes",
+  "scheduledRideCancelled": "Scheduled Ride Cancelled - {reason}",
+  "@scheduledRideCancelled": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentNotFoundForRide": "Payment not found for ride: {rideId}",
+  "@paymentNotFoundForRide": {
+    "placeholders": {
+      "rideId": {
+        "type": "String"
+      }
+    }
+  },
+  "onlyTheRiderCanConfirmPayment": "Only the rider can confirm payment",
+  "paymentCannotBeConfirmedInStatus": "Payment cannot be confirmed in status: {status}",
+  "@paymentCannotBeConfirmedInStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "insufficientWalletBalance": "Insufficient wallet balance",
+  "tripFareForRide": "Trip fare for ride #{rideId}",
+  "@tripFareForRide": {
+    "placeholders": {
+      "rideId": {
+        "type": "String"
+      }
+    }
+  },
+  "onlyTheDriverCanConfirmCashReceipt": "Only the driver can confirm cash receipt",
+  "thisEndpointIsOnlyForCashPayments": "This endpoint is only for CASH payments",
+  "onlyTheDriverCanReportCashUnpaid": "Only the driver can report cash unpaid",
+  "customerDidNotPayCash": "Customer did not pay cash",
+  "onlyTheDriverCanConfirmReceipt": "Only the driver can confirm receipt",
+  "onlyTheDriverCanDisputePayment": "Only the driver can dispute payment",
+  "refundForRide": "Refund for ride #{rideId} - {reason}",
+  "@refundForRide": {
+    "placeholders": {
+      "rideId": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "onlyTheRiderOrDriverCanViewPaymentStatus": "Only the rider or driver can view payment status",
+  "scheduledTimeMustBeInTheFuture": "Scheduled time must be in the future",
+  "scheduledRideNotFound": "Scheduled ride not found",
+  "canOnlyCancelScheduledOrAssignedScheduledRides": "Can only cancel scheduled or assigned scheduled rides",
+  "cancelledByUser": "Cancelled by user",
+  "cancelledByRider": "Cancelled by rider",
+  "canOnlyCompleteStartedScheduledRides": "Can only complete started scheduled rides",
+  "latitudeAndLongitudeAreRequired": "Latitude and longitude are required",
+  "thisRideIsNoLongerAvailable": "This ride is no longer available",
+  "thisRideIsNotAssignedToYou": "This ride is not assigned to you",
+  "canOnlyUnassignARideThatIsInAssignedStatus": "Can only unassign a ride that is in ASSIGNED status",
+  "accessDenied": "Access denied",
+  "rideMustBeAssignedBeforeArriving": "Ride must be assigned before arriving",
+  "onlyTheAssignedDriverCanVerifyThePickupCode": "Only the assigned driver can verify the pickup code",
+  "pickupCodeCanOnlyBeVerifiedAfterTheDriverHasArrived": "Pickup code can only be verified after the driver has arrived",
+  "driverMustArriveBeforeStartingTheRide": "Driver must arrive before starting the ride",
+  "pickupCodeMustBeVerifiedBeforeStartingTheRide": "Pickup code must be verified before starting the ride",
+  "pickupCodeVerificationHasExpiredPleaseVerifyAgain": "Pickup code verification has expired. Please verify again.",
+  "paymentStartedButNeverCompleted": "Payment started but never completed",
+  "rideCompletedButPaymentStillPending": "Ride completed but payment still pending",
+  "eventOccurredTimes": "Event '{name}' occurred {count} times",
+  "@eventOccurredTimes": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "retryLoopDetectedRetries": "Retry loop detected: {count} retries",
+  "@retryLoopDetectedRetries": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "apiTimeoutOccurred": "API timeout occurred",
+  "serverException": "Server exception: {message}",
+  "@serverException": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "websocketDisconnectedTimes": "WebSocket disconnected {count} times",
+  "@websocketDisconnectedTimes": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "driverAcceptedButPassengerMayNotHaveReceivedUpdate": "Driver accepted but passenger may not have received update",
+  "tripRemainedInForS": "Trip remained in '{state}' for {seconds}s",
+  "@tripRemainedInForS": {
+    "placeholders": {
+      "state": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "gpsUpdatingForS": "GPS updating for {seconds}s",
+  "@gpsUpdatingForS": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "coordinatesCannotBeNull": "Coordinates cannot be null",
+  "geocodingFailed": "Geocoding failed: {status}",
+  "@geocodingFailed": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "usingEstimatedRouteActualRouteMayDiffer": "Using estimated route - actual route may differ",
+  "noDriversAvailableAutoCancelled": "No drivers available - auto cancelled",
+  "autocancelledDriverNeverMovedToPickupFor2Hours": "Auto-cancelled - driver never moved to pickup for 2+ hours",
+  "autocancelledDriverNeverStartedRideFor2Hours": "Auto-cancelled - driver never started ride for 2+ hours",
+  "noDriversAvailable": "No drivers available",
+  "urlCannotBeEmpty": "URL cannot be empty",
+  "serverUrlUpdated": "Server URL updated",
+  "rideUpdatesAndOffers": "Receive ride updates and offers",
+  "receiveTextMessagesForRides": "Receive text messages for rides",
+  "receivePromotionalEmails": "Receive promotional emails",
+  "displayCurrency": "Display Currency",
+  "saveServerUrl": "Save Server URL",
+  "currency": "Currency",
+  "premiumRideSharing": "Premium ride sharing",
+  "grantLocationAccess": "Grant Location Access",
+  "date": "Date"
+}

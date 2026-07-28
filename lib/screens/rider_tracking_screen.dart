@@ -21,6 +21,7 @@ import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../services/event_recorder_service.dart';
+import '../l10n/app_localizations.dart';
 
 class RiderTrackingScreen extends StatefulWidget {
   final int rideId;
@@ -139,25 +140,25 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
             barrierDismissible: false,
             builder: (ctx) => AlertDialog(
               icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 48),
-              title: const Text('Ride Cancelled'),
-              content: Text(ride.cancellationReason ?? 'The ride was cancelled'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/rider-home',
-                      (route) => false,
-                    );
-                  },
-                  child: const Text('Back to Home'),
-                ),
-              ],
-            ),
-          );
-        }
-        return;
+              title: Text(AppLocalizations.of(context).rideCancelled),
+                content: Text(ride.cancellationReason ?? 'The ride was cancelled'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/rider-home',
+                        (route) => false,
+                      );
+                    },
+                    child: Text(AppLocalizations.of(context).backToHome),
+                  ),
+                ],
+              ),
+            );
+          }
+          return;
       }
 
       if (ride.status == 'STARTED') {
@@ -206,7 +207,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
               barrierDismissible: false,
               builder: (ctx) => AlertDialog(
                 icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 48),
-                title: const Text('Ride Cancelled'),
+                title: Text(AppLocalizations.of(context).rideCancelled),
                 content: Text(ride.cancellationReason ?? 'The ride was cancelled'),
                 actions: [
                   TextButton(
@@ -218,7 +219,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                         (route) => false,
                       );
                     },
-                    child: const Text('Back to Home'),
+                    child: Text(AppLocalizations.of(context).backToHome),
                   ),
                 ],
               ),
@@ -354,9 +355,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         if (!mounted) return;
         final type = event['type'] ?? '';
 
-        if (type == 'driver_location') {
-          _handleDriverLocationEvent(event);
-        } else if (type == 'ride_started') {
+        if (type == 'ride_started') {
           if (_rideStarting) return;
           _rideStarting = true;
           recordEvent(
@@ -390,10 +389,10 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
           );
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Your driver has arrived!'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).yourDriverHasArrivedAtThePickupLocation),
               backgroundColor: AppColors.primary,
-              duration: Duration(seconds: 5),
+              duration: const Duration(seconds: 5),
             ),
           );
 
@@ -412,7 +411,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
               barrierDismissible: false,
               builder: (ctx) => AlertDialog(
                 icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 48),
-                title: const Text('Ride Cancelled'),
+                title: Text(AppLocalizations.of(context).rideCancelled),
                 content: Text(event['reason'] as String? ?? 'The driver cancelled the ride'),
                 actions: [
                   TextButton(
@@ -424,7 +423,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                         (route) => false,
                       );
                     },
-                    child: const Text('Back to Home'),
+                    child: Text(AppLocalizations.of(context).backToHome),
                   ),
                 ],
               ),
@@ -690,7 +689,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         elevation: 0,
         leading: Semantics(
           button: true,
-          label: 'Cancel ride',
+          label: AppLocalizations.of(context).cancelRide,
           child: IconButton(
             icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
             onPressed: () => _showCancelRideDialog(),
@@ -709,10 +708,10 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
             children: [
               Semantics(
                 button: true,
-                label: 'Chat with driver',
+                label: AppLocalizations.of(context).chatWithRider,
                 child: IconButton(
                   icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary),
-                  tooltip: 'Chat with Driver',
+                  tooltip: AppLocalizations.of(context).chatWithRider,
                   onPressed: _openChat,
                 ),
               ),
@@ -751,7 +750,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
               bottom: 240,
               child:               Semantics(
                 button: true,
-                label: 'Recenter map',
+                label: AppLocalizations.of(context).recenterMap,
                 child: FloatingActionButton.small(
                   heroTag: 'recenter',
                   onPressed: () {
@@ -856,7 +855,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                             ),
                             child: Semantics(
                               button: true,
-                              label: 'Chat with driver',
+                              label: AppLocalizations.of(context).chatWithRider,
                               child: IconButton(
                                 icon: const Icon(Icons.chat_rounded,
                                     color: AppColors.primary, size: 20),
@@ -968,8 +967,8 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                       AppSpacing.hGapSm,
                       StatusBadge(
                         label: _driverArrived
-                            ? 'Arrived'
-                            : 'Arriving',
+                            ? AppLocalizations.of(context).arrived
+                            : AppLocalizations.of(context).arriving,
                         color: _driverArrived
                             ? AppColors.success
                             : AppColors.primary,

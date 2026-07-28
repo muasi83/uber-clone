@@ -25,6 +25,7 @@ import '../utils/marker_factory.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/address_utils.dart';
 import '../services/recorded_screen_mixin.dart';
+import '../l10n/app_localizations.dart';
 
 class DriverNavigationToRiderScreen extends StatefulWidget {
   final int rideId;
@@ -242,7 +243,7 @@ class _DriverNavigationToRiderScreenState
           icon: _carIcon,
           flat: true,
           rotation: normalizeCarHeading(_driverHeading % 360),
-          infoWindow: const InfoWindow(title: 'Your Location'),
+          infoWindow: InfoWindow(title: AppLocalizations.of(context).yourLocation),
         ),
       );
     }
@@ -252,7 +253,7 @@ class _DriverNavigationToRiderScreenState
         markerId: const MarkerId('pickup'),
         position: _pickupLocation,
         icon: _yellowPinMarker,
-        infoWindow: InfoWindow(title: 'Pickup: ${widget.pickupAddress}'),
+        infoWindow: InfoWindow(title: AppLocalizations.of(context).pickup2(widget.pickupAddress)),
       ),
     );
 
@@ -344,8 +345,8 @@ class _DriverNavigationToRiderScreenState
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Rider notified!'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).riderNotified),
             backgroundColor: AppColors.success,
           ),
         );
@@ -367,8 +368,8 @@ class _DriverNavigationToRiderScreenState
           } else if (mounted) {
             addDebugMessage('⚠️ Ride was ${ride?.status} — returning to home');
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Ride was cancelled'),
+              SnackBar(
+                content: Text(AppLocalizations.of(context).rideWasCancelled),
                 backgroundColor: AppColors.error,
               ),
             );
@@ -408,12 +409,12 @@ class _DriverNavigationToRiderScreenState
         await RideService.cancelRide(widget.rideId, token, reason: reason);
         ChatScreen.clearAllCache();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ride cancelled'),
-              backgroundColor: AppColors.success,
-            ),
-          );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).rideCancelled2),
+            backgroundColor: AppColors.success,
+          ),
+        );
           Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
         }
       } catch (e) {
@@ -469,9 +470,9 @@ class _DriverNavigationToRiderScreenState
         await Clipboard.setData(ClipboardData(text: uri.toString()));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not open Maps — link copied to clipboard'),
-              duration: Duration(seconds: 3),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).couldNotOpenMapsLinkCopiedToClipboard),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -491,14 +492,14 @@ class _DriverNavigationToRiderScreenState
         elevation: 0,
         leading: Semantics(
           button: true,
-          label: 'Back',
+          label: AppLocalizations.of(context).back,
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: AppColors.primary),
             onPressed: () => Navigator.pop(context),
           ),
         ),
         title: Text(
-          'Navigate to Rider',
+          AppLocalizations.of(context).navigateToRider,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.primary),
         ),
         actions: [
@@ -507,10 +508,10 @@ class _DriverNavigationToRiderScreenState
             children: [
               Semantics(
                 button: true,
-                label: 'Chat with rider',
+                label: AppLocalizations.of(context).chatWithRider,
                 child: IconButton(
                   icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primary),
-                  tooltip: 'Chat with Rider',
+                  tooltip: AppLocalizations.of(context).chatWithRider2,
                   onPressed: _openChat,
                 ),
               ),
@@ -539,7 +540,7 @@ class _DriverNavigationToRiderScreenState
             end: 16,
             child:             Semantics(
               button: true,
-              label: 'Toggle driver marker',
+              label: AppLocalizations.of(context).toggleDriverMarker,
               child: FloatingActionButton(
                 heroTag: 'toggle_marker_nav',
                 mini: true,
@@ -579,7 +580,7 @@ class _DriverNavigationToRiderScreenState
                           const Icon(Icons.check_circle, color: AppColors.primaryLight, size: 80),
                           const SizedBox(height: AppSpacing.lg),
                           Text(
-                            'You have arrived!',
+                            AppLocalizations.of(context).youHaveArrived2,
                             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                   color: AppColors.primaryLight,
                                   fontWeight: FontWeight.bold,
@@ -587,7 +588,7 @@ class _DriverNavigationToRiderScreenState
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           Text(
-                            'Rider has been notified',
+                            AppLocalizations.of(context).riderHasBeenNotified,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   color: AppColors.primaryLight.withValues(alpha: 0.7),
                                 ),
@@ -648,7 +649,7 @@ class _DriverNavigationToRiderScreenState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'PICKUP',
+                                AppLocalizations.of(context).pickup3,
                                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                       color: AppColors.textTertiary,
                                       fontWeight: FontWeight.w600,
@@ -762,10 +763,10 @@ class _DriverNavigationToRiderScreenState
                   const SizedBox(height: AppSpacing.xxl),
                   Semantics(
                     button: true,
-                    label: "I've Arrived",
+                    label: AppLocalizations.of(context).iveArrived,
                     child: SwipeButton(
-                      label: "I've Arrived",
-                      processingLabel: 'Notifying...',
+                      label: AppLocalizations.of(context).iveArrived,
+                      processingLabel: AppLocalizations.of(context).notifying,
                       icon: Icons.check_circle,
                       onConfirmed: _notifyArrival,
                       isDisabled: _isArriving,
@@ -777,7 +778,7 @@ class _DriverNavigationToRiderScreenState
                     child: OutlinedButton.icon(
                       onPressed: () async { await _openGoogleMaps(); },
                       icon: const Icon(Icons.map, size: 18),
-                      label: const Text('Open Google Maps'),
+                      label: Text(AppLocalizations.of(context).openGoogleMaps),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
                         side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
@@ -793,7 +794,7 @@ class _DriverNavigationToRiderScreenState
                     button: true,
                     label: 'Cancel ride',
                     child: PremiumButton(
-                      label: 'Cancel Ride',
+                      label: AppLocalizations.of(context).cancelRide2,
                       onPressed: _showCancelRideDialog,
                       variant: ButtonVariant.danger,
                       icon: Icons.close,
@@ -824,21 +825,21 @@ class _DriverNavigationToRiderScreenState
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.cancel, color: AppColors.error, size: 24),
-                SizedBox(width: 8),
-                Text('Ride Cancelled'),
+                const Icon(Icons.cancel, color: AppColors.error, size: 24),
+                const SizedBox(width: 8),
+                Text(AppLocalizations.of(context).rideCancelled2),
               ],
             ),
-            content: Text('The rider cancelled the ride.\nReason: $reason'),
+            content: Text(AppLocalizations.of(context).rideCancelled3(reason)),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.pop(ctx);
                   Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
                 },
-                child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+                child: Text(AppLocalizations.of(context).ok, style: const TextStyle(color: AppColors.primary)),
               ),
             ],
           ),

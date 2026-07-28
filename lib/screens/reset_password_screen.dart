@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
+import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -39,7 +40,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (password.isEmpty) {
       _clearError('password');
     } else if (password.length < 6) {
-      setState(() => _passwordError = 'Password must be at least 6 characters');
+      setState(() => _passwordError = AppLocalizations.of(context).passwordMustBeAtLeast6Characters);
     } else {
       _clearError('password');
     }
@@ -53,7 +54,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (confirm.isEmpty) {
       _clearError('confirmPassword');
     } else if (confirm != _passwordController.text) {
-      setState(() => _confirmPasswordError = 'Passwords do not match');
+      setState(() => _confirmPasswordError = AppLocalizations.of(context).passwordsDoNotMatch);
     } else {
       _clearError('confirmPassword');
     }
@@ -77,7 +78,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
     if (_passwordController.text.isEmpty ||
         _confirmPasswordController.text.isEmpty) {
-      _showError('Please fill all fields');
+      _showError(AppLocalizations.of(context).pleaseFillAllFields);
       return;
     }
 
@@ -143,6 +144,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -194,7 +196,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 AppSpacing.gapXxxl,
                 PremiumTextField(
                   controller: _passwordController,
-                  label: 'New Password',
+                  label: l10n.newPassword,
                   prefixIcon: Icons.lock_outlined,
                   isPassword: true,
                   errorText: _passwordError.isNotEmpty ? _passwordError : null,
@@ -202,14 +204,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 AppSpacing.gapLg,
                 PremiumTextField(
                   controller: _confirmPasswordController,
-                  label: 'Confirm Password',
+                  label: l10n.confirmPassword,
                   prefixIcon: Icons.lock_outlined,
                   isPassword: true,
                   errorText: _confirmPasswordError.isNotEmpty ? _confirmPasswordError : null,
                 ),
                 AppSpacing.gapXxl,
                 PremiumButton(
-                  label: 'Reset Password',
+                  label: l10n.resetPassword,
                   isLoading: _isLoading,
                   onPressed: (_isLoading || _passwordError.isNotEmpty || _confirmPasswordError.isNotEmpty) ? null : _resetPassword,
                   variant: ButtonVariant.gradient,

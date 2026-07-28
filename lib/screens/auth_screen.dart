@@ -12,12 +12,14 @@ import '../services/firebase_service.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../screens/debug_screen.dart';
 import '../screens/forgot_password_screen.dart';
+import '../screens/password_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_shadows.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_text_field.dart';
+import '../l10n/app_localizations.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -79,7 +81,7 @@ class _AuthScreenState extends State<AuthScreen>
     if (email.isEmpty) {
       _clearError('email');
     } else if (!_isValidEmail(email)) {
-      setState(() => _emailError = 'Please enter a valid email address');
+      setState(() => _emailError = AppLocalizations.of(context).pleaseEnterAValidEmailAddress);
     } else {
       _clearError('email');
     }
@@ -90,7 +92,7 @@ class _AuthScreenState extends State<AuthScreen>
     if (password.isEmpty) {
       _clearError('password');
     } else if (password.length < 6) {
-      setState(() => _passwordError = 'Password must be at least 6 characters');
+      setState(() => _passwordError = AppLocalizations.of(context).passwordMustBeAtLeast6Characters);
     } else {
       _clearError('password');
     }
@@ -104,7 +106,7 @@ class _AuthScreenState extends State<AuthScreen>
     if (confirm.isEmpty) {
       _clearError('confirmPassword');
     } else if (confirm != _passwordController.text) {
-      setState(() => _confirmPasswordError = 'Passwords do not match');
+      setState(() => _confirmPasswordError = AppLocalizations.of(context).passwordsDoNotMatch);
     } else {
       _clearError('confirmPassword');
     }
@@ -140,7 +142,7 @@ class _AuthScreenState extends State<AuthScreen>
           _fullNameController.text.isEmpty ||
           _phoneController.text.isEmpty ||
           _confirmPasswordController.text.isEmpty) {
-        _showError('Please fill all fields');
+        _showError(AppLocalizations.of(context).pleaseFillAllFields);
         return;
       }
 
@@ -212,7 +214,7 @@ class _AuthScreenState extends State<AuthScreen>
     } on SocketException {
       _showError('Connection error. Check your internet.');
     } catch (e) {
-      _showError('An unexpected error occurred');
+      _showError(AppLocalizations.of(context).anUnexpectedErrorOccurred);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -284,7 +286,7 @@ class _AuthScreenState extends State<AuthScreen>
         }
       } else {
         final error = jsonDecode(response.body);
-        final errorMsg = error['message'] ?? 'Login failed';
+        final errorMsg = error['message'] ?? AppLocalizations.of(context).loginFailedPleaseCheckYourCredentialsAndTryAgain;
         recordEvent(
           eventName: 'LOGIN_FAILED',
           category: 'BUSINESS',
@@ -316,7 +318,7 @@ class _AuthScreenState extends State<AuthScreen>
         severity: 'ERROR',
         summary: 'Login failed: $e',
       );
-      _showError('An unexpected error occurred');
+      _showError(AppLocalizations.of(context).anUnexpectedErrorOccurred);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -380,8 +382,6 @@ class _AuthScreenState extends State<AuthScreen>
                     child: Column(
                       children: [
                         AppSpacing.gapLg,
-                        _buildPillToggle(),
-                        AppSpacing.gapXxl,
                         FadeTransition(
                           opacity: _fadeAnim,
                           child: SlideTransition(
@@ -407,8 +407,8 @@ class _AuthScreenState extends State<AuthScreen>
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.textTertiary,
                             ),
-                            child: const Text(
-                              'Server Settings (Dev)',
+            child: const Text(
+              'Server Settings (Dev)',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -448,7 +448,7 @@ class _AuthScreenState extends State<AuthScreen>
                   boxShadow: _isLogin ? AppShadows.small : null,
                 ),
                 child: Text(
-                  'Login',
+                  AppLocalizations.of(context).login,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: _isLogin ? AppColors.primary : AppColors.textTertiary,
@@ -590,28 +590,45 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   Widget _buildLoginForm() {
-    final loginDisabled = _isLoading || _emailError.isNotEmpty || _passwordError.isNotEmpty;
+    final canContinue = _emailController.text.isNotEmpty && _emailError.isEmpty && !_isLoading;
 
     return Column(
       key: const ValueKey('login'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        AppSpacing.gapXl,
         PremiumTextField(
           controller: _emailController,
-          label: 'Email',
+          label: AppLocalizations.of(context).emailAddress,
           prefixIcon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
           errorText: _emailError.isNotEmpty ? _emailError : null,
         ),
         AppSpacing.gapLg,
-        PremiumTextField(
-          controller: _passwordController,
-          label: 'Password',
-          prefixIcon: Icons.lock_outlined,
-          isPassword: true,
-          obscureText: true,
-          errorText: _passwordError.isNotEmpty ? _passwordError : null,
+        GestureDetector(
+          onTap: _showPhoneComingSoon,
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: AppRadius.lgRadius,
+              border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+            child: Row(
+              children: [
+                const Icon(Icons.phone_outlined, size: 20, color: AppColors.textTertiary),
+                AppSpacing.hGapMd,
+                const Text(
+                  'Phone Number (Coming Soon)',
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 15),
+                ),
+                const Spacer(),
+                const Icon(Icons.lock_outline, size: 16, color: AppColors.textTertiary),
+              ],
+            ),
+          ),
         ),
+        AppSpacing.gapMd,
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
@@ -626,9 +643,9 @@ class _AuthScreenState extends State<AuthScreen>
               foregroundColor: AppColors.primary,
               padding: const EdgeInsets.symmetric(vertical: 4),
             ),
-            child: const Text(
-              'Forgot Password?',
-              style: TextStyle(
+            child: Text(
+              AppLocalizations.of(context).forgotPassword,
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -637,60 +654,36 @@ class _AuthScreenState extends State<AuthScreen>
         ),
         AppSpacing.gapMd,
         PremiumButton(
-          label: 'Sign In',
-          onPressed: loginDisabled ? null : _login,
-          isLoading: _isLoading,
+          label: AppLocalizations.of(context).continueText,
+          onPressed: canContinue
+              ? () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => PasswordScreen(email: _emailController.text),
+                    ),
+                  );
+                }
+              : null,
           variant: ButtonVariant.gradient,
         ),
         AppSpacing.gapXl,
         _buildDisabledSocialSection(),
         AppSpacing.gapLg,
         _buildSwitchLink(isLogin: true),
-        if (kDebugMode)
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    _emailController.text = 'rider2@test.com';
-                    _passwordController.text = 'password123';
-                    setState(() => _selectedRole = 'RIDER');
-                  },
-                  icon: const Icon(Icons.person_outline, size: 16, color: AppColors.primary),
-                  label: const Text('Rider 2'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdRadius,
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              AppSpacing.hGapMd,
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    _emailController.text = 'driver2@test.com';
-                    _passwordController.text = 'password123';
-                    setState(() => _selectedRole = 'DRIVER');
-                  },
-                  icon: const Icon(Icons.local_taxi_outlined, size: 16, color: AppColors.primary),
-                  label: const Text('Driver 2'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdRadius,
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
       ],
+    );
+  }
+
+  void _showPhoneComingSoon() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Phone login will be available in a future update. Please use email to sign in.'),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.smRadius),
+        margin: AppSpacing.cardPadding,
+      ),
     );
   }
 
@@ -704,15 +697,16 @@ class _AuthScreenState extends State<AuthScreen>
       key: const ValueKey('register'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        AppSpacing.gapXl,
         PremiumTextField(
           controller: _fullNameController,
-          label: 'Full Name',
+          label: AppLocalizations.of(context).fullName,
           prefixIcon: Icons.person_outlined,
         ),
         AppSpacing.gapLg,
         PremiumTextField(
           controller: _emailController,
-          label: 'Email',
+          label: AppLocalizations.of(context).email,
           prefixIcon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
           errorText: _emailError.isNotEmpty ? _emailError : null,
@@ -743,7 +737,7 @@ class _AuthScreenState extends State<AuthScreen>
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
-                    hintText: 'Phone Number',
+                    hintText: AppLocalizations.of(context).phoneNumber,
                     hintStyle: TextStyle(color: AppColors.textTertiary.withValues(alpha: 0.7)),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 16),
@@ -760,7 +754,7 @@ class _AuthScreenState extends State<AuthScreen>
         AppSpacing.gapLg,
         PremiumTextField(
           controller: _passwordController,
-          label: 'Password',
+          label: AppLocalizations.of(context).password,
           prefixIcon: Icons.lock_outlined,
           isPassword: true,
           errorText: _passwordError.isNotEmpty ? _passwordError : null,
@@ -768,7 +762,7 @@ class _AuthScreenState extends State<AuthScreen>
         AppSpacing.gapLg,
         PremiumTextField(
           controller: _confirmPasswordController,
-          label: 'Confirm Password',
+          label: AppLocalizations.of(context).confirmPassword,
           prefixIcon: Icons.lock_outlined,
           isPassword: true,
           errorText: _confirmPasswordError.isNotEmpty ? _confirmPasswordError : null,
@@ -784,10 +778,10 @@ class _AuthScreenState extends State<AuthScreen>
         ),
         AppSpacing.gapSm,
         SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'MALE', label: Text('Male')),
-            ButtonSegment(value: 'FEMALE', label: Text('Female')),
-            ButtonSegment(value: 'PREFER_NOT_TO_SAY', label: Text('Prefer not to say')),
+          segments: [
+            ButtonSegment(value: 'MALE', label: Text(AppLocalizations.of(context).male)),
+            ButtonSegment(value: 'FEMALE', label: Text(AppLocalizations.of(context).female)),
+            ButtonSegment(value: 'PREFER_NOT_TO_SAY', label: Text(AppLocalizations.of(context).preferNotToSay)),
           ],
           selected: {_selectedGender},
           onSelectionChanged: (value) {
@@ -814,7 +808,7 @@ class _AuthScreenState extends State<AuthScreen>
               child: _buildRoleCard(
                 role: 'RIDER',
                 icon: Icons.person,
-                title: 'Ride',
+                title: AppLocalizations.of(context).ride,
                 subtitle: 'Request a trip',
               ),
             ),
@@ -829,64 +823,6 @@ class _AuthScreenState extends State<AuthScreen>
             ),
           ],
         ),
-        if (kDebugMode)
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    _fullNameController.text = 'Rider Two';
-                    _emailController.text = 'rider2@test.com';
-                    _passwordController.text = 'password123';
-                    _confirmPasswordController.text = 'password123';
-                    _phoneController.text = '512345678';
-                    setState(() {
-                      _selectedRole = 'RIDER';
-                      _selectedGender = 'PREFER_NOT_TO_SAY';
-                      _countryCode = '+966';
-                    });
-                  },
-                  icon: const Icon(Icons.person_outline, size: 16, color: AppColors.primary),
-                  label: const Text('Rider 2'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdRadius,
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              AppSpacing.hGapMd,
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    _fullNameController.text = 'Driver Two';
-                    _emailController.text = 'driver2@test.com';
-                    _passwordController.text = 'password123';
-                    _confirmPasswordController.text = 'password123';
-                    _phoneController.text = '512345679';
-                    setState(() {
-                      _selectedRole = 'DRIVER';
-                      _selectedGender = 'PREFER_NOT_TO_SAY';
-                      _countryCode = '+966';
-                    });
-                  },
-                  icon: const Icon(Icons.local_taxi_outlined, size: 16, color: AppColors.primary),
-                  label: const Text('Driver 2'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdRadius,
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
         AppSpacing.gapXl,
         PremiumButton(
           label: 'Create Account',
@@ -971,18 +907,18 @@ class _AuthScreenState extends State<AuthScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Server Settings',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                const Text(
+                  'Server Settings',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-              ),
               AppSpacing.gapXl,
               PremiumTextField(
                 controller: urlController,
-                label: 'Server URL',
+                label: AppLocalizations.of(context).serverUrl,
                 hint: 'https://your-ngrok-url.ngrok-free.dev',
               ),
               AppSpacing.gapXxl,
@@ -998,13 +934,13 @@ class _AuthScreenState extends State<AuthScreen>
                           borderRadius: AppRadius.mdRadius,
                         ),
                       ),
-                      child: const Text('Cancel'),
+                      child: Text(AppLocalizations.of(context).cancel),
                     ),
                   ),
                   AppSpacing.hGapMd,
                   Expanded(
                     child: PremiumButton(
-                      label: 'Save',
+                      label: AppLocalizations.of(context).save,
                       onPressed: () async {
                         await StorageService.setServerUrl(urlController.text);
                         if (!context.mounted) return;
@@ -1015,8 +951,8 @@ class _AuthScreenState extends State<AuthScreen>
                           summary: 'Server URL updated successfully',
                         );
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Server URL updated'),
+                          SnackBar(
+                            content: Text(AppLocalizations.of(context).serverUrlUpdated),
                             backgroundColor: AppColors.success,
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -1103,7 +1039,7 @@ class _AuthHeaderDelegate extends SliverPersistentHeaderDelegate {
               left: 0,
               right: 0,
               child: Text(
-                'RideNow',
+                AppLocalizations.of(context).ridenow,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: lerpDouble(28, 20, progress),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/admin_service.dart';
 import '../services/currency_service.dart';
@@ -230,9 +231,10 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Trip #${widget.rideId}'),
+        title: Text(l10n.trip(widget.rideId.toString())),
         actions: [
           if (_detail != null)
             IconButton(
@@ -245,8 +247,8 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
                       ? Icons.lock
                       : Icons.lock_open),
               tooltip: _detail!['keepForever'] == true
-                  ? 'Disable retention'
-                  : 'Enable retention',
+                  ? l10n.disableRetention
+                  : l10n.enableRetention,
               onPressed: _togglingKeep ? null : _toggleKeepForever,
             ),
           IconButton(
@@ -258,10 +260,10 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
             ? null
             : TabBar(
                 controller: _tabController,
-                tabs: const [
-                  Tab(text: 'Overview'),
-                  Tab(text: 'Trip Behaviour'),
-                  Tab(text: 'Trip Replay'),
+                tabs: [
+                  Tab(text: l10n.overview),
+                  Tab(text: l10n.tripBehaviour),
+                  Tab(text: l10n.tripReplay),
                 ],
                 labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 unselectedLabelStyle: const TextStyle(fontSize: 13),
@@ -297,13 +299,14 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
           const SizedBox(height: 16),
           Text(_error!, style: const TextStyle(color: AppColors.error)),
           const SizedBox(height: 16),
-          ElevatedButton(onPressed: _loadAll, child: const Text('Retry')),
+          ElevatedButton(onPressed: _loadAll, child: Text(AppLocalizations.of(context).retry)),
         ],
       ),
     );
   }
 
   Widget _buildContent() {
+    final l10n = AppLocalizations.of(context);
     final detail = _detail!;
     final status = detail['status'] as String?;
     final rider = detail['rider'] as Map<String, dynamic>?;
@@ -317,15 +320,15 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
         children: [
           _buildHeader(detail, status),
           const SizedBox(height: 12),
-          if (rider != null) _buildSection('Rider', _buildRiderCard(rider)),
-          if (driver != null) _buildSection('Driver', _buildDriverCard(driver)),
-          if (payment != null) _buildSection('Payment', _buildPaymentCard(payment)),
+          if (rider != null) _buildSection(l10n.rider, _buildRiderCard(rider)),
+          if (driver != null) _buildSection(l10n.driver, _buildDriverCard(driver)),
+          if (payment != null) _buildSection(l10n.payment, _buildPaymentCard(payment)),
           const SizedBox(height: 8),
           _buildInfoCard(detail),
           const SizedBox(height: 12),
-          _buildSection('Timeline', _buildTimeline()),
+          _buildSection(l10n.timeline, _buildTimeline()),
           const SizedBox(height: 12),
-          _buildSection('Chat', _buildChatSection()),
+          _buildSection(l10n.chat, _buildChatSection()),
           const SizedBox(height: 12),
           _buildAdminNotesSection(),
           const SizedBox(height: 24),
@@ -335,6 +338,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
   }
 
   Widget _buildHeader(Map<String, dynamic> detail, String? status) {
+    final l10n = AppLocalizations.of(context);
     final reqAt = detail['requestedAt'] as String?;
     final compAt = detail['completedAt'] as String?;
     final canAt = detail['cancelledAt'] as String?;
@@ -347,7 +351,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
           children: [
             Row(
               children: [
-                Text('Trip #${widget.rideId}',
+                Text(l10n.trip(widget.rideId.toString()),
                     style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold)),
                 const Spacer(),
@@ -359,14 +363,14 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
             ),
             const SizedBox(height: 8),
             if (reqAt != null)
-              _infoRow(Icons.access_time, 'Requested',
+              _infoRow(Icons.access_time, l10n.requested,
                   _formatDate(reqAt)),
             if (compAt != null)
-              _infoRow(Icons.flag, 'Completed', _formatDate(compAt)),
+              _infoRow(Icons.flag, l10n.completed, _formatDate(compAt)),
             if (canAt != null)
-              _infoRow(Icons.cancel, 'Cancelled', _formatDate(canAt)),
+              _infoRow(Icons.cancel, l10n.cancelled, _formatDate(canAt)),
             if (detail['cancellationReason'] != null)
-              _infoRow(Icons.info_outline, 'Reason',
+              _infoRow(Icons.info_outline, l10n.reason2,
                   detail['cancellationReason'] as String),
           ],
         ),
@@ -461,6 +465,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
   }
 
   Widget _buildPaymentCard(Map<String, dynamic> payment) {
+    final l10n = AppLocalizations.of(context);
     final status = payment['status'] as String?;
     final amount = payment['amount'] as num?;
     final method = payment['paymentMethod'] as String?;
@@ -507,9 +512,9 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
             ),
             const SizedBox(height: 4),
             if (method != null)
-              _infoRow(Icons.payment, 'Method', method),
+              _infoRow(Icons.payment, l10n.method, method),
             if (completedAt != null)
-              _infoRow(Icons.check_circle, 'Completed', _formatDate(completedAt)),
+              _infoRow(Icons.check_circle, l10n.completed, _formatDate(completedAt)),
           ],
         ),
       ),
@@ -517,37 +522,38 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
   }
 
   Widget _buildInfoCard(Map<String, dynamic> detail) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Ride Info',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(l10n.rideInfo,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             const SizedBox(height: 8),
-            _infoRow(Icons.route, 'Type', detail['rideType'] as String? ?? ''),
-            _infoRow(Icons.location_on, 'Pickup',
+            _infoRow(Icons.route, l10n.type, detail['rideType'] as String? ?? ''),
+            _infoRow(Icons.location_on, l10n.pickup,
                 detail['pickupAddress'] as String? ?? ''),
-            _infoRow(Icons.map, 'Pickup Coord',
+            _infoRow(Icons.map, l10n.pickupCoord,
                 formatLatLng((detail['pickupLatitude'] as num?)?.toDouble() ?? 0,
                     (detail['pickupLongitude'] as num?)?.toDouble() ?? 0)),
-            _infoRow(Icons.flag, 'Dropoff',
+            _infoRow(Icons.flag, l10n.dropoff,
                 detail['dropoffAddress'] as String? ?? ''),
-            _infoRow(Icons.map, 'Dropoff Coord',
+            _infoRow(Icons.map, l10n.dropoffCoord,
                 formatLatLng((detail['dropoffLatitude'] as num?)?.toDouble() ?? 0,
                     (detail['dropoffLongitude'] as num?)?.toDouble() ?? 0)),
             if (detail['estimatedDistance'] != null)
-              _infoRow(Icons.straighten, 'Distance',
+              _infoRow(Icons.straighten, l10n.distance,
                   '${(detail['estimatedDistance'] as num).toStringAsFixed(2)} km'),
             if (detail['estimatedDuration'] != null)
-              _infoRow(Icons.timer, 'Duration',
+              _infoRow(Icons.timer, l10n.duration,
                   '${detail['estimatedDuration']} min'),
             if (detail['estimatedFare'] != null)
-              _infoRow(Icons.attach_money, 'Est. Fare',
+              _infoRow(Icons.attach_money, l10n.estFare,
                   CurrencyService.format((detail['estimatedFare'] as num).toDouble())),
             if (detail['finalFare'] != null)
-              _infoRow(Icons.receipt, 'Final Fare',
+              _infoRow(Icons.receipt, l10n.finalFare,
                   CurrencyService.format((detail['finalFare'] as num).toDouble())),
           ],
         ),
@@ -556,6 +562,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
   }
 
   Widget _buildTimeline() {
+    final l10n = AppLocalizations.of(context);
     if (_loadingEvents) {
       return const ShimmerList(itemCount: 4, itemHeight: 50);
     }
@@ -563,7 +570,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
       return Center(
         child: TextButton(
           onPressed: _loadEvents,
-          child: const Text('Failed to load events. Tap to retry.'),
+          child: Text(l10n.failedToLoadEventsTapToRetry),
         ),
       );
     }
@@ -608,7 +615,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
     }
 
     if (sections.isEmpty) {
-      return const Text('No timeline events',
+      return Text(l10n.noTimelineEvents,
           style: TextStyle(color: AppColors.textSecondary));
     }
 
@@ -681,6 +688,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
   }
 
   Widget _buildChatSection() {
+    final l10n = AppLocalizations.of(context);
     if (_loadingMessages) {
       return const ShimmerList(itemCount: 3, itemHeight: 40);
     }
@@ -693,7 +701,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
               children: [
-                Text('Chat Messages (${_messages.length})',
+                Text(l10n.chatMessages3(_messages.length.toString()),
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 14)),
                 const Spacer(),
@@ -707,14 +715,14 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
               ? Center(
                   child: TextButton(
                     onPressed: _loadMessages,
-                    child: const Text('Failed to load. Retry.'),
+                    child: Text(l10n.failedToLoadRetry),
                   ),
                 )
               : _messages.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Text('No messages',
-                          style: TextStyle(color: AppColors.textSecondary)),
+                  ? Padding(
+                      padding: const EdgeInsets.all(8),
+child: Text(AppLocalizations.of(context).noMessages,
+                      style: const TextStyle(color: AppColors.textSecondary)),
                     )
                   : Card(
                       child: ListView.separated(
@@ -760,10 +768,11 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
   }
 
   Widget _buildAdminNotesSection() {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Admin Notes',
+        Text(l10n.adminNotes,
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 8),
         Row(
@@ -771,8 +780,8 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
             Expanded(
               child: TextField(
                 controller: _noteController,
-                decoration: const InputDecoration(
-                  hintText: 'Add an investigation note...',
+                decoration: InputDecoration(
+                  hintText: l10n.addAnInvestigationNote,
                   isDense: true,
                   contentPadding:
                       EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -802,6 +811,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
   }
 
   Future<void> _toggleKeepForever() async {
+    final l10n = AppLocalizations.of(context);
     if (_token == null || _detail == null) return;
     setState(() => _togglingKeep = true);
     final current = _detail!['keepForever'] == true;
@@ -817,14 +827,15 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(ok
-              ? 'Retention ${current ? "disabled" : "enabled"} for this ride'
-              : 'Failed to update retention'),
+              ? (current ? l10n.retentionDisabledForThisRide : l10n.retentionEnabledForThisRide)
+              : l10n.failedToUpdateRetention),
         ),
       );
     }
   }
 
   Future<void> _addNote() async {
+    final l10n = AppLocalizations.of(context);
     final note = _noteController.text.trim();
     if (note.isEmpty || _token == null) return;
     setState(() => _savingNote = true);
@@ -837,7 +848,7 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
       setState(() => _savingNote = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(ok ? 'Note added' : 'Failed to add note'),
+          content: Text(ok ? l10n.noteAdded : l10n.failedToAddNote),
         ),
       );
     }

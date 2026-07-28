@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import '../l10n/app_localizations.dart';
 import '../services/currency_service.dart';
 import '../services/ride_service.dart';
 import '../services/storage_service.dart';
@@ -256,9 +257,10 @@ class _RideMapScreenState extends State<RideMapScreen> {
   double _toRad(double degree) => degree * (3.141592653589793 / 180);
 
   Future<void> _confirmPickup() async {
+    final l10n = AppLocalizations.of(context);
     if (pickupLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a pickup location')),
+        SnackBar(content: Text(l10n.pleaseSelectAPickupLocation)),
       );
       return;
     }
@@ -293,9 +295,10 @@ class _RideMapScreenState extends State<RideMapScreen> {
   }
 
   Future<void> _confirmDropoff() async {
+    final l10n = AppLocalizations.of(context);
     if (dropoffLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a dropoff location')),
+        SnackBar(content: Text(l10n.pleaseSelectADropoffLocation)),
       );
       return;
     }
@@ -329,9 +332,10 @@ class _RideMapScreenState extends State<RideMapScreen> {
     await _requestRide();
   }
 Future<void> _requestRide() async {
+  final l10n = AppLocalizations.of(context);
   if (pickupLocation == null || dropoffLocation == null || pickupAddress == null || dropoffAddress == null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invalid locations')),
+      SnackBar(content: Text(l10n.pleaseSelectAPickupLocation)),
     );
     return;
   }
@@ -351,7 +355,7 @@ Future<void> _requestRide() async {
     
     if (token == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Token not found')),
+        SnackBar(content: Text(l10n.authenticationError)),
       );
       return;
     }
@@ -377,8 +381,8 @@ Future<void> _requestRide() async {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ride requested! Waiting for driver...'),
+          SnackBar(
+            content: Text(l10n.searchingForADriver),
             backgroundColor: AppColors.success,
           ),
         );
@@ -406,6 +410,7 @@ int _calculateDuration(double distanceKm) {
 }
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -458,9 +463,9 @@ int _calculateDuration(double distanceKm) {
                         children: [
                           _stepDot(1, true),
                           const SizedBox(width: 6),
-                          const Text(
-                            'Pickup',
-                            style: TextStyle(
+                          Text(
+                            l10n.pickup,
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppColors.primary,
@@ -472,7 +477,7 @@ int _calculateDuration(double distanceKm) {
                           _stepDot(2, step >= 2),
                           const SizedBox(width: 6),
                           Text(
-                            'Dropoff',
+                            l10n.dropoff,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -555,6 +560,7 @@ int _calculateDuration(double distanceKm) {
   }
 
   Widget _buildPickupPanel() {
+    final l10n = AppLocalizations.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -574,9 +580,9 @@ int _calculateDuration(double distanceKm) {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Pickup Location',
-                    style: TextStyle(
+                  Text(
+                    l10n.pickupLocation,
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                       color: AppColors.textTertiary,
@@ -585,7 +591,7 @@ int _calculateDuration(double distanceKm) {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    pickupAddress ?? 'Move the map to set location',
+                    pickupAddress ?? l10n.moveTheMapToSelectLocation,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -601,7 +607,7 @@ int _calculateDuration(double distanceKm) {
         ),
         const SizedBox(height: 20),
         PremiumButton(
-          label: 'Confirm Pickup Location',
+          label: l10n.confirmPickupLocation,
           icon: Icons.check_circle_outline,
           onPressed: _confirmPickup,
         ),
@@ -610,6 +616,7 @@ int _calculateDuration(double distanceKm) {
   }
 
   Widget _buildDropoffPanel() {
+    final l10n = AppLocalizations.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -629,9 +636,9 @@ int _calculateDuration(double distanceKm) {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Pickup',
-                    style: TextStyle(
+                  Text(
+                    l10n.pickup,
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                       color: AppColors.textTertiary,
@@ -670,9 +677,9 @@ int _calculateDuration(double distanceKm) {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Dropoff',
-                    style: TextStyle(
+                  Text(
+                    l10n.dropoff,
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                       color: AppColors.textTertiary,
@@ -681,7 +688,7 @@ int _calculateDuration(double distanceKm) {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    dropoffAddress ?? 'Move the map to set location',
+                    dropoffAddress ?? l10n.moveTheMapToSelectLocation,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -699,15 +706,15 @@ int _calculateDuration(double distanceKm) {
         Row(
           children: [
             Expanded(
-              child: _rideTypeOption('ECONOMY', '\$0.20/km', Icons.directions_car),
+              child: _rideTypeOption('ECONOMY', l10n.dollar + '0.20/km', Icons.directions_car),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: _rideTypeOption('WOMEN_DRIVER', '\$0.25/km', Icons.face),
+              child: _rideTypeOption('WOMEN_DRIVER', l10n.dollar + '0.25/km', Icons.face),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: _rideTypeOption('LUXURY', '\$0.35/km', Icons.diamond_outlined),
+              child: _rideTypeOption('LUXURY', l10n.dollar + '0.35/km', Icons.diamond_outlined),
             ),
           ],
         ),
@@ -726,7 +733,7 @@ int _calculateDuration(double distanceKm) {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Distance',
+                      l10n.distance,
                       style: TextStyle(fontSize: 11, color: AppColors.textSecondary.withValues(alpha: 0.8)),
                     ),
                     const SizedBox(height: 2),
@@ -744,7 +751,7 @@ int _calculateDuration(double distanceKm) {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      'Estimated Fare',
+                      l10n.fareEstimate(l10n.dollar + estimatedFare!.toStringAsFixed(2)),
                       style: TextStyle(fontSize: 11, color: AppColors.textSecondary.withValues(alpha: 0.8)),
                     ),
                     const SizedBox(height: 2),
@@ -767,7 +774,7 @@ int _calculateDuration(double distanceKm) {
           children: [
             Expanded(
               child: PremiumButton(
-                label: 'Back',
+                label: l10n.back,
                 variant: ButtonVariant.outline,
                 onPressed: () => setState(() => step = 1),
               ),
@@ -776,7 +783,7 @@ int _calculateDuration(double distanceKm) {
             Expanded(
               flex: 2,
               child: PremiumButton(
-                label: 'Confirm & Request Ride',
+                label: l10n.confirmRide,
                 icon: Icons.rocket_launch_outlined,
                 onPressed: _confirmDropoff,
               ),

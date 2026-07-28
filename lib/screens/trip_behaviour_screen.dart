@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 import '../models/trip_events.dart';
 import '../services/trip_behaviour_service.dart';
 import '../services/storage_service.dart';
@@ -91,6 +92,7 @@ class _TripBehaviourScreenState extends State<TripBehaviourScreen> {
   }
 
   Widget _buildToolbar() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
       decoration: BoxDecoration(
@@ -121,7 +123,7 @@ class _TripBehaviourScreenState extends State<TripBehaviourScreen> {
             icon: Icon(Icons.filter_list, size: 20,
                 color: _selectedFilter.isNotEmpty ? AppColors.primary : AppColors.textSecondary),
             onPressed: () => setState(() => _showFilters = !_showFilters),
-            tooltip: 'Filter',
+            tooltip: l10n.filter,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
@@ -145,6 +147,7 @@ class _TripBehaviourScreenState extends State<TripBehaviourScreen> {
   }
 
   Widget _buildFilterChips() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -158,7 +161,7 @@ class _TripBehaviourScreenState extends State<TripBehaviourScreen> {
           final active = _selectedFilter == f;
           return FilterChip(
             label: Text(
-              f.isEmpty ? 'All' : EventCategory.displayName(f),
+              f.isEmpty ? l10n.all : EventCategory.displayName(f),
               style: TextStyle(fontSize: 11, color: active ? Colors.white : AppColors.textSecondary),
             ),
             selected: active,
@@ -179,6 +182,7 @@ class _TripBehaviourScreenState extends State<TripBehaviourScreen> {
   }
 
   Widget _buildExportToolbar() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -217,6 +221,7 @@ class _TripBehaviourScreenState extends State<TripBehaviourScreen> {
   }
 
   Widget _buildError() {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -225,13 +230,14 @@ class _TripBehaviourScreenState extends State<TripBehaviourScreen> {
           const SizedBox(height: 8),
           Text(_error!, style: TextStyle(color: AppColors.error, fontSize: 13)),
           const SizedBox(height: 8),
-          ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
+          ElevatedButton(onPressed: _loadData, child: Text(l10n.retry)),
         ],
       ),
     );
   }
 
   Widget _buildContent() {
+    final l10n = AppLocalizations.of(context);
     if (_data == null) return const SizedBox();
 
     final summary = _data!.summary;
@@ -261,6 +267,7 @@ class _TripBehaviourScreenState extends State<TripBehaviourScreen> {
   }
 
   Widget _buildSummaryCard(TripSummary summary) {
+    final l10n = AppLocalizations.of(context);
     final score = summary.healthScore ?? 100;
     final scoreColor = score >= 80 ? AppColors.success : (score >= 50 ? AppColors.warning : AppColors.error);
 
@@ -287,7 +294,7 @@ class _TripBehaviourScreenState extends State<TripBehaviourScreen> {
               ],
             ),
             const SizedBox(height: 6),
-            _healthRow(Icons.timer, 'Duration', summary.duration ?? 'N/A'),
+            _healthRow(Icons.timer, l10n.duration, summary.duration ?? 'N/A'),
             _healthRow(Icons.warning, 'Warnings', '${summary.warningCount ?? 0}'),
             _healthRow(Icons.error, 'Errors', '${summary.errorCount ?? 0}'),
             _healthRow(Icons.wifi, 'Network Issues', '${summary.networkInterruptions ?? 0}'),
@@ -331,6 +338,7 @@ class _TripBehaviourScreenState extends State<TripBehaviourScreen> {
   }
 
   Widget _buildAnomalyList(List<TripAnomaly> anomalies) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: AppColors.surface,

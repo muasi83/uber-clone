@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -80,12 +81,13 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
     if (mounted) {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated')),
+        SnackBar(content: Text(AppLocalizations.of(context).profileUpdated)),
       );
     }
   }
 
   void _showPhotoOptions() {
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       shape: RoundedRectangleBorder(
@@ -97,14 +99,14 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Profile Photo',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+              Text(
+                l10n.profilePhoto,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
               ListTile(
                 leading: const Icon(Icons.camera_alt_outlined),
-                title: const Text('Take Photo'),
+                title: Text(l10n.takePhoto),
                 onTap: () {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -114,7 +116,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Choose from Gallery'),
+                title: Text(l10n.chooseFromGallery),
                 onTap: () {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -124,7 +126,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: AppColors.error),
-                title: const Text('Remove Photo', style: TextStyle(color: AppColors.error)),
+                title: Text(l10n.removePhoto, style: const TextStyle(color: AppColors.error)),
                 onTap: () {
                   Navigator.pop(ctx);
                 },
@@ -138,13 +140,14 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final initial = (widget.user?.fullName ?? 'U').isNotEmpty
         ? (widget.user?.fullName ?? 'U')[0].toUpperCase()
         : 'U';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(l10n.profile),
         centerTitle: true,
       ),
       body: ListView(
@@ -185,11 +188,11 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
             ),
           ),
           AppSpacing.gapXxl,
-          _buildField('Full Name', _nameController, Icons.person_outline),
+          _buildField(l10n.fullName, _nameController, Icons.person_outline),
           AppSpacing.gapLg,
-          _buildField('Email', _emailController, Icons.email_outlined),
+          _buildField(l10n.email, _emailController, Icons.email_outlined),
           AppSpacing.gapLg,
-          _buildField('Phone', _phoneController, Icons.phone_outlined),
+          _buildField(l10n.phoneNumber, _phoneController, Icons.phone_outlined),
           if (widget.user?.countryCode != null) ...[
             AppSpacing.gapXs,
             Text(
@@ -200,7 +203,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
           AppSpacing.gapXl,
           const Text(
             'Gender',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
@@ -208,10 +211,10 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
           ),
           AppSpacing.gapSm,
           SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'MALE', label: Text('Male')),
-              ButtonSegment(value: 'FEMALE', label: Text('Female')),
-              ButtonSegment(value: 'PREFER_NOT_TO_SAY', label: Text('Prefer not to say')),
+            segments: [
+              ButtonSegment(value: 'MALE', label: Text(l10n.male)),
+              ButtonSegment(value: 'FEMALE', label: Text(l10n.female)),
+              ButtonSegment(value: 'PREFER_NOT_TO_SAY', label: Text(l10n.preferNotToSay)),
             ],
             selected: {_selectedGender},
             onSelectionChanged: (value) {

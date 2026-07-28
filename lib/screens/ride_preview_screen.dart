@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../l10n/app_localizations.dart';
 import '../services/currency_service.dart';
 import '../services/directions_service.dart';
 import '../services/location_service.dart';
@@ -291,14 +292,15 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.textPrimary,
       appBar: AppBar(
         backgroundColor: AppColors.textPrimary,
         foregroundColor: AppColors.primaryLight,
         title: Semantics(
-          label: 'Trip preview',
-          child: const Text('Trip Preview'),
+          label: l10n.tripPreview,
+          child: Text(l10n.tripPreview),
         ),
         actions: [
           Center(
@@ -353,7 +355,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
             end: 16,
             bottom: MediaQuery.of(context).padding.bottom + 16,
             child: Semantics(
-              label: widget.driverMode ? 'Ride request details' : 'Trip preview',
+              label: widget.driverMode ? 'Ride request details' : l10n.tripPreview,
               child: Container(
                 padding: AppSpacing.cardPadding,
                 decoration: BoxDecoration(
@@ -405,7 +407,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                                     if (widget.riderRideCount != null) ...[
                                       const SizedBox(width: 8),
                                       Text(
-                                        '${widget.riderRideCount} rides',
+                                        l10n.rides2('${widget.riderRideCount}'),
                                         style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
                                       ),
                                     ],
@@ -443,7 +445,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                             const Icon(Icons.timer, size: 14, color: AppColors.primary),
                             const SizedBox(width: 4),
                             Text(
-                              'Pickup in $_etaMinutes min',
+                              l10n.pickupInMin('$_etaMinutes'),
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.primary,
@@ -454,21 +456,21 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                         ),
                       )
                     else if (widget.driverMode && _pickupEtaLoading)
-                      const Padding(
-                        padding: EdgeInsetsDirectional.only(start: 16, top: 4),
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(start: 16, top: 4),
                         child: Row(
                           children: [
-                            SizedBox(
+                            const SizedBox(
                               width: 12, height: 12,
                               child: CircularProgressIndicator(
                                 strokeWidth: 1.5,
                                 color: AppColors.primary,
                               ),
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
                               'Calculating ETA...',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,
                               ),
@@ -530,7 +532,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                                   ),
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                 ),
-                                child: const Text('IGNORE', style: TextStyle(fontWeight: FontWeight.w600)),
+                                child: Text(l10n.ignore, style: const TextStyle(fontWeight: FontWeight.w600)),
                               ),
                             ),
                           ),
@@ -540,7 +542,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                             child: Semantics(
                               label: 'Accept ride request, swipe to confirm',
                               child: SwipeButton(
-                                label: 'ACCEPT RIDE',
+                                label: l10n.accept.toUpperCase(),
                                 icon: Icons.arrow_forward_ios,
                                 onConfirmed: () {
                                   widget.onAccept?.call();
@@ -553,7 +555,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                       )
                     else
                       Semantics(
-                        label: 'Return to offer',
+                        label: l10n.goBack2,
                         child: SizedBox(
                           width: double.infinity,
                           child: TextButton(
@@ -566,7 +568,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
-                            child: const Text('Return to Offer', style: TextStyle(fontWeight: FontWeight.w600)),
+                            child: Text(l10n.goBack2, style: const TextStyle(fontWeight: FontWeight.w600)),
                           ),
                         ),
                       ),
@@ -590,9 +592,9 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                     ),
                     child: Semantics(
                       label: 'Loading route',
-                      child: const Text(
+                      child: Text(
                         'Loading route...',
-                        style: TextStyle(color: AppColors.primaryLight, fontSize: 13),
+                        style: const TextStyle(color: AppColors.primaryLight, fontSize: 13),
                       ),
                     ),
                   ),

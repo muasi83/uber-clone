@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import '../l10n/app_localizations.dart';
 import '../services/location_monitor_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_colors.dart';
@@ -104,15 +105,16 @@ class _LocationBannerState extends State<LocationBanner>
     super.dispose();
   }
 
-  String get _subtitle {
+  String _subtitle(AppLocalizations l10n) {
     final role = StorageService.getRole() ?? '';
     if (role == 'DRIVER') {
-      return 'Turn on location — it will help us find your rider.';
+      return l10n.turnOnLocationItWillHelpUsFindYourRider;
     }
-    return 'Turn on location — it will help us find your driver.';
+    return l10n.turnOnLocationItWillHelpUsFindYourDriver;
   }
 
   Widget _buildSheet() {
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
@@ -134,9 +136,9 @@ class _LocationBannerState extends State<LocationBanner>
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
-              'Allow location',
-              style: TextStyle(
+            Text(
+              l10n.allowLocation,
+              style: const TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 18,
                 color: AppColors.textPrimary,
@@ -144,7 +146,7 @@ class _LocationBannerState extends State<LocationBanner>
             ),
             const SizedBox(height: 6),
             Text(
-              _subtitle,
+              _subtitle(l10n),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 14,
@@ -155,7 +157,7 @@ class _LocationBannerState extends State<LocationBanner>
             SizedBox(
               width: double.infinity,
               child: _buildButton(
-                label: 'Allow Location',
+                label: l10n.allowLocation2,
                 filled: true,
                 onTap: _onAllowLocation,
               ),
@@ -164,7 +166,7 @@ class _LocationBannerState extends State<LocationBanner>
             SizedBox(
               width: double.infinity,
               child: _buildButton(
-                label: 'Maybe Later',
+                label: l10n.maybeLater,
                 filled: false,
                 onTap: _onMaybeLater,
               ),

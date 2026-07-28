@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 import '../models/trip_events.dart';
 import '../services/trip_behaviour_service.dart';
 import '../services/storage_service.dart';
@@ -162,6 +163,7 @@ class TripReplayScreenState extends State<TripReplayScreen> {
   }
 
   Widget _buildError() {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -170,7 +172,7 @@ class TripReplayScreenState extends State<TripReplayScreen> {
           const SizedBox(height: 8),
           Text(_error!, style: TextStyle(color: AppColors.error, fontSize: 13)),
           const SizedBox(height: 8),
-          ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
+          ElevatedButton(onPressed: _loadData, child: Text(l10n.retry)),
         ],
       ),
     );

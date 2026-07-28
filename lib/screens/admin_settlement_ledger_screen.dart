@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/currency_service.dart';
 import '../services/admin_earnings_service.dart';
@@ -45,14 +46,14 @@ class _AdminSettlementLedgerScreenState extends State<AdminSettlementLedgerScree
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Settlement Ledger'),
+        title: Text(AppLocalizations.of(context).settlementLedger),
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: 'Create Settlement',
+            tooltip: AppLocalizations.of(context).createSettlement,
             onPressed: _showCreateDialog,
           ),
           IconButton(
@@ -79,12 +80,12 @@ class _AdminSettlementLedgerScreenState extends State<AdminSettlementLedgerScree
         children: [
           Icon(Icons.receipt_long, size: 48, color: AppColors.textTertiary),
           const SizedBox(height: 12),
-          const Text('No settlements recorded', style: TextStyle(color: AppColors.textSecondary)),
+          Text(AppLocalizations.of(context).noSettlementsRecorded, style: const TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 12),
           ElevatedButton.icon(
             onPressed: _showCreateDialog,
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('Create Settlement'),
+            label: Text(AppLocalizations.of(context).createSettlement),
           ),
         ],
       ),
@@ -106,6 +107,7 @@ class _AdminSettlementLedgerScreenState extends State<AdminSettlementLedgerScree
   }
 
   Widget _buildSettlementCard(Map<String, dynamic> s) {
+    final l10n = AppLocalizations.of(context);
     final name = s['driverName'] as String? ?? 'Unknown';
     final net = (s['netAmount'] as num?) ?? 0;
     final gross = (s['grossAmount'] as num?) ?? 0;
@@ -179,20 +181,20 @@ class _AdminSettlementLedgerScreenState extends State<AdminSettlementLedgerScree
             const SizedBox(height: 10),
             Row(
               children: [
-                _buildDetail('Gross', CurrencyService.format(gross.toDouble())),
+                _buildDetail(l10n.gross, CurrencyService.format(gross.toDouble())),
                 const SizedBox(width: 16),
-                _buildDetail('Fee', CurrencyService.format(appFee.toDouble())),
+                _buildDetail(l10n.fee, CurrencyService.format(appFee.toDouble())),
                 const SizedBox(width: 16),
-                _buildDetail('Net', CurrencyService.format(net.toDouble())),
+                _buildDetail(l10n.net, CurrencyService.format(net.toDouble())),
               ],
             ),
             if (ref.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text('Ref: $ref', style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+              Text(l10n.ref(ref), style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
             ],
             if (receipt != null && receipt.isNotEmpty) ...[
               const SizedBox(height: 2),
-              Text('Receipt: $receipt', style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+              Text(l10n.receipt2(receipt), style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
             ],
           ],
         ),
@@ -213,6 +215,7 @@ class _AdminSettlementLedgerScreenState extends State<AdminSettlementLedgerScree
   }
 
   void _showCreateDialog() {
+    final l10n = AppLocalizations.of(context);
     final driverIdCtrl = TextEditingController();
     final grossCtrl = TextEditingController();
     final feeCtrl = TextEditingController();
@@ -222,53 +225,56 @@ class _AdminSettlementLedgerScreenState extends State<AdminSettlementLedgerScree
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('Create Settlement', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _dialogField(driverIdCtrl, 'Driver ID', 'Enter driver user ID'),
-              _dialogField(grossCtrl, 'Gross Amount', '0.00'),
-              _dialogField(feeCtrl, 'App Fee', '0.00'),
-              _dialogField(netCtrl, 'Net Amount', '0.00'),
-              _dialogField(refCtrl, 'Settlement Reference', 'e.g. STL-001'),
-              _dialogField(receiptCtrl, 'Receipt Number (optional)', ''),
-            ],
+      builder: (ctx) {
+          final l10n = AppLocalizations.of(ctx);
+          return AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: Text(l10n.createSettlement, style: const TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _dialogField(driverIdCtrl, l10n.driverId, l10n.enterDriverUserId),
+                _dialogField(grossCtrl, l10n.grossAmount, '0.00'),
+                _dialogField(feeCtrl, l10n.appFee, '0.00'),
+                _dialogField(netCtrl, l10n.netAmount, '0.00'),
+                _dialogField(refCtrl, l10n.settlementReference, l10n.egStl001),
+                _dialogField(receiptCtrl, l10n.receiptNumberOptional, ''),
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (driverIdCtrl.text.isEmpty || refCtrl.text.isEmpty) return;
-              Navigator.pop(ctx);
-              final ok = await AdminEarningsService.createSettlement(
-                driverId: int.parse(driverIdCtrl.text),
-                grossAmount: grossCtrl.text.isEmpty ? '0' : grossCtrl.text,
-                appFee: feeCtrl.text.isEmpty ? '0' : feeCtrl.text,
-                netAmount: netCtrl.text.isEmpty ? '0' : netCtrl.text,
-                settlementReference: refCtrl.text,
-                receiptNumber: receiptCtrl.text,
-                token: _token!,
-              );
-              if (!mounted) return;
-              if (ok) {
-                _loadSettlements();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to create settlement')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel, style: const TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (driverIdCtrl.text.isEmpty || refCtrl.text.isEmpty) return;
+                Navigator.pop(ctx);
+                final ok = await AdminEarningsService.createSettlement(
+                  driverId: int.parse(driverIdCtrl.text),
+                  grossAmount: grossCtrl.text.isEmpty ? '0' : grossCtrl.text,
+                  appFee: feeCtrl.text.isEmpty ? '0' : feeCtrl.text,
+                  netAmount: netCtrl.text.isEmpty ? '0' : netCtrl.text,
+                  settlementReference: refCtrl.text,
+                  receiptNumber: receiptCtrl.text,
+                  token: _token!,
                 );
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+                if (!mounted) return;
+                if (ok) {
+                  _loadSettlements();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to create settlement')),
+                  );
+                }
+              },
+              child: Text(l10n.create),
+            ),
+          ],
+        );
+        },
     );
   }
 

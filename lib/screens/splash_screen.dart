@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/ride_service.dart';
 import '../screens/auth_screen.dart';
@@ -198,6 +199,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Widget _buildSplashContent() {
+    final l10n = AppLocalizations.of(context);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -234,14 +236,14 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         AppSpacing.gapXxl,
         Text(
-          'RideNow',
+          l10n.ridenow,
           style: AppTypography.textTheme.displayMedium?.copyWith(
             color: AppColors.primaryLight,
           ),
         ),
         AppSpacing.gapSm,
         Text(
-          'Premium Ride Sharing',
+          l10n.premiumRideSharing,
           style: AppTypography.textTheme.bodyLarge?.copyWith(
             color: AppColors.primaryLight.withValues(alpha: 0.7),
             letterSpacing: 1.0,
@@ -251,7 +253,7 @@ class _SplashScreenState extends State<SplashScreen>
         _BouncingDots(controller: _animationController),
         AppSpacing.gapLg,
         Text(
-          'v1.0.0',
+          l10n.version('v1.0.0'),
           style: AppTypography.textTheme.bodySmall?.copyWith(
             color: AppColors.primaryLight.withValues(alpha: 0.38),
             letterSpacing: 0.5,
@@ -263,6 +265,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Widget _buildLocationRequest() {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: AppSpacing.screenPadding.copyWith(
         left: AppSpacing.xl,
@@ -287,7 +290,7 @@ class _SplashScreenState extends State<SplashScreen>
           ),
           AppSpacing.gapXxl,
           Text(
-            'Location Access Required',
+            l10n.locationPermissionRequired,
             style: AppTypography.textTheme.headlineMedium?.copyWith(
               color: AppColors.primaryLight,
             ),
@@ -328,7 +331,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: ElevatedButton.icon(
                 onPressed: _openAppSettings,
                 icon: const Icon(Icons.settings),
-                label: const Text('Open Settings'),
+                label: Text(l10n.openSettings),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.textOnPrimary,
@@ -345,7 +348,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: ElevatedButton.icon(
                 onPressed: _retryLocationPermission,
                 icon: const Icon(Icons.my_location),
-                label: const Text('Grant Location Access'),
+                label: Text(l10n.grantLocationAccess),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.textOnPrimary,
@@ -360,12 +363,9 @@ class _SplashScreenState extends State<SplashScreen>
               onPressed: () {
                 if (mounted) _navigateToAuth();
               },
-              child: Text(
-                'Not Now',
-                style: AppTypography.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.primaryLight.withValues(alpha: 0.54),
-                ),
-              ),
+              child: Text(l10n.notNow, style: AppTypography.textTheme.bodyMedium?.copyWith(
+                color: AppColors.primaryLight.withValues(alpha: 0.54),
+              )),
             ),
           ],
           const Spacer(),

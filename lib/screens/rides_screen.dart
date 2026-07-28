@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/past_rides_view.dart';
 import '../widgets/upcoming_rides_view.dart';
@@ -8,16 +9,17 @@ class RidesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('My Rides'),
+          title: Text(l10n.yourRides),
           centerTitle: true,
           bottom: TabBar(
-            tabs: const [
-              Tab(text: 'Past'),
-              Tab(text: 'Upcoming'),
+            tabs: [
+              Tab(text: l10n.past),
+              Tab(text: l10n.upcoming),
             ],
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.textSecondary,

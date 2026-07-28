@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../services/storage_service.dart';
@@ -298,10 +299,11 @@ class _ScheduleRideSheetState extends State<ScheduleRideSheet> {
       _selectedTime.minute,
     );
 
+    final l10n = AppLocalizations.of(context);
     if (!scheduledDateTime.isAfter(DateTime.now())) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a future date and time')),
+          SnackBar(content: Text(l10n.pleaseSelectAFutureDateAndTime)),
         );
       }
       return;
@@ -331,14 +333,14 @@ class _ScheduleRideSheetState extends State<ScheduleRideSheet> {
         Navigator.of(context).pop(result != null);
         messenger.showSnackBar(
           SnackBar(
-            content: Text(result != null ? 'Ride scheduled successfully!' : 'Failed to schedule ride'),
+            content: Text(result != null ? l10n.rideScheduledSuccessfully : l10n.failedToScheduleRide),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An unexpected error occurred')),
+          SnackBar(content: Text(l10n.anUnexpectedErrorOccurred)),
         );
       }
     } finally {
@@ -354,6 +356,7 @@ bool get _canSchedule =>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: SingleChildScrollView(
         padding: EdgeInsets.only(
@@ -400,7 +403,7 @@ bool get _canSchedule =>
                           ),
                         )
                       : Text(
-                          'Schedule Ride — ${_formatDate(widget.selectedDate)} at ${_selectedTime.format(context)}',
+                          l10n.scheduleRideAt(_formatDate(widget.selectedDate), _selectedTime.format(context)),
                         ),
                 ),
               ),
@@ -421,13 +424,14 @@ bool get _canSchedule =>
   }
 
   Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         const SizedBox(width: 48),
-        const Text(
-          'Schedule your later ride',
-          style: TextStyle(
+        Text(
+          l10n.scheduleYourLaterRide,
+          style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -457,6 +461,7 @@ bool get _canSchedule =>
   }
 
   Widget _buildPickupField() {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -471,7 +476,7 @@ bool get _canSchedule =>
                 controller: _pickupController,
                 focusNode: _pickupFocus,
                 decoration: InputDecoration(
-                  hintText: 'Pickup location',
+                  hintText: l10n.pickupLocation,
                   hintStyle: TextStyle(color: AppColors.textTertiary),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -543,6 +548,7 @@ bool get _canSchedule =>
   }
 
   Widget _buildDropoffField() {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -557,7 +563,7 @@ bool get _canSchedule =>
                 controller: _dropoffController,
                 focusNode: _dropoffFocus,
                 decoration: InputDecoration(
-                  hintText: 'Dropoff location',
+                  hintText: l10n.dropoffLocation,
                   hintStyle: TextStyle(color: AppColors.textTertiary),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -685,15 +691,16 @@ bool get _canSchedule =>
   }
 
   Widget _buildSearchResults() {
+    final l10n = AppLocalizations.of(context);
     if (_searchResults.isEmpty && !_isSearching) {
       return Container(
         constraints: const BoxConstraints(maxHeight: 200),
         child: Center(
           child: Text(
             _searchedOnce
-                ? 'No locations found'
+                ? l10n.noLocationsFound
                 : (_activeField != null
-                    ? 'Start typing to search locations'
+                    ? l10n.startTypingToSearchLocations
                     : ''),
             style: const TextStyle(
               fontSize: 14,

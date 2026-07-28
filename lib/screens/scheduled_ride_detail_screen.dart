@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -41,16 +42,17 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
 
   Future<void> _cancelRide() async {
     if (_isLoading) return;
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Scheduled Ride'),
-        content: const Text('Are you sure you want to cancel this ride?'),
+        title: Text(l10n.cancelScheduledRide),
+        content: Text(l10n.areYouSureYouWantToCancelThisRide),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.no)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Yes, Cancel', style: TextStyle(color: AppColors.error)),
+            child: Text(l10n.yesCancel, style: const TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -66,8 +68,8 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
       final success = await ScheduledRideService.cancel(_ride!.id!, token);
       if (mounted && success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ride cancelled'),
+          SnackBar(
+            content: Text(l10n.rideCancelled2),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
           ),
@@ -81,10 +83,11 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final ride = _ride;
     if (ride == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Ride Details')),
+        appBar: AppBar(title: Text(l10n.rideDetails)),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -93,7 +96,7 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ride Details'),
+        title: Text(l10n.rideDetails),
         actions: [
           if (ride.isScheduled || ride.isAssigned)
             IconButton(
@@ -189,6 +192,7 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
   }
 
   Widget _buildAddressSection(ScheduledRide ride) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: AppSpacing.cardPadding,
@@ -199,7 +203,7 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
               children: [
                 const Icon(Icons.trip_origin, size: 16, color: AppColors.pickupMarker),
                 AppSpacing.hGapSm,
-                const Text('Pickup', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                Text(l10n.pickup, style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
               ],
             ),
             AppSpacing.gapXs,
@@ -213,7 +217,7 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
               children: [
                 const Icon(Icons.location_on, size: 16, color: AppColors.error),
                 AppSpacing.hGapSm,
-                const Text('Dropoff', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                Text(l10n.dropoff, style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
               ],
             ),
             AppSpacing.gapXs,
@@ -229,17 +233,18 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
   }
 
   Widget _buildDriverSection(ScheduledRide ride) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.person, size: 16, color: AppColors.primary),
-                SizedBox(width: 8),
-                Text('Driver', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                const Icon(Icons.person, size: 16, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(l10n.driver, style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
               ],
             ),
             AppSpacing.gapSm,
@@ -254,14 +259,15 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
   }
 
   Widget _buildPickupCodeCard(ScheduledRide ride) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: AppSpacing.cardPadding,
         child: Column(
           children: [
-            const Text(
-              'Pickup Code',
-              style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+            Text(
+              l10n.pickupCode,
+              style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
             ),
             AppSpacing.gapSm,
             Text(
@@ -274,9 +280,9 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
               ),
             ),
             AppSpacing.gapXs,
-            const Text(
-              'Share this code with your driver to start the ride',
-              style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+            Text(
+              l10n.shareThisCodeWithYourDriverToStartTheRide,
+              style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
               textAlign: TextAlign.center,
             ),
           ],
@@ -286,22 +292,23 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
   }
 
   Widget _buildInfoSection(ScheduledRide ride) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Details', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+            Text(l10n.details, style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
             AppSpacing.gapSm,
             if (ride.rideType != null)
-              _infoRow('Type', ride.rideType!),
+              _infoRow(l10n.type, ride.rideType!),
             if (ride.estimatedFare != null)
-              _infoRow('Fare', CurrencyService.format(ride.estimatedFare!)),
+              _infoRow(l10n.fare, CurrencyService.format(ride.estimatedFare!)),
             if (ride.estimatedDistance != null)
-              _infoRow('Distance', '${ride.estimatedDistance!.toStringAsFixed(1)} km'),
+              _infoRow(l10n.distance, '${ride.estimatedDistance!.toStringAsFixed(1)} km'),
             if (ride.estimatedDuration != null)
-              _infoRow('Duration', '${ride.estimatedDuration} min'),
+              _infoRow(l10n.duration, '${ride.estimatedDuration} min'),
           ],
         ),
       ),
@@ -324,6 +331,7 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
   }
 
   Widget _buildCancellationCard(ScheduledRide ride) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       color: AppColors.error.withValues(alpha: 0.05),
       child: Padding(
@@ -334,7 +342,7 @@ class _ScheduledRideDetailScreenState extends State<ScheduledRideDetailScreen> {
             AppSpacing.hGapSm,
             Expanded(
               child: Text(
-                ride.cancellationReason ?? 'Cancelled',
+                ride.cancellationReason ?? l10n.cancelled,
                 style: const TextStyle(fontSize: 13, color: AppColors.error),
               ),
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -21,8 +22,9 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Phone Verification'), centerTitle: true),
+      appBar: AppBar(title: Text(l10n.verifyYourPhone), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -30,9 +32,9 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
           children: [
             const Icon(Icons.phone_android_outlined, size: 80, color: AppColors.primary),
             AppSpacing.gapXl,
-            const Text(
-              'Verify Your Phone',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+            Text(
+              l10n.verifyYourPhone,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
             ),
             AppSpacing.gapMd,
             const Text(
@@ -65,13 +67,13 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
                 ),
-                child: const Text('Verify', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                child: Text(l10n.verify, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
             AppSpacing.gapMd,
             TextButton(
               onPressed: () {},
-              child: const Text('Resend Code', style: TextStyle(color: AppColors.textSecondary)),
+              child: Text(l10n.resendCode, style: const TextStyle(color: AppColors.textSecondary)),
             ),
           ],
         ),

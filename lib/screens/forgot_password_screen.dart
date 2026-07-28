@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
+import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import 'otp_screen.dart';
 import 'reset_password_screen.dart';
@@ -36,7 +37,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Record
     if (email.isEmpty) {
       _clearError();
     } else if (!_isValidEmail(email)) {
-      setState(() => _emailError = 'Please enter a valid email address');
+      setState(() => _emailError = AppLocalizations.of(context).pleaseEnterAValidEmailAddress);
     } else {
       _clearError();
     }
@@ -127,6 +128,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Record
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -158,9 +160,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Record
                   ),
                 ),
                 AppSpacing.gapXxl,
-                const Text(
-                  'Forgot Password?',
-                  style: TextStyle(
+                Text(
+                  l10n.forgotPassword,
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
@@ -170,7 +172,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Record
                 const Text(
                   'Enter your email and we\'ll send you a code to reset your password.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
                   ),
@@ -178,14 +180,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Record
                 AppSpacing.gapXxxl,
                 PremiumTextField(
                   controller: _emailController,
-                  label: 'Email',
+                  label: l10n.email,
                   prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   errorText: _emailError.isNotEmpty ? _emailError : null,
                 ),
                 AppSpacing.gapXxl,
                 PremiumButton(
-                  label: 'Send Reset Code',
+                  label: l10n.sendResetLink,
                   isLoading: _isLoading,
                   onPressed: (_isLoading || _emailError.isNotEmpty) ? null : _sendOtp,
                   variant: ButtonVariant.gradient,

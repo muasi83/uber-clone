@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/admin_drivers_service.dart';
 import 'admin_driver_details_screen.dart';
@@ -63,7 +64,7 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('All Drivers'),
+        title: Text(AppLocalizations.of(context).allDrivers),
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
@@ -84,6 +85,7 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
   }
 
   Widget _buildFilterBar() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       color: AppColors.surface,
@@ -91,7 +93,7 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
         children: [
           TextField(
             decoration: InputDecoration(
-              hintText: 'Search by name, vehicle, plate...',
+              hintText: l10n.searchByNameVehiclePlate,
               hintStyle: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.7)),
               prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
               filled: true,
@@ -111,15 +113,15 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                _buildChip('All', 'all'),
+                _buildChip(l10n.all, 'all'),
                 const SizedBox(width: 6),
-                _buildChip('Online', 'online'),
+                _buildChip(l10n.online, 'online'),
                 const SizedBox(width: 6),
-                _buildChip('Offline', 'offline'),
+                _buildChip(l10n.offline, 'offline'),
                 const SizedBox(width: 6),
-                _buildChip('Available', 'available'),
+                _buildChip(l10n.available, 'available'),
                 const SizedBox(width: 6),
-                _buildChip('On Ride', 'busy'),
+                _buildChip(l10n.onRide, 'busy'),
               ],
             ),
           ),
@@ -148,6 +150,8 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
   }
 
   Widget _buildBody() {
+    final l10n = AppLocalizations.of(context);
+
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
@@ -158,12 +162,12 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
           children: [
             Icon(Icons.error_outline, size: 48, color: AppColors.error.withValues(alpha: 0.7)),
             const SizedBox(height: 12),
-            const Text('Failed to load drivers', style: TextStyle(color: AppColors.textSecondary)),
+            Text(l10n.failedToLoadDrivers, style: const TextStyle(color: AppColors.textSecondary)),
             const SizedBox(height: 12),
             TextButton.icon(
               onPressed: _loadDrivers,
               icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Retry'),
+              label: Text(l10n.retry),
             ),
           ],
         ),
@@ -176,7 +180,7 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
           children: [
             Icon(Icons.person_off, size: 48, color: AppColors.textTertiary),
             const SizedBox(height: 12),
-            const Text('No drivers found', style: TextStyle(color: AppColors.textSecondary)),
+            Text(l10n.noDriversFound2, style: const TextStyle(color: AppColors.textSecondary)),
           ],
         ),
       );
@@ -196,6 +200,7 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
   }
 
   Widget _buildDriverCard(Map<String, dynamic> driver) {
+    final l10n = AppLocalizations.of(context);
     final online = driver['online'] == true;
     final active = driver['active'] == true;
     final onRide = driver['currentRideId'] != null;
@@ -206,16 +211,16 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
     String statusText;
     Color statusColor;
     if (online && onRide) {
-      statusText = 'On Ride';
+      statusText = l10n.onRide;
       statusColor = AppColors.warning;
     } else if (online && active) {
-      statusText = 'Available';
+      statusText = l10n.available;
       statusColor = AppColors.success;
     } else if (online) {
-      statusText = 'Online';
+      statusText = l10n.online;
       statusColor = AppColors.primary;
     } else {
-      statusText = 'Offline';
+      statusText = l10n.offline;
       statusColor = AppColors.textTertiary;
     }
 

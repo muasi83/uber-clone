@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/admin_drivers_service.dart';
 import '../services/currency_service.dart';
@@ -76,12 +77,12 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
         children: [
           Icon(Icons.error_outline, size: 48, color: AppColors.error.withValues(alpha: 0.7)),
           const SizedBox(height: 12),
-          const Text('Failed to load driver details', style: TextStyle(color: AppColors.textSecondary)),
+          Text(AppLocalizations.of(context).failedToLoadDriverDetails, style: const TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 12),
           TextButton.icon(
             onPressed: _loadDetail,
             icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('Retry'),
+            label: Text(AppLocalizations.of(context).retry),
           ),
         ],
       ),
@@ -121,6 +122,7 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
     final online = d['online'] == true;
     final active = d['active'] == true;
     final verified = d['verified'] == true;
+    final l10n = AppLocalizations.of(context);
 
     return Card(
       color: AppColors.surface,
@@ -171,15 +173,15 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
               children: [
                 _buildInfoChip(
                   Icons.circle,
-                  online ? 'Online' : 'Offline',
+                  online ? l10n.online : l10n.offline,
                   online ? AppColors.success : AppColors.textTertiary,
                 ),
-                if (active) _buildInfoChip(Icons.check_circle, 'Active', AppColors.success),
-                if (!active) _buildInfoChip(Icons.block, 'Blocked', AppColors.error),
-                if (verified) _buildInfoChip(Icons.verified, 'Verified', AppColors.primary),
-                if (!verified) _buildInfoChip(Icons.verified, 'Unverified', AppColors.warning),
+                if (active) _buildInfoChip(Icons.check_circle, l10n.active, AppColors.success),
+                if (!active) _buildInfoChip(Icons.block, l10n.blocked, AppColors.error),
+                if (verified) _buildInfoChip(Icons.verified, l10n.verified, AppColors.primary),
+                if (!verified) _buildInfoChip(Icons.verified, l10n.unverified, AppColors.warning),
                 if (d['currentRideId'] != null)
-                  _buildInfoChip(Icons.route, 'On Ride', AppColors.warning),
+                  _buildInfoChip(Icons.route, l10n.onRide, AppColors.warning),
               ],
             ),
             const SizedBox(height: 12),
@@ -189,7 +191,7 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
                   child: OutlinedButton.icon(
                     onPressed: () => _toggleVerify(d),
                     icon: Icon(verified ? Icons.verified : Icons.verified, size: 16),
-                    label: Text(verified ? 'Unverify' : 'Verify'),
+                    label: Text(verified ? l10n.unverify : l10n.verify),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: verified ? AppColors.warning : AppColors.primary,
                     ),
@@ -200,7 +202,7 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
                   child: OutlinedButton.icon(
                     onPressed: () => _toggleBlock(d),
                     icon: Icon(active ? Icons.block : Icons.check_circle, size: 16),
-                    label: Text(active ? 'Block' : 'Unblock'),
+                    label: Text(active ? l10n.block : l10n.unblock),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: active ? AppColors.error : AppColors.success,
                     ),
@@ -238,6 +240,7 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
     final color = d['vehicleColor'] as String?;
     final plate = d['vehicleNumber'] as String?;
     final type = d['vehicleType'] as String?;
+    final l10n = AppLocalizations.of(context);
 
     if (model == null && plate == null) return const SizedBox.shrink();
 
@@ -257,14 +260,14 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
               children: [
                 Icon(Icons.directions_car, size: 18, color: AppColors.primary),
                 const SizedBox(width: 8),
-                const Text('Vehicle', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                Text(l10n.vehicle, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               ],
             ),
             const SizedBox(height: 12),
-            _buildDetailRow('Model', model ?? '-'),
-            if (color != null) _buildDetailRow('Color', color),
-            _buildDetailRow('Plate', plate ?? '-'),
-            if (type != null) _buildDetailRow('Type', type),
+            _buildDetailRow(l10n.model, model ?? '-'),
+            if (color != null) _buildDetailRow(l10n.color, color),
+            _buildDetailRow(l10n.plate, plate ?? '-'),
+            if (type != null) _buildDetailRow(l10n.type, type),
           ],
         ),
       ),
@@ -278,6 +281,7 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
     final totalEarnings = d['totalEarnings'] != null ? (d['totalEarnings'] as num).toDouble() : null;
     final lat = d['currentLatitude'] as double?;
     final lng = d['currentLongitude'] as double?;
+    final l10n = AppLocalizations.of(context);
 
     return Card(
       color: AppColors.surface,
@@ -295,26 +299,26 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
               children: [
                 Icon(Icons.bar_chart, size: 18, color: AppColors.primary),
                 const SizedBox(width: 8),
-                const Text('Statistics', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                Text(l10n.statistics, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                _buildStatItem(Icons.star, rating != null ? rating.toStringAsFixed(1) : 'N/A', 'Rating', AppColors.warning),
-                _buildStatItem(Icons.route, totalRides.toString(), 'Rides', AppColors.primary),
+                _buildStatItem(Icons.star, rating != null ? rating.toStringAsFixed(1) : l10n.na, l10n.rating2, AppColors.warning),
+                _buildStatItem(Icons.route, totalRides.toString(), l10n.rides, AppColors.primary),
                 if (totalEarnings != null)
-                  _buildStatItem(Icons.attach_money, totalEarnings.toStringAsFixed(2), 'Earnings', AppColors.success),
+                  _buildStatItem(Icons.attach_money, totalEarnings.toStringAsFixed(2), l10n.earnings, AppColors.success),
               ],
             ),
             if (lat != null && lng != null) ...[
               const Divider(height: 20, color: AppColors.outline),
-              _buildDetailRow('Latitude', lat.toStringAsFixed(6)),
-              _buildDetailRow('Longitude', lng.toStringAsFixed(6)),
+              _buildDetailRow(l10n.latitude, lat.toStringAsFixed(6)),
+              _buildDetailRow(l10n.longitude, lng.toStringAsFixed(6)),
             ],
             if (d['lastSeenAt'] != null) ...[
               const Divider(height: 20, color: AppColors.outline),
-              _buildDetailRow('Last Seen', _formatDateTime(d['lastSeenAt'] as String)),
+              _buildDetailRow(l10n.lastSeen, _formatDateTime(d['lastSeenAt'] as String)),
             ],
           ],
         ),
@@ -338,6 +342,7 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
   Widget _buildCurrentRideCard() {
     final rideId = _detail!['currentRideId'] as int;
     final rideStatus = _detail!['currentRideStatus'] as String? ?? 'UNKNOWN';
+    final l10n = AppLocalizations.of(context);
 
     return Card(
       color: AppColors.surface,
@@ -355,12 +360,12 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
               children: [
                 Icon(Icons.route, size: 18, color: AppColors.warning),
                 const SizedBox(width: 8),
-                const Text('Current Ride', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                Text(l10n.currentRide, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               ],
             ),
             const SizedBox(height: 12),
-            _buildDetailRow('Ride #', rideId.toString()),
-            _buildDetailRow('Status', rideStatus),
+            _buildDetailRow(l10n.ride2, rideId.toString()),
+            _buildDetailRow(l10n.status, rideStatus),
           ],
         ),
       ),
@@ -369,6 +374,7 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
 
   Widget _buildRecentRidesCard() {
     final rides = (_detail!['recentRides'] as List).cast<Map<String, dynamic>>();
+    final l10n = AppLocalizations.of(context);
 
     return Card(
       color: AppColors.surface,
@@ -386,7 +392,7 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
               children: [
                 Icon(Icons.history, size: 18, color: AppColors.primary),
                 const SizedBox(width: 8),
-                const Text('Recent Rides', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                Text(l10n.recentRides, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               ],
             ),
             const SizedBox(height: 8),
@@ -502,19 +508,22 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
     if (_token == null) return;
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirm'),
-        content: Text(d['active'] == true
-            ? 'Block this driver? They will be unable to login or accept rides.'
-            : 'Unblock this driver?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(d['active'] == true ? 'Block' : 'Unblock'),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+            final l10n = AppLocalizations.of(ctx);
+            return AlertDialog(
+            title: Text(l10n.confirm),
+            content: Text(d['active'] == true
+                ? l10n.blockThisDriverTheyWillBeUnableToLoginOrAcceptRides
+                : l10n.unblockThisDriver),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(d['active'] == true ? l10n.block : l10n.unblock),
+              ),
+            ],
+          );
+            },
     );
     if (confirm != true) return;
     final result = await AdminDriversService.toggleBlock(widget.driverId, _token!);

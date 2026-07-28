@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import '../l10n/app_localizations.dart';
 import '../services/location_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -44,9 +45,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
         LocationPickerMode.dropoff => AppColors.dropoffMarker,
       };
 
-  String get _title => switch (widget.mode) {
-        LocationPickerMode.pickup => 'Set pickup location',
-        LocationPickerMode.dropoff => 'Set drop-off location',
+  String _title(AppLocalizations l10n) => switch (widget.mode) {
+        LocationPickerMode.pickup => l10n.setPickupLocation,
+        LocationPickerMode.dropoff => l10n.setDropoffLocation,
       };
 
   @override
@@ -166,6 +167,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: Stack(
         children: [
@@ -218,7 +220,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                   onPressed: () => Navigator.of(context).pop(),
                 ),
                 title: Text(
-                  _title,
+                  _title(l10n),
                   style: const TextStyle(color: AppColors.primary),
                 ),
                 centerTitle: true,
@@ -268,9 +270,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                           AppSpacing.hGapMd,
                           Expanded(
                             child: _isLoadingAddress
-                                ? const Row(
+                                ? Row(
                                     children: [
-                                      SizedBox(
+                                      const SizedBox(
                                         width: 16,
                                         height: 16,
                                         child: CircularProgressIndicator(
@@ -279,8 +281,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                                       ),
                                       AppSpacing.hGapSm,
                                       Text(
-                                        'Finding address...',
-                                        style: TextStyle(
+                                        l10n.findingAddress,
+                                        style: const TextStyle(
                                           color: AppColors.textSecondary,
                                           fontSize: 14,
                                         ),
@@ -289,7 +291,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                                   )
                                 : Text(
                                     _address.isEmpty
-                                        ? 'Move the map to select location'
+                                        ? l10n.moveTheMapToSelectLocation
                                         : _address,
                                     style: TextStyle(
                                       fontSize: _address.isEmpty ? 14 : 16,
@@ -309,8 +311,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                       AppSpacing.gapMd,
                       PremiumButton(
                         label: _address.isEmpty
-                            ? 'Move the map'
-                            : 'Confirm Location',
+                            ? l10n.moveTheMap
+                            : l10n.confirmLocation2,
                         onPressed:
                             _address.isNotEmpty ? _onConfirm : null,
                         variant: ButtonVariant.gradient,

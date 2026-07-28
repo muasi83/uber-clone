@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -9,14 +10,14 @@ class SafetyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Safety'), centerTitle: true),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).safety), centerTitle: true),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _buildSafetyCard(
             icon: Icons.share_location_outlined,
-            title: 'Share My Trip',
-            subtitle: 'Share your ride status with trusted contacts',
+            title: AppLocalizations.of(context).shareMyTrip,
+            subtitle: AppLocalizations.of(context).shareYourRideStatusWithTrustedContacts,
             trailing: Switch(value: false, onChanged: (_) {}),
           ),
           _buildSafetyCard(

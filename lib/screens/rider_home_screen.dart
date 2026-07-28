@@ -33,6 +33,7 @@ import '../services/event_recorder_service.dart';
 import '../services/location_monitor_service.dart';
 import 'rides_screen.dart';
 import 'account_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class RiderHomeScreen extends StatefulWidget {
   const RiderHomeScreen({super.key});
@@ -463,7 +464,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
         Marker(
           markerId: const MarkerId('current'),
           position: _currentLocation!,
-          infoWindow: const InfoWindow(title: 'Your Location'),
+          infoWindow: InfoWindow(title: AppLocalizations.of(context).yourLocation),
           icon: _customCurrentMarker,
         ),
       );
@@ -560,7 +561,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
             TextButton(
               onPressed: () => Navigator.pop(ctx, 'cancel'),
               style: TextButton.styleFrom(foregroundColor: AppColors.error),
-              child: const Text('Cancel Ride'),
+              child: Text(AppLocalizations.of(context).cancelRide2),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, 'resume'),
@@ -694,7 +695,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
       );
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text(AppLocalizations.of(context).error2('$e')),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -761,7 +762,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
               AppSpacing.gapLg,
               ListTile(
                 leading: const Icon(Icons.bug_report_outlined, size: 20),
-                title: const Text('Debug'),
+                title: Text(AppLocalizations.of(context).debug),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -774,7 +775,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
               ),
               ListTile(
                 leading: const Icon(Icons.history, size: 20),
-                title: const Text('Ride History'),
+                title: Text(AppLocalizations.of(context).rideHistory),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -787,7 +788,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
               ),
               ListTile(
                 leading: const Icon(Icons.logout, size: 20),
-                title: const Text('Logout'),
+                title: Text(AppLocalizations.of(context).logout),
                 onTap: () {
                   Navigator.pop(context);
                   _onLogout();
@@ -822,7 +823,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
             ),
             AppSpacing.gapLg,
             Text(
-              'Finding your location...',
+              AppLocalizations.of(context).findingYourLocation,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -891,21 +892,21 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
         currentIndex: _adminTabIndex,
         onTap: (index) => setState(() => _adminTabIndex = index),
         type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.map_outlined),
             activeIcon: Icon(Icons.map),
             label: 'Home',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.route_outlined),
             activeIcon: Icon(Icons.route),
             label: 'Trips',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.directions_car_outlined),
-            activeIcon: Icon(Icons.directions_car),
-            label: 'Drivers',
+            icon: const Icon(Icons.directions_car_outlined),
+            activeIcon: const Icon(Icons.directions_car),
+            label: AppLocalizations.of(context).drivers,
           ),
         ],
       ),
@@ -923,10 +924,10 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
         currentIndex: _riderTabIndex,
         onTap: (index) => setState(() => _riderTabIndex = index),
         type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.route_rounded), label: 'Rides'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Account'),
+        items: [
+          BottomNavigationBarItem(icon: const Icon(Icons.home_rounded), label: 'Home'),
+          BottomNavigationBarItem(icon: const Icon(Icons.route_rounded), label: AppLocalizations.of(context).rides),
+          BottomNavigationBarItem(icon: const Icon(Icons.person_rounded), label: AppLocalizations.of(context).account),
         ],
       ),
     );
@@ -979,7 +980,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                 _initializeMap();
               },
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(AppLocalizations.of(context).retry),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.textPrimary,
@@ -1040,7 +1041,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
           start: 16,
           child: Semantics(
             button: true,
-            label: 'Menu',
+            label: AppLocalizations.of(context).menu,
             child: _buildFloatingButton(
               icon: Icons.menu_rounded,
               onPressed: _showMenuSheet,
@@ -1068,7 +1069,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
           end: 16,
           child: Semantics(
             button: true,
-            label: 'Settings',
+            label: AppLocalizations.of(context).settings,
             child: _buildFloatingButton(
               icon: Icons.settings_outlined,
               onPressed: () {
@@ -1122,7 +1123,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
           end: 16,
           child: Semantics(
             button: true,
-            label: 'Recenter map',
+            label: AppLocalizations.of(context).recenterMap,
             child: _buildFloatingButton(
               icon: Icons.my_location_rounded,
               onPressed: _centerOnLocation,
@@ -1495,7 +1496,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
   Widget _buildSearchBar() {
     return Semantics(
       button: true,
-      label: 'Search destination',
+      label: AppLocalizations.of(context).searchDestination,
       child: InkWell(
         onTap: _requestRide,
         borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -1525,7 +1526,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
               ),
               AppSpacing.hGapMd,
               Text(
-                'Where to?',
+                AppLocalizations.of(context).whereTo,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w500,
@@ -1562,7 +1563,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                       const Icon(Icons.directions_car_rounded, color: AppColors.textOnPrimary, size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        'Ride',
+                        AppLocalizations.of(context).ride,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               color: AppColors.textOnPrimary,
                               fontWeight: FontWeight.w600,
@@ -1595,7 +1596,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                       const Icon(Icons.schedule_rounded, color: AppColors.primary, size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        'Schedule',
+                        AppLocalizations.of(context).schedule,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w600,
@@ -1648,7 +1649,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Connection lost — retrying...',
+                AppLocalizations.of(context).connectionLostRetrying,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.primaryLight),
               ),
             ),

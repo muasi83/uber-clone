@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../services/currency_service.dart';
 import '../theme/app_colors.dart';
 
@@ -14,6 +15,7 @@ Future<PaymentDialogResult?> showPaymentDialog(
   required double amount,
   String title = 'Payment',
 }) async {
+  final l10n = AppLocalizations.of(context);
   final result = await showDialog<bool>(
     context: context,
     barrierDismissible: false,
@@ -29,7 +31,7 @@ Future<PaymentDialogResult?> showPaymentDialog(
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Your trip has been completed.'),
+          Text(l10n.yourTripHasBeenCompleted),
           const SizedBox(height: 16),
           Text(
             CurrencyService.format(amount),
@@ -41,7 +43,7 @@ Future<PaymentDialogResult?> showPaymentDialog(
           ),
           const SizedBox(height: 8),
           Text(
-            'Total Fare',
+            l10n.totalFare3,
             style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ],
@@ -49,7 +51,7 @@ Future<PaymentDialogResult?> showPaymentDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
@@ -58,7 +60,7 @@ Future<PaymentDialogResult?> showPaymentDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
           onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Pay Now'),
+          child: Text(l10n.payNow),
         ),
       ],
     ),

@@ -12,6 +12,7 @@ import '../widgets/premium_button.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../utils/address_utils.dart';
 import '../utils/map_style_loader.dart';
+import '../l10n/app_localizations.dart';
 
 class RiderRideCompletedScreen extends StatefulWidget {
   final int rideId;
@@ -114,8 +115,8 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> wit
   Future<void> _submitRating() async {
     if (_rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a rating'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).pleaseSelectARating),
           backgroundColor: AppColors.warning,
         ),
       );
@@ -128,8 +129,8 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> wit
       final token = StorageService.getToken();
       if (token == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Authentication error'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).authenticationError),
             backgroundColor: AppColors.error,
           ),
         );
@@ -155,8 +156,8 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> wit
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Thank you for rating!'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).ratingSubmittedThankYou),
             backgroundColor: AppColors.success,
           ),
         );
@@ -176,7 +177,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> wit
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text(AppLocalizations.of(context).error2('$e')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -311,17 +312,17 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> wit
                       _buildAddressSection(),
                       const Divider(height: 1, color: AppColors.outline),
                       _buildSummaryRow(
-                        'Distance',
+                        AppLocalizations.of(context).distance,
                         '${_ride?.estimatedDistance?.toStringAsFixed(2) ?? widget.distance?.toStringAsFixed(2) ?? '0.00'} km',
                       ),
                       const Divider(height: 1, color: AppColors.outline),
                       _buildSummaryRow(
-                        'Duration',
+                        AppLocalizations.of(context).duration,
                         '${_ride?.estimatedDuration ?? widget.duration ?? 0} min',
                       ),
                       const Divider(height: 1, color: AppColors.outline),
                       _buildSummaryRow(
-                        'Total Fare',
+                        AppLocalizations.of(context).totalFare3,
                         '${CurrencyService.format(_ride?.finalFare ?? _ride?.estimatedFare ?? widget.totalFare ?? 0)}',
                         isPrice: true,
                       ),
@@ -335,7 +336,7 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> wit
                       ],
                       const Divider(height: 1, color: AppColors.outline),
                       _buildSummaryRow(
-                        'Payment',
+                        AppLocalizations.of(context).payment,
                         widget.paymentStatus,
                       ),
                     ],
@@ -456,9 +457,9 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> wit
               label: 'Rate your driver',
               child: Column(
                 children: [
-                  const Text(
-                    'Rate your driver',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context).rateYourDriver,
+                    style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
                       color: AppColors.textPrimary,
@@ -489,11 +490,11 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> wit
               ),
             ),
             AppSpacing.gapXxl,
-            const Align(
+            Align(
               alignment: AlignmentDirectional.centerStart,
               child: Text(
-                'Additional feedback (optional)',
-                style: TextStyle(
+                AppLocalizations.of(context).additionalFeedbackOptional,
+                style: const TextStyle(
                   color: AppColors.textTertiary,
                   fontSize: 13,
                 ),
@@ -517,16 +518,16 @@ class _RiderRideCompletedScreenState extends State<RiderRideCompletedScreen> wit
             ),
             AppSpacing.gapXxl,
             PremiumButton(
-              label: _isSubmitting ? 'Submitting...' : 'Submit Rating',
+              label: _isSubmitting ? AppLocalizations.of(context).submitting : AppLocalizations.of(context).submitRating2,
               onPressed: _isSubmitting ? null : _submitRating,
               isLoading: _isSubmitting,
             ),
             AppSpacing.gapMd,
             TextButton(
               onPressed: _skipRating,
-              child: const Text(
-                'Skip rating',
-                style: TextStyle(color: AppColors.textTertiary),
+              child: Text(
+                AppLocalizations.of(context).skip,
+                style: const TextStyle(color: AppColors.textTertiary),
               ),
             ),
           ],

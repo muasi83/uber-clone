@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
 import '../models/ride_model.dart';
 import '../services/currency_service.dart';
 import '../services/ride_service.dart';
@@ -101,31 +102,32 @@ class _PastRidesViewState extends State<PastRidesView> {
   }
 
   Widget _buildList() {
+    final l10n = AppLocalizations.of(context);
     final groups = _groupByMonth(_allRides);
     if (groups.isEmpty) {
       return ListView(
         children: [
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.4,
-            child: const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.history, size: 64, color: AppColors.textTertiary),
-                  SizedBox(height: 16),
-                  Text(
-                    'No past rides yet',
-                    style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Your completed trips will appear here',
-                    style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
-                  ),
-                ],
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.4,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.history, size: 64, color: AppColors.textTertiary),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.noPastRidesYet,
+                      style: const TextStyle(fontSize: 16, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.yourCompletedTripsWillAppearHere,
+                      style: const TextStyle(fontSize: 13, color: AppColors.textTertiary),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       );
     }
@@ -175,10 +177,10 @@ class _PastRidesViewState extends State<PastRidesView> {
     );
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(String status, AppLocalizations l10n) {
     switch (status) {
-      case 'COMPLETED': return 'Completed';
-      case 'CANCELLED': return 'Cancelled';
+      case 'COMPLETED': return l10n.completed;
+      case 'CANCELLED': return l10n.cancelled;
       default: return status;
     }
   }
@@ -192,6 +194,7 @@ class _PastRidesViewState extends State<PastRidesView> {
   }
 
   Widget _buildRideCard(Ride ride) {
+    final l10n = AppLocalizations.of(context);
     final dateStr = ride.requestedAt != null
         ? DateFormat('MMM dd, yyyy – HH:mm').format(ride.requestedAt!)
         : '';
@@ -214,7 +217,7 @@ class _PastRidesViewState extends State<PastRidesView> {
                     borderRadius: AppRadius.smRadius,
                   ),
                   child: Text(
-                    _statusLabel(ride.status),
+                    _statusLabel(ride.status, l10n),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,

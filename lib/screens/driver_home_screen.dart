@@ -30,6 +30,7 @@ import '../utils/address_utils.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../models/scheduled_ride.dart';
 import '../services/scheduled_ride_service.dart';
+import '../l10n/app_localizations.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   final int userId;
@@ -207,7 +208,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                   children: [
                     const Icon(Icons.notifications, color: AppColors.warning, size: 18),
                     const SizedBox(width: 8),
-                    Expanded(child: Text('Scheduled ride in 30 min: $pickup')),
+                     Expanded(child: Text('${AppLocalizations.of(context).scheduledRideIn30Min}: $pickup')),
                   ],
                 ),
                 backgroundColor: AppColors.primary,
@@ -223,8 +224,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               _driverScheduledRides.removeWhere((r) => r.id == unassignedId);
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Scheduled ride was cancelled'),
+              SnackBar(
+                content: Text(AppLocalizations.of(context).scheduledRideWasCancelled),
                 backgroundColor: AppColors.warning,
                 behavior: SnackBarBehavior.floating,
               ),
@@ -249,8 +250,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               _pendingScheduledRides.removeWhere((r) => r.id == cancelledId);
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('A scheduled ride was cancelled by the rider'),
+              SnackBar(
+                content: Text(AppLocalizations.of(context).aScheduledRideWasCancelledByTheRider),
                 backgroundColor: AppColors.warning,
                 behavior: SnackBarBehavior.floating,
                 duration: Duration(seconds: 4),
@@ -265,8 +266,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               _pendingScheduledRides.removeWhere((r) => r.id == expiredId);
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('A scheduled ride has expired'),
+              SnackBar(
+                content: Text(AppLocalizations.of(context).aScheduledRideHasExpired),
                 backgroundColor: AppColors.warning,
                 behavior: SnackBarBehavior.floating,
                 duration: Duration(seconds: 4),
@@ -377,8 +378,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
         extraDetails: {'rideId': rideId},
       );
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ride has been cancelled'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).rideHasBeenCancelled),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -539,7 +540,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (mounted) _showError('Please enable GPS/Location services');
+        if (mounted) _showError(AppLocalizations.of(context).pleaseEnableGpslocationServices);
         return;
       }
 
@@ -547,13 +548,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          if (mounted) _showError('Location permission is required');
+          if (mounted) _showError(AppLocalizations.of(context).locationPermissionIsRequired);
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        if (mounted) _showError('Location permission denied. Please enable in settings.');
+        if (mounted) _showError(AppLocalizations.of(context).locationPermissionDeniedPleaseEnableInSettings);
         await Geolocator.openAppSettings();
         return;
       }
@@ -836,7 +837,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
             bottom: 120,
             child:             Semantics(
               button: true,
-              label: 'Recenter map',
+              label: AppLocalizations.of(context).recenterMap,
               child: FloatingActionButton.small(
                 heroTag: 'recenter',
                 backgroundColor: AppColors.surfaceVariant.withValues(alpha: 0.9),
@@ -915,7 +916,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               const Icon(Icons.directions_car, color: AppColors.primary, size: 22),
               const SizedBox(width: 10),
               Text(
-                'Active Ride',
+                AppLocalizations.of(context).activeRide,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
@@ -1045,7 +1046,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                 const Icon(Icons.timer_outlined, size: 18, color: AppColors.textSecondary),
                 const SizedBox(width: 8),
                 Text(
-                  'Pickup ETA: -- min',
+                  AppLocalizations.of(context).pickupEtaMin,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary,
@@ -1056,7 +1057,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
           ),
           const SizedBox(height: 16),
           PremiumButton(
-            label: 'Navigate',
+            label: AppLocalizations.of(context).navigate,
             icon: Icons.navigation,
             onPressed: () {
               Navigator.pushNamed(
@@ -1091,7 +1092,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
         children: [
           Semantics(
             button: true,
-            label: 'Menu',
+            label: AppLocalizations.of(context).menu,
             child: _buildFloatingButton(
               icon: Icons.menu_rounded,
               onPressed: _showMenuSheet,
@@ -1101,7 +1102,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
           const Spacer(),
           Semantics(
             button: true,
-            label: 'Toggle online status',
+            label: AppLocalizations.of(context).toggleOnlineStatus,
             child: _buildOnlineToggle(),
           ),
           const Spacer(),
@@ -1150,7 +1151,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isOnline ? 'Go Offline' : 'Go Online',
+                  _isOnline ? AppLocalizations.of(context).goOffline : AppLocalizations.of(context).goOnline,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
@@ -1161,8 +1162,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                 if (_isOnline)
                   Text(
                     _availableRides.isEmpty
-                        ? 'No nearby rides'
-                        : '${_availableRides.length} ride${_availableRides.length == 1 ? '' : 's'} nearby',
+                        ? AppLocalizations.of(context).noNearbyRides
+                        : _availableRides.length == 1
+                            ? AppLocalizations.of(context).rideNearby('${_availableRides.length}')
+                            : AppLocalizations.of(context).ridesNearby('${_availableRides.length}'),
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 12,
@@ -1213,7 +1216,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
             Padding(
               padding: AppSpacing.cardPadding,
               child: Text(
-                'Available Rides',
+                AppLocalizations.of(context).availableRides,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
@@ -1233,14 +1236,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'No rides available',
+                            AppLocalizations.of(context).noRidesAvailable,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   color: AppColors.textSecondary,
                                 ),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'New ride requests will appear here',
+                            AppLocalizations.of(context).newRideRequestsWillAppearHere,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: AppColors.textTertiary,
                                 ),
@@ -1255,7 +1258,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                           Padding(
                             padding: const EdgeInsets.only(top: 4, bottom: 8),
                             child: Text(
-                              'Available Now',
+                              AppLocalizations.of(context).availableNow,
                               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.textPrimary,
@@ -1268,7 +1271,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                           Padding(
                             padding: const EdgeInsets.only(top: 16, bottom: 8),
                             child: Text(
-                              'Scheduled Rides',
+                              AppLocalizations.of(context).scheduledRides,
                               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.textPrimary,
@@ -1281,7 +1284,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                           Padding(
                             padding: const EdgeInsets.only(top: 16, bottom: 8),
                             child: Text(
-                              'My Upcoming',
+                              AppLocalizations.of(context).myUpcoming,
                               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.textPrimary,
@@ -1337,7 +1340,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                         ),
                   ),
                   Text(
-                    "Today's earnings",
+                    AppLocalizations.of(context).todaysEarnings,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.textTertiary,
                         ),
@@ -1375,18 +1378,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               ),
             ),
             const SizedBox(height: 20),
-            const Text('Financial Summary',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            Text(AppLocalizations.of(context).financialSummary,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             const SizedBox(height: 16),
-            _finRow('Lifetime Earnings', CurrencyService.format(totalGross), AppColors.success),
-            _finRow('Platform Fees (15%)', CurrencyService.format(platformFees), AppColors.primary),
-            _finRow('Amount Settled', CurrencyService.format(amountSettled), AppColors.info),
+            _finRow(AppLocalizations.of(context).lifetimeEarnings, CurrencyService.format(totalGross), AppColors.success),
+            _finRow(AppLocalizations.of(context).platformFees15, CurrencyService.format(platformFees), AppColors.primary),
+            _finRow(AppLocalizations.of(context).amountSettled, CurrencyService.format(amountSettled), AppColors.info),
             const Divider(height: 24, color: AppColors.outline),
-            _finRow('Outstanding Balance', CurrencyService.format(outstanding),
+            _finRow(AppLocalizations.of(context).outstandingBalance, CurrencyService.format(outstanding),
               outstanding > 0 ? AppColors.warning : AppColors.success),
             if (lastDate != null) ...[
               const SizedBox(height: 8),
-              Text('Last Settlement: ${_formatDate(lastDate)}',
+              Text(AppLocalizations.of(context).lastSettlement(_formatDate(lastDate)),
                 style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
             ],
           ],
@@ -1577,7 +1580,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                     'rideType': ride.rideType,
                   }),
                   icon: const Icon(Icons.assignment_turned_in, size: 18),
-                  label: const Text('View', style: TextStyle(fontWeight: FontWeight.w600)),
+                  label: Text(AppLocalizations.of(context).view, style: const TextStyle(fontWeight: FontWeight.w600)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.textOnPrimary,
@@ -1692,7 +1695,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                   ),
                   child: _scheduledRideLoadingIds.contains(ride.id)
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textOnPrimary))
-                    : const Text('Accept', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    : Text(AppLocalizations.of(context).accept, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 ),
               ),
             ],
@@ -1798,7 +1801,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                     ),
                     child: _scheduledRideLoadingIds.contains(ride.id)
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.error))
-                      : const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                      : Text(AppLocalizations.of(context).cancel, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1815,10 +1818,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                       ),
                     ),
                     child: _scheduledRideLoadingIds.contains(ride.id)
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textOnPrimary))
-                      : const Text('Arrived', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  ),
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textOnPrimary))
+                    : Text(AppLocalizations.of(context).arrived, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 ),
+              ),
               ],
               if (ride.isDriverArrived)
                 SizedBox(
@@ -1835,7 +1838,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                     ),
                     child: _scheduledRideLoadingIds.contains(ride.id)
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textOnPrimary))
-                      : const Text('Verify Code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      : Text(AppLocalizations.of(context).verifyCode, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                   ),
                 ),
             ],
@@ -1851,15 +1854,15 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Accept Scheduled Ride'),
-        content: Text('Accept ride scheduled for ${
-          DateFormat('MMM dd, HH:mm').format(ride.scheduledAt)
-        }?'),
+        title: Text(AppLocalizations.of(context).acceptScheduledRide),
+        content: Text(AppLocalizations.of(context).acceptRideScheduledFor(
+          DateFormat('MMM dd, HH:mm').format(ride.scheduledAt),
+        )),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Ignore')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppLocalizations.of(context).ignore)),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Accept'),
+            child: Text(AppLocalizations.of(context).accept),
           ),
         ],
       ),
@@ -1876,7 +1879,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Scheduled ride accepted — ${ride.pickupAddress}'),
+            content: Text('${AppLocalizations.of(context).scheduledRideAccepted} — ${ride.pickupAddress}'),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
           ),
@@ -1893,14 +1896,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Scheduled Ride'),
-        content: const Text('Release this ride so other drivers can accept it?'),
+        title: Text(AppLocalizations.of(context).cancelScheduledRide),
+        content: Text(AppLocalizations.of(context).releaseThisRideSoOtherDriversCanAcceptIt),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppLocalizations.of(context).keep)),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Release', style: TextStyle(color: AppColors.textOnPrimary)),
+            child: Text(AppLocalizations.of(context).release, style: TextStyle(color: AppColors.textOnPrimary)),
           ),
         ],
       ),
@@ -1915,8 +1918,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
           _driverScheduledRides.removeWhere((r) => r.id == ride.id);
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Scheduled ride released'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).scheduledRideReleased),
             backgroundColor: AppColors.warning,
             behavior: SnackBarBehavior.floating,
           ),
@@ -1939,8 +1942,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
           if (idx >= 0) _driverScheduledRides[idx] = result;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Marked as arrived — ask rider for pickup code'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).markedAsArrivedAskRiderForPickupCode),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
           ),
@@ -1956,11 +1959,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Enter Pickup Code'),
+        title: Text(AppLocalizations.of(context).enterPickupCode),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Ask the rider for the 6-digit pickup code'),
+            Text(AppLocalizations.of(context).askTheRiderForThe6digitPickupCode),
             const SizedBox(height: 12),
             TextField(
               controller: codeController,
@@ -1977,7 +1980,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(AppLocalizations.of(context).cancel)),
           ElevatedButton(
             onPressed: () async {
               final code = codeController.text.trim();
@@ -1985,7 +1988,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               Navigator.pop(ctx);
               await _verifyAndStartRide(ride, code);
             },
-            child: const Text('Verify & Start'),
+            child: Text(AppLocalizations.of(context).verifyStart),
           ),
         ],
       ),
@@ -2001,8 +2004,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
       if (!mounted) return;
       if (!valid) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid code — please try again'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).invalidCodePleaseTryAgain2),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -2012,8 +2015,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
       final result = await ScheduledRideService.start(ride.id!, widget.token);
       if (mounted && result != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ride started — navigating to trip'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).rideStartedNavigatingToTrip),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
           ),
@@ -2096,7 +2099,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Profile',
+                AppLocalizations.of(context).profile,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
@@ -2139,20 +2142,20 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               const SizedBox(height: 24),
               _buildProfileStat(
                 icon: Icons.star,
-                label: 'Rating',
+                label: AppLocalizations.of(context).rating2,
                 value: '${_driverProfile?.averageRating.toStringAsFixed(1) ?? "5.0"}',
                 color: AppColors.warning,
               ),
               _buildProfileStat(
                 icon: Icons.directions_car,
-                label: 'Total Rides',
+                label: AppLocalizations.of(context).totalRides,
                 value: '${_driverProfile?.totalRides ?? 0}',
                 color: AppColors.primary,
               ),
               _buildProfileStat(
                 icon: Icons.attach_money,
-                label: 'Vehicle',
-                value: _driverProfile?.vehicleModel ?? "N/A",
+                label: AppLocalizations.of(context).vehicle,
+                value: _driverProfile?.vehicleModel ?? AppLocalizations.of(context).na,
                 color: AppColors.success,
               ),
             ],
@@ -2212,21 +2215,21 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
         setState(() => _selectedIndex = index);
         if (index == 1) _fetchAvailableRides();
       },
-      destinations: const [
+      destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: AppLocalizations.of(context).home,
           ),
           NavigationDestination(
-            icon: Icon(Icons.directions_car_outlined),
-            selectedIcon: Icon(Icons.directions_car),
-            label: 'Available',
+            icon: const Icon(Icons.directions_car_outlined),
+            selectedIcon: const Icon(Icons.directions_car),
+            label: AppLocalizations.of(context).available,
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outlined),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
+            icon: const Icon(Icons.person_outlined),
+            selectedIcon: const Icon(Icons.person),
+            label: AppLocalizations.of(context).profile,
           ),
         ],
       );
@@ -2270,7 +2273,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               ),
               ListTile(
                 leading: const Icon(Icons.bug_report_outlined, size: 20),
-                title: const Text('Debug'),
+                title: Text(AppLocalizations.of(context).debug),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -2283,7 +2286,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               ),
               ListTile(
                 leading: const Icon(Icons.history, size: 20),
-                title: const Text('Trip History'),
+                title: Text(AppLocalizations.of(context).tripHistory),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -2296,7 +2299,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               ),
               ListTile(
                 leading: const Icon(Icons.settings, size: 20),
-                title: const Text('Settings'),
+                title: Text(AppLocalizations.of(context).settings),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -2313,7 +2316,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               ),
               ListTile(
                 leading: const Icon(Icons.logout, size: 20),
-                title: const Text('Logout'),
+                title: Text(AppLocalizations.of(context).logout),
                 onTap: _onLogout,
               ),
             ],

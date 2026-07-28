@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
 
 import 'services/storage_service.dart';
@@ -13,8 +14,10 @@ import 'services/firebase_service.dart';
 import 'services/app_lifecycle_observer.dart';
 import 'services/navigation_recorder.dart';
 import 'services/location_monitor_service.dart';
+import 'services/locale_service.dart';
 import 'widgets/location_banner.dart';
 import 'utils/map_style_loader.dart';
+import 'l10n/app_localizations.dart';
 
 import 'screens/auth_screen.dart';
 import 'screens/debug_screen.dart';
@@ -81,6 +84,9 @@ void main() async {
       _setupChatNotificationListener();
 
       await MapStyleLoader.load();
+
+      final locale = await LocaleService.loadLocale();
+      MyApp.localeNotifier.value = locale;
 
       runApp(MyApp());
     },
@@ -173,6 +179,8 @@ void _setupChatNotificationListener() {
 class MyApp extends StatefulWidget {
   MyApp({super.key});
 
+  static final ValueNotifier<Locale> localeNotifier = ValueNotifier(const Locale('en'));
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -181,17 +189,25 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final _lifecycleObserver = AppLifecycleObserver();
   final _navigationRecorder = NavigationRecorder();
   final _locationMonitor = LocationMonitorService();
+  Locale _locale = const Locale('en');
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(_lifecycleObserver);
     _locationMonitor.start();
+    _locale = MyApp.localeNotifier.value;
+    MyApp.localeNotifier.addListener(_onLocaleChanged);
+  }
+
+  void _onLocaleChanged() {
+    setState(() => _locale = MyApp.localeNotifier.value);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+    MyApp.localeNotifier.removeListener(_onLocaleChanged);
     _locationMonitor.dispose();
     super.dispose();
   }
@@ -203,6 +219,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       navigatorObservers: [_navigationRecorder],
       title: 'RideNow',
       debugShowCheckedModeBanner: false,
+      locale: _locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'),
+        Locale('ar'),
+      ],
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,

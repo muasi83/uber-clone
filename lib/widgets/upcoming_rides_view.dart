@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../utils/address_utils.dart';
@@ -88,6 +89,7 @@ class _UpcomingRidesViewState extends State<UpcomingRidesView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final totalDays = _daysInMonth(_currentMonth);
     final offset = _weekdayOffset(_currentMonth);
     final today = DateTime.now();
@@ -133,7 +135,7 @@ class _UpcomingRidesViewState extends State<UpcomingRidesView> {
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                    children: [l10n.sun, l10n.mon, l10n.tue, l10n.wed, l10n.thu, l10n.fri, l10n.sat]
                         .map((d) => SizedBox(
                               width: cellSize,
                               child: Text(
@@ -182,7 +184,7 @@ class _UpcomingRidesViewState extends State<UpcomingRidesView> {
                 if (result == true) _loadRides();
               },
               icon: const Icon(Icons.schedule_rounded),
-              label: const Text('Later Ride'),
+              label: Text(l10n.laterRide),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.textOnPrimary,
@@ -202,19 +204,19 @@ class _UpcomingRidesViewState extends State<UpcomingRidesView> {
             ..._rides.map((ride) => _buildRideCard(ride)),
           ] else if (!_isLoading) ...[
             const SizedBox(height: 32),
-            const Center(
+            Center(
               child: Column(
                 children: [
-                  Icon(Icons.event_available, size: 48, color: AppColors.textTertiary),
-                  SizedBox(height: 12),
+                  const Icon(Icons.event_available, size: 48, color: AppColors.textTertiary),
+                  const SizedBox(height: 12),
                   Text(
-                    'No upcoming rides',
-                    style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+                    l10n.noUpcomingRides,
+                    style: const TextStyle(fontSize: 16, color: AppColors.textSecondary),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    'Schedule a ride using the button above',
-                    style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
+                    l10n.scheduleARideUsingTheButtonAbove,
+                    style: const TextStyle(fontSize: 13, color: AppColors.textTertiary),
                   ),
                 ],
               ),

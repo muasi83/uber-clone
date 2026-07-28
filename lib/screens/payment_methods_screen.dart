@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -17,8 +18,9 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Payment Methods'), centerTitle: true),
+      appBar: AppBar(title: Text(l10n.paymentMethods), centerTitle: true),
       body: ListView(
         padding: AppSpacing.screenPadding,
         children: [
@@ -29,7 +31,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             child: OutlinedButton.icon(
               onPressed: () {},
               icon: const Icon(Icons.add),
-              label: const Text('Add Payment Method'),
+              label: Text(l10n.addPaymentMethod),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary),
