@@ -9,6 +9,7 @@ import '../widgets/shimmer_loading.dart';
 import 'admin_trip_details_screen.dart';
 import 'admin_driver_list_screen.dart';
 import 'admin_earnings_dashboard_screen.dart';
+import 'admin_rider_list_screen.dart';
 import '../theme/app_colors.dart';
 import '../services/recorded_screen_mixin.dart';
 
@@ -266,6 +267,19 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const AdminEarningsDashboardScreen()),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _navButton(
+              icon: Icons.people_outline,
+              label: 'Riders',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminRiderListScreen()),
                 );
               },
             ),

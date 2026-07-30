@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../l10n/app_localizations.dart';
@@ -58,15 +59,17 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
+  final Set<Circle> _circles = {};
   String? _mapStyle;
   Timer? _autoDismissTimer;
 
-  BitmapDescriptor? _pickupMarker;
-  BitmapDescriptor? _dropoffMarker;
-  BitmapDescriptor? _driverMarker;
   BitmapDescriptor _dotMarker = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor? _blackDotDescriptor;
   Timer? _dotTimer;
+  Timer? _pulseTimer;
   double _dotProgress = 0.0;
+  double _pulseRadius = 20;
+  double _pulseOpacity = 0.4;
   List<LatLng> _currentPolylinePoints = [];
   LatLng? _driverLocation;
   int? _etaMinutes;
@@ -104,10 +107,8 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
 
   Future<void> _loadAllMarkers() async {
     try {
-      _pickupMarker = await MarkerFactory.stickPickupLabeled;
-      _dropoffMarker = await MarkerFactory.stickDropoffLabeled;
       _dotMarker = await MarkerFactory.userLocation;
-      _driverMarker = await MarkerFactory.driver;
+      _blackDotDescriptor = await _createBlackDot();
       if (mounted) {
         _addMarkers();
         _fitAllPoints();
@@ -117,18 +118,74 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
     }
   }
 
+  void _startPulseAnimation(LatLng center) {
+    _pulseTimer?.cancel();
+    _pulseRadius = 20;
+    _pulseOpacity = 0.4;
+    _updatePulseCircle(center);
+    _pulseTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
+      if (!mounted) return;
+      _pulseRadius += 2;
+      _pulseOpacity -= 0.008;
+      if (_pulseRadius >= 100 || _pulseOpacity <= 0) {
+        _pulseRadius = 20;
+        _pulseOpacity = 0.4;
+      }
+      _updatePulseCircle(center);
+    });
+  }
+
+  void _updatePulseCircle(LatLng center) {
+    setState(() {
+      _circles
+        ..clear()
+        ..add(Circle(
+          circleId: const CircleId('driver_pulse'),
+          center: center,
+          radius: _pulseRadius,
+          fillColor: Colors.black.withValues(alpha: _pulseOpacity * 0.3),
+          strokeColor: Colors.black.withValues(alpha: _pulseOpacity),
+          strokeWidth: 2,
+        ));
+    });
+  }
+
+  Future<BitmapDescriptor> _createBlackDot() async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawCircle(
+      const Offset(12, 12),
+      8,
+      Paint()..color = Colors.black,
+    );
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(24, 24);
+    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
+  }
+
   Future<void> _loadDriverLocationAndEta() async {
     if (!widget.driverMode) return;
     try {
       final location = await LocationService.getCurrentLocation();
       if (location != null && mounted) {
         _driverLocation = LatLng(location.latitude, location.longitude);
+        _startPulseAnimation(_driverLocation!);
         final route = await DirectionsService.getDirections(
           origin: _driverLocation!,
           destination: LatLng(widget.pickupLat, widget.pickupLng),
         );
         if (route != null && route.isSuccess && route.durationMinutes != null) {
           _etaMinutes = route.durationMinutes;
+        }
+        if (route != null && route.isSuccess && route.polylinePoints != null) {
+          _polylines.add(Polyline(
+            polylineId: const PolylineId('driver_to_pickup'),
+            points: route.polylinePoints!,
+            color: Colors.red,
+            width: 4,
+            geodesic: true,
+          ));
         }
         _pickupEtaLoading = false;
         if (mounted) {
@@ -150,27 +207,15 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
   }
 
   void _addMarkers() {
-    if (_pickupMarker == null || _dropoffMarker == null) return;
     if (!mounted) return;
     setState(() {
       _markers.clear();
-      _markers.add(Marker(
-        markerId: const MarkerId('pickup'),
-        position: LatLng(widget.pickupLat, widget.pickupLng),
-        icon: _pickupMarker!,
-        infoWindow: InfoWindow(title: 'Pickup: ${widget.pickupAddress}'),
-      ));
-      _markers.add(Marker(
-        markerId: const MarkerId('dropoff'),
-        position: LatLng(widget.dropoffLat, widget.dropoffLng),
-        icon: _dropoffMarker!,
-        infoWindow: InfoWindow(title: 'Dropoff: ${widget.dropoffAddress}'),
-      ));
-      if (_driverLocation != null && _driverMarker != null) {
+      if (_driverLocation != null && _blackDotDescriptor != null) {
         _markers.add(Marker(
           markerId: const MarkerId('driver'),
           position: _driverLocation!,
-          icon: _driverMarker!,
+          icon: _blackDotDescriptor!,
+          anchor: const Offset(0.5, 0.5),
           infoWindow: const InfoWindow(title: 'You are here'),
         ));
       }
@@ -285,6 +330,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
   @override
   void dispose() {
     _autoDismissTimer?.cancel();
+    _pulseTimer?.cancel();
     _stopMovingDotAnimation();
     _mapController?.dispose();
     super.dispose();
@@ -343,6 +389,7 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                   zIndexInt: 10,
                 ),
             },
+            circles: _circles,
             polylines: _polylines,
             myLocationEnabled: false,
             zoomControlsEnabled: false,

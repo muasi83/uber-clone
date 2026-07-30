@@ -17,6 +17,9 @@ opencode -s ses_061c67395ffeOnAktI6nJZzjhp
 
 
 opencode -s ses_0577880f3ffeCjYiXnGrGR0WHa
+opencode -s ses_0577880f3ffeCjYiXnGrGR0WHa
+
+
 continue with this 
 we fixed car rotation at rider tracking driver
 we fixed messages sometimes not reach but may be need follow up
@@ -25,7 +28,6 @@ the next is to add from chate gpt the package that prevent app from the problem 
 
 
 
-1-  Arabic language
 7- add payments
 8- add phone verification all over the world
 9- handle the rating of the driver and rider in the admin,

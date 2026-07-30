@@ -38,8 +38,6 @@ class FirebaseService {
 
       FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundHandler);
 
-      await _requestPermissions();
-
       _currentFcmToken = await _messaging.getToken();
       addDebugMessage('📱 FCM token: ${_currentFcmToken?.substring(0, 20)}...');
 
@@ -58,7 +56,7 @@ class FirebaseService {
     }
   }
 
-  static Future<void> _requestPermissions() async {
+  static Future<bool> requestNotificationPermission() async {
     try {
       final settings = await _messaging.requestPermission(
         alert: true,
@@ -69,9 +67,13 @@ class FirebaseService {
         criticalAlert: false,
         provisional: false,
       );
+      final granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
       addDebugMessage('🔔 FCM permission: ${settings.authorizationStatus}');
+      return granted;
     } catch (e) {
       addDebugMessage('❌ FCM permission error: $e');
+      return false;
     }
   }
 

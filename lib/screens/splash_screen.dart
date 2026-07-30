@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/ride_service.dart';
+import '../services/firebase_service.dart';
 import '../screens/auth_screen.dart';
 import '../screens/rider_home_screen.dart';
 import '../screens/driver_home_screen.dart';
@@ -23,8 +24,11 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
   bool _logoVisible = false;
-  bool _locationRequired = false;
+  bool _showWelcome = false;
   bool _locationDeniedForever = false;
+  bool _notificationGranted = false;
+  bool _notificationDeniedForever = false;
+  bool _locationGranted = false;
 
   @override
   void initState() {
@@ -43,60 +47,60 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       await Future.delayed(const Duration(seconds: 2));
 
-      if (mounted) setState(() => _locationRequired = true);
-
-      final granted = await _requestLocation();
-      if (!granted || !mounted) return;
-
-      await _checkSession();
+      if (mounted) setState(() => _showWelcome = true);
     } catch (e) {
       _navigateToAuth();
     }
   }
 
-  Future<bool> _requestLocation() async {
-    try {
-      var permission = await Geolocator.checkPermission();
-
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.always ||
-          permission == LocationPermission.whileInUse) {
-        return true;
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        if (mounted) setState(() => _locationDeniedForever = true);
-        return false;
-      }
-
-      return false;
-    } catch (e) {
-      return false;
+  Future<void> _enableLocation() async {
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (!mounted) return;
+    if (permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse) {
+      setState(() {
+        _locationGranted = true;
+        _locationDeniedForever = false;
+      });
+    } else if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        _locationGranted = false;
+        _locationDeniedForever = true;
+      });
+    } else {
+      setState(() {
+        _locationGranted = false;
+        _locationDeniedForever = false;
+      });
     }
   }
 
-  void _retryLocationPermission() async {
-    setState(() {
-      _locationRequired = true;
-      _locationDeniedForever = false;
-    });
-    final granted = await _requestLocation();
-    if (granted && mounted) {
-      await _checkSession();
+  Future<void> _enableNotification() async {
+    final granted = await FirebaseService.requestNotificationPermission();
+    if (!mounted) return;
+    if (granted) {
+      setState(() {
+        _notificationGranted = true;
+        _notificationDeniedForever = false;
+      });
+    } else {
+      setState(() {
+        _notificationGranted = false;
+        _notificationDeniedForever = true;
+      });
     }
   }
 
   void _openAppSettings() async {
     await Geolocator.openAppSettings();
-    final granted = await _requestLocation();
-    if (granted && mounted) {
-      await _checkSession();
-    } else if (mounted) {
-      setState(() => _locationDeniedForever = true);
-    }
+    if (!mounted) return;
+    setState(() {
+      _locationDeniedForever = false;
+      _notificationDeniedForever = false;
+    });
   }
 
   Future<void> _checkSession() async {
@@ -191,8 +195,8 @@ class _SplashScreenState extends State<SplashScreen>
         decoration: const BoxDecoration(
           gradient: AppColors.darkGradient,
         ),
-        child: _locationRequired
-            ? _buildLocationRequest()
+        child: _showWelcome
+            ? _buildWelcomeOverlay()
             : _buildSplashContent(),
       ),
     );
@@ -264,111 +268,182 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  Widget _buildLocationRequest() {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: AppSpacing.screenPadding.copyWith(
-        left: AppSpacing.xl,
-        right: AppSpacing.xl,
+  Widget _buildWelcomeOverlay() {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          children: [
+            const SizedBox(height: 60),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: AppRadius.xlRadius,
+                boxShadow: AppShadows.large,
+              ),
+              child: const Icon(
+                Icons.directions_car,
+                size: 48,
+                color: AppColors.primaryLight,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Welcome to U-Go',
+              style: AppTypography.textTheme.headlineMedium?.copyWith(
+                color: AppColors.primaryLight,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'To provide the best experience:',
+              style: AppTypography.textTheme.bodyLarge?.copyWith(
+                color: AppColors.primaryLight.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 40),
+            _buildPermissionCard(
+              icon: Icons.location_on,
+              title: 'Location',
+              description: 'Find nearby drivers and track your trip',
+              granted: _locationGranted,
+              deniedForever: _locationDeniedForever,
+              onEnable: _enableLocation,
+              onOpenSettings: _openAppSettings,
+            ),
+            const SizedBox(height: 16),
+            _buildPermissionCard(
+              icon: Icons.notifications,
+              title: 'Notifications',
+              description: 'Receive ride updates and messages',
+              granted: _notificationGranted,
+              deniedForever: _notificationDeniedForever,
+              onEnable: _enableNotification,
+              onOpenSettings: _openAppSettings,
+            ),
+            const SizedBox(height: 40),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _checkSession,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.textOnPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.mdRadius,
+                  ),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                child: const Text('Continue'),
+              ),
+            ),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPermissionCard({
+    required IconData icon,
+    required String title,
+    required String description,
+    required bool granted,
+    required bool deniedForever,
+    required VoidCallback onEnable,
+    required VoidCallback onOpenSettings,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.1),
+        borderRadius: AppRadius.lgRadius,
+        border: Border.all(
+          color: granted
+              ? AppColors.success.withValues(alpha: 0.5)
+              : AppColors.outline.withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Spacer(),
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.location_on,
-              size: 48,
-              color: AppColors.primary,
+          Row(
+            children: [
+              Icon(icon, size: 20, color: granted ? AppColors.success : AppColors.primary),
+              const SizedBox(width: 8),
+              Text(title,
+                style: AppTypography.textTheme.titleMedium?.copyWith(
+                  color: AppColors.primaryLight,
+                ),
+              ),
+              const Spacer(),
+              if (granted)
+                const Icon(Icons.check_circle, size: 20, color: AppColors.success),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(description,
+            style: AppTypography.textTheme.bodySmall?.copyWith(
+              color: AppColors.primaryLight.withValues(alpha: 0.6),
             ),
           ),
-          AppSpacing.gapXxl,
-          Text(
-            l10n.locationPermissionRequired,
-            style: AppTypography.textTheme.headlineMedium?.copyWith(
-              color: AppColors.primaryLight,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          AppSpacing.gapMd,
-          Text(
-            'RideNow needs your location to find nearby rides and drivers. This permission is required to use the app.',
-            style: AppTypography.textTheme.bodyMedium?.copyWith(
-              color: AppColors.primaryLight.withValues(alpha: 0.7),
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          AppSpacing.gapXxl,
-          if (_locationDeniedForever) ...[
+          const SizedBox(height: 12),
+          if (granted)
             Container(
-              padding: AppSpacing.cardPaddingCompact,
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.15),
+                color: AppColors.success.withValues(alpha: 0.1),
                 borderRadius: AppRadius.mdRadius,
-                border: Border.all(
-                  color: AppColors.warning.withValues(alpha: 0.3),
+              ),
+              child: const Center(
+                child: Text('Enabled',
+                  style: TextStyle(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
               ),
-              child: Text(
-                'Location permission was permanently denied. Please enable it in Settings.',
-                style: AppTypography.textTheme.bodySmall?.copyWith(
-                  color: AppColors.warning,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            AppSpacing.gapLg,
+            )
+          else if (deniedForever)
             SizedBox(
               width: double.infinity,
-              height: 50,
+              child: OutlinedButton.icon(
+                onPressed: onOpenSettings,
+                icon: const Icon(Icons.settings, size: 16),
+                label: const Text('Open Settings'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.warning,
+                  side: const BorderSide(color: AppColors.warning),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.mdRadius,
+                  ),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _openAppSettings,
-                icon: const Icon(Icons.settings),
-                label: Text(l10n.openSettings),
+                onPressed: onEnable,
+                icon: Icon(icon, size: 16),
+                label: Text('Enable $title'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.textOnPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: AppRadius.mdRadius,
                   ),
                 ),
               ),
             ),
-          ] else ...[
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: _retryLocationPermission,
-                icon: const Icon(Icons.my_location),
-                label: Text(l10n.grantLocationAccess),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.textOnPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.mdRadius,
-                  ),
-                ),
-              ),
-            ),
-            AppSpacing.gapMd,
-            TextButton(
-              onPressed: () {
-                if (mounted) _navigateToAuth();
-              },
-              child: Text(l10n.notNow, style: AppTypography.textTheme.bodyMedium?.copyWith(
-                color: AppColors.primaryLight.withValues(alpha: 0.54),
-              )),
-            ),
-          ],
-          const Spacer(),
         ],
       ),
     );

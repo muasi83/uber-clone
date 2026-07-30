@@ -15,7 +15,10 @@ import 'services/app_lifecycle_observer.dart';
 import 'services/navigation_recorder.dart';
 import 'services/location_monitor_service.dart';
 import 'services/locale_service.dart';
+import 'services/connectivity_service.dart';
+import 'services/connectivity_recovery_service.dart';
 import 'widgets/location_banner.dart';
+import 'widgets/connectivity_banner.dart';
 import 'utils/map_style_loader.dart';
 import 'l10n/app_localizations.dart';
 
@@ -80,6 +83,9 @@ void main() async {
       }
 
       await BackgroundNavigationService().initialize();
+
+      ConnectivityService.init();
+      ConnectivityRecoveryService.init();
 
       _setupChatNotificationListener();
 
@@ -241,6 +247,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               child: child,
             ),
           const Positioned.fill(child: LocationBanner()),
+          const ConnectivityBanner(),
         ],
       ),
       home: const SplashScreen(),

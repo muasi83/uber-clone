@@ -744,6 +744,39 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
     setState(() => _isLoading = true);
     final isGoingOnline = !_isOnline;
 
+    if (isGoingOnline) {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          _showError(AppLocalizations.of(context).pleaseEnableGpslocationServices);
+        }
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          _showError(AppLocalizations.of(context).locationPermissionIsRequired);
+        }
+        return;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          _showError(AppLocalizations.of(context).locationPermissionDeniedPleaseEnableInSettings);
+          await Geolocator.openAppSettings();
+        }
+        return;
+      }
+    }
+
     try {
       final result = await DriverService.toggleOnlineStatus(widget.token);
       if (mounted) {
