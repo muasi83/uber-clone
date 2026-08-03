@@ -1,11 +1,13 @@
 // ignore_for_file: avoid_print
 import 'models.dart';
+import 'ride_verification_model.dart';
 
 class Ride {
   final int? id;
   final User rider;
   final User? driver;
   final double? driverAverageRating;
+  final RideVerification? verification;
   final double pickupLatitude;
   final double pickupLongitude;
   final String pickupAddress;
@@ -30,12 +32,18 @@ class Ride {
   final String? paymentMethod;
   final double? driverLatitude;
   final double? driverLongitude;
+  final String? driverVehiclePhotoUrl;
+  final String? driverVehicleType;
+  final String? driverVehicleNumber;
+  final String? driverVehicleModel;
+  final String? driverVehicleColor;
 
   Ride({
     this.id,
     required this.rider,
     this.driver,
     this.driverAverageRating,
+    this.verification,
     required this.pickupLatitude,
     required this.pickupLongitude,
     required this.pickupAddress,
@@ -60,6 +68,11 @@ class Ride {
     this.paymentMethod,
     this.driverLatitude,
     this.driverLongitude,
+    this.driverVehiclePhotoUrl,
+    this.driverVehicleType,
+    this.driverVehicleNumber,
+    this.driverVehicleModel,
+    this.driverVehicleColor,
   });
 
   factory Ride.fromJson(Map<String, dynamic> json) {
@@ -101,6 +114,24 @@ class Ride {
             : null,
         driverLongitude: json['driver'] is Map<String, dynamic>
             ? (json['driver']['currentLongitude'] as num?)?.toDouble()
+            : null,
+        driverVehiclePhotoUrl: json['driver'] is Map<String, dynamic>
+            ? json['driver']['vehiclePhotoUrl'] as String?
+            : null,
+        driverVehicleType: json['driver'] is Map<String, dynamic>
+            ? json['driver']['vehicleType'] as String?
+            : null,
+        driverVehicleNumber: json['driver'] is Map<String, dynamic>
+            ? json['driver']['vehicleNumber'] as String?
+            : null,
+        driverVehicleModel: json['driver'] is Map<String, dynamic>
+            ? json['driver']['vehicleModel'] as String?
+            : null,
+        driverVehicleColor: json['driver'] is Map<String, dynamic>
+            ? json['driver']['vehicleColor'] as String?
+            : null,
+        verification: json['verification'] != null
+            ? RideVerification.fromJson(json['verification'] as Map<String, dynamic>)
             : null,
         pickupLatitude: toDouble(json['pickupLatitude']) ?? 0.0,
         pickupLongitude: toDouble(json['pickupLongitude']) ?? 0.0,
@@ -175,6 +206,11 @@ class Ride {
     'paymentMethod': paymentMethod,
     'driverLatitude': driverLatitude,
     'driverLongitude': driverLongitude,
+    'driverVehiclePhotoUrl': driverVehiclePhotoUrl,
+    'driverVehicleType': driverVehicleType,
+    'driverVehicleNumber': driverVehicleNumber,
+    'driverVehicleModel': driverVehicleModel,
+    'driverVehicleColor': driverVehicleColor,
   };
 
 }
@@ -194,6 +230,11 @@ class DriverProfile {
   final double? currentLatitude;
   final double? currentLongitude;
   final bool isOnline;
+  final String? photoUrl;
+  final String? vehiclePhotoUrl;
+  final int? vehicleYear;
+  final String? verificationStatus;
+  final DateTime? verifiedAt;
 
   DriverProfile({
     this.id,
@@ -210,6 +251,11 @@ class DriverProfile {
     this.currentLatitude,
     this.currentLongitude,
     required this.isOnline,
+    this.photoUrl,
+    this.vehiclePhotoUrl,
+    this.vehicleYear,
+    this.verificationStatus,
+    this.verifiedAt,
   });
 
 factory DriverProfile.fromJson(Map<String, dynamic> json) {
@@ -262,6 +308,13 @@ factory DriverProfile.fromJson(Map<String, dynamic> json) {
           ? (json['currentLongitude'] as num).toDouble() 
           : null,
       isOnline: toBool(json['isOnline']),
+      photoUrl: json['photoUrl'] as String?,
+      vehiclePhotoUrl: json['vehiclePhotoUrl'] as String?,
+      vehicleYear: json['vehicleYear'] as int?,
+      verificationStatus: json['verificationStatus'] as String?,
+      verifiedAt: json['verifiedAt'] != null
+          ? DateTime.tryParse(json['verifiedAt'] as String)
+          : null,
     );
   } catch (e) {
     print('❌ Error parsing DriverProfile: $e');
@@ -285,5 +338,10 @@ factory DriverProfile.fromJson(Map<String, dynamic> json) {
     'currentLatitude': currentLatitude,
     'currentLongitude': currentLongitude,
     'isOnline': isOnline,
+    'photoUrl': photoUrl,
+    'vehiclePhotoUrl': vehiclePhotoUrl,
+    'vehicleYear': vehicleYear,
+    'verificationStatus': verificationStatus,
+    'verifiedAt': verifiedAt?.toIso8601String(),
   };
 }

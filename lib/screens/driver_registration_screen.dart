@@ -5,6 +5,7 @@ import '../screens/driver_home_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_radius.dart';
+import '../widgets/driver_documents_panel.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/premium_text_field.dart';
 import '../services/recorded_screen_mixin.dart';
@@ -27,7 +28,7 @@ class DriverRegistrationScreen extends StatefulWidget {
       _DriverRegistrationScreenState();
 }
 
-enum _RegStep { personalInfo, vehicleInfo, review }
+enum _RegStep { personalInfo, vehicleInfo, documents, review }
 
 class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> with RecordedScreenMixin<DriverRegistrationScreen> {
   _RegStep _currentStep = _RegStep.personalInfo;
@@ -35,8 +36,10 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> wit
   final _vehicleNumberController = TextEditingController();
   final _vehicleModelController = TextEditingController();
   final _vehicleColorController = TextEditingController();
+  final _vehicleYearController = TextEditingController();
   String _selectedVehicleType = 'CAR';
   bool _isLoading = false;
+  bool _documentsReady = false;
 
   int get _currentStepIndex => _RegStep.values.indexOf(_currentStep);
   bool get _isFirstStep => _currentStep == _RegStep.personalInfo;
@@ -104,12 +107,18 @@ Future<void> _checkExistingProfile() async {
       vehicleType: _selectedVehicleType,
       vehicleModel: _vehicleModelController.text,
       vehicleColor: _vehicleColorController.text,
+      vehicleYear: int.tryParse(_vehicleYearController.text.trim()),
       token: widget.token,
     );
 
     addDebugMessage('Registration result: $result');
 
-    if (result) {
+    final submit = await DriverService.submitDriver(widget.token);
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (submit.ok) {
+      addDebugMessage('✅ Driver submitted for verification: ${submit.verificationStatus}');
       _showSuccess(AppLocalizations.of(context).driverProfileRegistered);
 
       await Future.delayed(const Duration(seconds: 1));
@@ -126,8 +135,8 @@ Future<void> _checkExistingProfile() async {
         );
       }
     } else {
-      addDebugMessage('❌ Registration failed - profile might already exist');
-      _showError(AppLocalizations.of(context).driverProfileRegistrationFailedYouMayAlreadyBeRegistered);
+      addDebugMessage('❌ Submission failed: ${submit.message}');
+      _showError(submit.message ?? AppLocalizations.of(context).driverProfileRegistrationFailedYouMayAlreadyBeRegistered);
 
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) {
@@ -186,7 +195,7 @@ Future<void> _checkExistingProfile() async {
           ),
         ),
         title: Semantics(
-          label: AppLocalizations.of(context).registrationStepOf('${_currentStepIndex + 1}', '3'),
+          label: AppLocalizations.of(context).registrationStepOf('${_currentStepIndex + 1}', '${_RegStep.values.length}'),
           child: Text(
             AppLocalizations.of(context).becomeADriver,
             style: TextStyle(
@@ -241,7 +250,7 @@ Future<void> _checkExistingProfile() async {
 
   Widget _buildStepIndicator() {
     return Semantics(
-      label: AppLocalizations.of(context).stepOf('${_currentStepIndex + 1}', '3'),
+      label: AppLocalizations.of(context).stepOf('${_currentStepIndex + 1}', '${_RegStep.values.length}'),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl, vertical: AppSpacing.lg),
         child: Row(
@@ -295,6 +304,7 @@ Future<void> _checkExistingProfile() async {
     final icon = switch (_currentStep) {
       _RegStep.personalInfo => Icons.credit_card,
       _RegStep.vehicleInfo => Icons.directions_car,
+      _RegStep.documents => Icons.folder_open,
       _RegStep.review => Icons.checklist,
     };
     return Semantics(
@@ -316,6 +326,7 @@ Future<void> _checkExistingProfile() async {
     final title = switch (_currentStep) {
       _RegStep.personalInfo => AppLocalizations.of(context).personalInformation,
       _RegStep.vehicleInfo => AppLocalizations.of(context).vehicleInformation,
+      _RegStep.documents => 'Documents',
       _RegStep.review => AppLocalizations.of(context).reviewSubmit,
     };
     return Semantics(
@@ -336,6 +347,7 @@ Future<void> _checkExistingProfile() async {
     final subtitle = switch (_currentStep) {
       _RegStep.personalInfo => AppLocalizations.of(context).enterYourDrivingLicenseDetails,
       _RegStep.vehicleInfo => AppLocalizations.of(context).tellUsAboutYourVehicle,
+      _RegStep.documents => 'Upload your documents to complete your profile',
       _RegStep.review => AppLocalizations.of(context).verifyYourInformationBeforeSubmitting,
     };
     return Text(
@@ -352,8 +364,18 @@ Future<void> _checkExistingProfile() async {
     return switch (_currentStep) {
       _RegStep.personalInfo => _buildPersonalInfoStep(),
       _RegStep.vehicleInfo => _buildVehicleInfoStep(),
+      _RegStep.documents => _buildDocumentsStep(),
       _RegStep.review => _buildReviewStep(),
     };
+  }
+
+  Widget _buildDocumentsStep() {
+    return DriverDocumentsPanel(
+      token: widget.token,
+      onReadinessChanged: (ready) {
+        if (mounted) setState(() => _documentsReady = ready);
+      },
+    );
   }
 
   Widget _buildPersonalInfoStep() {
@@ -442,6 +464,18 @@ Future<void> _checkExistingProfile() async {
             prefixIcon: Icons.palette_outlined,
           ),
         ),
+        AppSpacing.gapLg,
+        Semantics(
+          label: 'Vehicle year input',
+          child: PremiumTextField(
+            controller: _vehicleYearController,
+            label: 'Vehicle Year',
+            hint: '2022',
+            prefixIcon: Icons.calendar_today_outlined,
+            keyboardType: TextInputType.number,
+            maxLength: 4,
+          ),
+        ),
       ],
     );
   }
@@ -469,6 +503,8 @@ Future<void> _checkExistingProfile() async {
               _buildReviewRow(AppLocalizations.of(context).vehicleModel, _vehicleModelController.text),
               const Divider(height: 1, color: AppColors.outline),
               _buildReviewRow(AppLocalizations.of(context).vehicleColor, _vehicleColorController.text),
+              const Divider(height: 1, color: AppColors.outline),
+              _buildReviewRow('Vehicle Year', _vehicleYearController.text),
             ],
           ),
         ),
@@ -553,6 +589,16 @@ Future<void> _checkExistingProfile() async {
         _showError(AppLocalizations.of(context).pleaseFillAllVehicleFields);
         return;
       }
+      final year = int.tryParse(_vehicleYearController.text.trim());
+      final currentYear = DateTime.now().year;
+      if (year == null || year < 1980 || year > currentYear + 1) {
+        _showError('Please enter a valid vehicle year');
+        return;
+      }
+    }
+    if (_currentStep == _RegStep.documents && !_documentsReady) {
+      _showError('Please upload all required documents before continuing');
+      return;
     }
     setState(() => _currentStep = _RegStep.values[_currentStepIndex + 1]);
   }
@@ -563,6 +609,7 @@ Future<void> _checkExistingProfile() async {
     _vehicleNumberController.dispose();
     _vehicleModelController.dispose();
     _vehicleColorController.dispose();
+    _vehicleYearController.dispose();
     super.dispose();
   }
 }

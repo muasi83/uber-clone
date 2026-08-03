@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
@@ -13,8 +14,10 @@ import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/status_badge.dart';
+import '../widgets/user_avatar.dart';
 import '../models/ride_model.dart';
 import '../services/currency_service.dart';
+import '../services/photo_service.dart';
 import '../services/ride_service.dart';
 import '../services/driver_service.dart';
 import '../services/websocket_service.dart';
@@ -22,8 +25,10 @@ import '../services/storage_service.dart';
 import '../screens/settings_screen.dart';
 import '../screens/ride_preview_screen.dart';
 import '../screens/debug_screen.dart';
+import '../screens/driver_documents_screen.dart';
 import '../screens/trip_history_screen.dart';
 import '../utils/bearing_utils.dart';
+import '../utils/driver_verification.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../utils/address_utils.dart';
@@ -780,8 +785,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
     try {
       final result = await DriverService.toggleOnlineStatus(widget.token);
       if (mounted) {
+        if (!result.online && result.message != null) {
+          setState(() => _isLoading = false);
+          _showError(result.message!);
+          return;
+        }
         setState(() {
-          _isOnline = result;
+          _isOnline = result.online;
           _isLoading = false;
         });
 
@@ -2142,24 +2152,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               Center(
                 child: Column(
                   children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryContainer,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          widget.username.isNotEmpty
-                              ? widget.username[0].toUpperCase()
-                              : '?',
-                          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                              ),
-                        ),
-                      ),
+                    UserAvatar(
+                      photoUrl: PhotoService.resolvePhotoUrl(_driverProfile?.photoUrl),
+                      displayName: _driverProfile?.user.fullName ?? widget.username,
+                      radius: 40,
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -2172,6 +2168,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+              _buildVerificationBanner(),
+              if (_needsVerificationAction) ...[
+                const SizedBox(height: 12),
+                PremiumButton(
+                  label: 'Complete Verification',
+                  icon: Icons.folder_open,
+                  variant: ButtonVariant.outline,
+                  height: 48,
+                  borderRadius: 14,
+                  onPressed: _openDocumentsScreen,
+                ),
+              ],
               const SizedBox(height: 24),
               _buildProfileStat(
                 icon: Icons.star,
@@ -2188,12 +2197,116 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
               _buildProfileStat(
                 icon: Icons.attach_money,
                 label: AppLocalizations.of(context).vehicle,
-                value: _driverProfile?.vehicleModel ?? AppLocalizations.of(context).na,
+                value: _vehicleSummary,
                 color: AppColors.success,
               ),
+              _buildProfileStat(
+                icon: Icons.category,
+                label: AppLocalizations.of(context).vehicleType,
+                value: _driverProfile?.vehicleType ?? AppLocalizations.of(context).na,
+                color: AppColors.info,
+              ),
+              if (_driverProfile?.vehiclePhotoUrl != null)
+                _buildVehiclePhotoCard(),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  String get _vehicleSummary {
+    final model = _driverProfile?.vehicleModel;
+    final year = _driverProfile?.vehicleYear;
+    if (year != null) {
+      return '$model • $year';
+    }
+    return model ?? AppLocalizations.of(context).na;
+  }
+
+  bool get _needsVerificationAction {
+    final status = _driverProfile?.verificationStatus;
+    return status == 'DRAFT' || status == 'REJECTED';
+  }
+
+  void _openDocumentsScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DriverDocumentsScreen(
+          token: widget.token,
+          verificationStatus: _driverProfile?.verificationStatus,
+        ),
+      ),
+    ).then((_) => _loadDriverProfile());
+  }
+
+  Widget _buildVerificationBanner() {
+    final info = driverVerificationInfo(_driverProfile?.verificationStatus);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: info.color.withValues(alpha: 0.1),
+        borderRadius: AppRadius.lgRadius,
+        border: Border.all(color: info.color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(info.icon, size: 18, color: info.color),
+          const SizedBox(width: 8),
+          Text(
+            info.label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: info.color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVehiclePhotoCard() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: AppRadius.mdRadius,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Vehicle Photo',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: AppRadius.mdRadius,
+            child: CachedNetworkImage(
+              imageUrl: PhotoService.resolvePhotoUrl(_driverProfile!.vehiclePhotoUrl)!,
+              width: double.infinity,
+              height: 140,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                height: 140,
+                color: AppColors.outline.withValues(alpha: 0.3),
+                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+              errorWidget: (context, url, error) => Container(
+                height: 140,
+                color: AppColors.outline.withValues(alpha: 0.3),
+                child: const Icon(Icons.directions_car, size: 48, color: AppColors.textTertiary),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2328,6 +2441,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                       builder: (_) => const TripHistoryScreen(),
                     ),
                   );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.folder_open, size: 20),
+                title: const Text('Documents & Verification'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _openDocumentsScreen();
                 },
               ),
               ListTile(

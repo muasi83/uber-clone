@@ -20,7 +20,10 @@ import '../utils/bearing_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../utils/address_utils.dart';
+import '../utils/driver_card_data.dart';
+import '../services/photo_service.dart';
 import '../widgets/cancel_ride_dialog.dart';
+import '../widgets/user_avatar.dart';
 import '../widgets/payment_dialog.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../services/event_recorder_service.dart';
@@ -60,6 +63,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
   final Set<Polyline> _polylines = {};
   int _remainingMinutes = 0;
   String? _driverName;
+  DriverCardData _cardData = const DriverCardData();
   int? _otherUserId;
   bool _rideCompleting = false;
   bool _paymentInProgress = false;
@@ -140,6 +144,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
           _driverLocation = LatLng(ride.driverLatitude!, ride.driverLongitude!);
           _driverName = ride.driver?.fullName ?? _driverName;
           _otherUserId = ride.driver?.id ?? _otherUserId;
+          _cardData = DriverCardData.fromRide(ride);
         });
         _updateMarkers();
         _updateRoute();
@@ -631,6 +636,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         setState(() {
           _driverName = ride.driver!.fullName;
           _otherUserId = ride.driver!.id;
+          _cardData = DriverCardData.fromRide(ride);
         });
       }
     } catch (e) {
@@ -1002,25 +1008,34 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                     ),
                     Row(
                       children: [
-                        CircleAvatar(
+                        UserAvatar(
+                          photoUrl: PhotoService.resolvePhotoUrl(_cardData.photoUrl),
+                          displayName: _driverName ?? 'Driver',
                           radius: 16,
-                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                          child: Text(
-                            _driverName![0].toUpperCase(),
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
                         ),
                         AppSpacing.hGapMd,
                         Expanded(
-                          child: Text(
-                            _driverName!,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _driverName!,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              if (_cardData.vehicleSummary.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  _cardData.vehicleSummary,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                         Stack(

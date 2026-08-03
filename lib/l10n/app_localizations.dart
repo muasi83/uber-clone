@@ -1022,12 +1022,6 @@ abstract class AppLocalizations {
   /// **'Confirm destination'**
   String get confirmDestination;
 
-  /// No description provided for @paymentMethod.
-  ///
-  /// In en, this message translates to:
-  /// **'Payment method'**
-  String get paymentMethod;
-
   /// No description provided for @promoApplied.
   ///
   /// In en, this message translates to:
@@ -2810,18 +2804,6 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get today;
 
-  /// No description provided for @thisWeek.
-  ///
-  /// In en, this message translates to:
-  /// **'This week'**
-  String get thisWeek;
-
-  /// No description provided for @thisMonth.
-  ///
-  /// In en, this message translates to:
-  /// **'This month'**
-  String get thisMonth;
-
   /// No description provided for @customRange.
   ///
   /// In en, this message translates to:
@@ -3440,12 +3422,6 @@ abstract class AppLocalizations {
   /// **'Reason: {reason}'**
   String reason(String reason);
 
-  /// No description provided for @waitingForPayment.
-  ///
-  /// In en, this message translates to:
-  /// **'Waiting for payment...'**
-  String get waitingForPayment;
-
   /// No description provided for @destination.
   ///
   /// In en, this message translates to:
@@ -3715,6 +3691,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'e.g., White'**
   String get egWhite;
+
+  /// No description provided for @vehicleYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle Year'**
+  String get vehicleYear;
 
   /// No description provided for @license.
   ///
@@ -4279,6 +4261,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create'**
   String get create;
+
+  /// No description provided for @settlementDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Settlement Dashboard'**
+  String get settlementDashboard;
+
+  /// No description provided for @payToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Today'**
+  String get payToday;
+
+  /// No description provided for @recommendedSettlement.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended Settlement'**
+  String get recommendedSettlement;
+
+  /// No description provided for @waitingForPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Payment'**
+  String get waitingForPayment;
+
+  /// No description provided for @underReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under Review'**
+  String get underReview;
+
+  /// No description provided for @rejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rejected;
+
+  /// No description provided for @payable.
+  ///
+  /// In en, this message translates to:
+  /// **'Payable'**
+  String get payable;
+
+  /// No description provided for @waitingPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get waitingPayment;
+
+  /// No description provided for @underReviewShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get underReviewShort;
+
+  /// No description provided for @rejectedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rejectedShort;
+
+  /// No description provided for @settlementRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Range'**
+  String get settlementRange;
+
+  /// No description provided for @thisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This Week'**
+  String get thisWeek;
+
+  /// No description provided for @thisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This Month'**
+  String get thisMonth;
+
+  /// No description provided for @last30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 Days'**
+  String get last30Days;
+
+  /// No description provided for @custom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get custom;
+
+  /// No description provided for @noSettlementData.
+  ///
+  /// In en, this message translates to:
+  /// **'No settlement data for the selected period'**
+  String get noSettlementData;
+
+  /// No description provided for @noDriversInRange.
+  ///
+  /// In en, this message translates to:
+  /// **'No drivers found in this range'**
+  String get noDriversInRange;
+
+  /// No description provided for @driverSettlementDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver Settlement Details'**
+  String get driverSettlementDetails;
+
+  /// No description provided for @settlementStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Settlement Status'**
+  String get settlementStatus;
+
+  /// No description provided for @verificationStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Status'**
+  String get verificationStatus;
+
+  /// No description provided for @paymentStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Status'**
+  String get paymentStatus;
+
+  /// No description provided for @paymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Method'**
+  String get paymentMethod;
+
+  /// No description provided for @reasons.
+  ///
+  /// In en, this message translates to:
+  /// **'Reasons'**
+  String get reasons;
+
+  /// No description provided for @sortBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get sortBy;
+
+  /// No description provided for @sortDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get sortDate;
+
+  /// No description provided for @sortScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Score'**
+  String get sortScore;
+
+  /// No description provided for @sortNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Net Amount'**
+  String get sortNet;
+
+  /// No description provided for @completedTrips.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed Trips'**
+  String get completedTrips;
+
+  /// No description provided for @reliability.
+  ///
+  /// In en, this message translates to:
+  /// **'Reliability'**
+  String get reliability;
+
+  /// No description provided for @verification.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification'**
+  String get verification;
+
+  /// No description provided for @settlement.
+  ///
+  /// In en, this message translates to:
+  /// **'Settlement'**
+  String get settlement;
+
+  /// No description provided for @score.
+  ///
+  /// In en, this message translates to:
+  /// **'Score'**
+  String get score;
+
+  /// No description provided for @unverifiedRides.
+  ///
+  /// In en, this message translates to:
+  /// **'Unverified'**
+  String get unverifiedRides;
+
+  /// No description provided for @suspicious.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspicious'**
+  String get suspicious;
+
+  /// No description provided for @failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get failed;
+
+  /// No description provided for @trips.
+  ///
+  /// In en, this message translates to:
+  /// **'Trips'**
+  String get trips;
 
   /// No description provided for @trip.
   ///
@@ -5971,6 +6169,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Date'**
   String get date;
+
+  /// No description provided for @adminNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin note'**
+  String get adminNote;
+
+  /// No description provided for @approved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get approved;
+
+  /// No description provided for @approvedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved by'**
+  String get approvedBy;
+
+  /// No description provided for @approveDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get approveDocument;
+
+  /// No description provided for @documents.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get documents;
+
+  /// No description provided for @documentReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Document Review'**
+  String get documentReviewTitle;
+
+  /// No description provided for @expiresOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires'**
+  String get expiresOn;
+
+  /// No description provided for @issueDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Issue date'**
+  String get issueDate;
+
+  /// No description provided for @documentNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Document number'**
+  String get documentNumber;
+
+  /// No description provided for @reviewedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed by'**
+  String get reviewedBy;
+
+  /// No description provided for @noDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'No documents uploaded'**
+  String get noDocuments;
+
+  /// No description provided for @noteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (optional)'**
+  String get noteHint;
+
+  /// No description provided for @rejectDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get rejectDocument;
+
+  /// No description provided for @requestReupload.
+  ///
+  /// In en, this message translates to:
+  /// **'Request re-upload'**
+  String get requestReupload;
+
+  /// No description provided for @reviewedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed'**
+  String get reviewedAt;
+
+  /// No description provided for @tapToViewDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to view'**
+  String get tapToViewDocument;
+
+  /// No description provided for @uploadedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded'**
+  String get uploadedOn;
+
+  /// No description provided for @dashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard'**
+  String get dashboard;
+
+  /// No description provided for @totalDrivers.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Drivers'**
+  String get totalDrivers;
+
+  /// No description provided for @pendingDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Documents'**
+  String get pendingDocuments;
+
+  /// No description provided for @noPendingDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending documents'**
+  String get noPendingDocuments;
+
+  /// No description provided for @statusDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get statusDraft;
+
+  /// No description provided for @statusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get statusPending;
+
+  /// No description provided for @documentExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Document Expiry'**
+  String get documentExpiry;
+
+  /// No description provided for @expiredDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get expiredDocuments;
+
+  /// No description provided for @expiringWithin7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiring within 7 days'**
+  String get expiringWithin7Days;
+
+  /// No description provided for @expiringWithin30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiring within 30 days'**
+  String get expiringWithin30Days;
+
+  /// No description provided for @noExpiringDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'No documents in this window'**
+  String get noExpiringDocuments;
 }
 
 class _AppLocalizationsDelegate

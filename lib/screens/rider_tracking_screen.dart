@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/directions_service.dart';
 import '../services/ride_service.dart';
@@ -19,8 +20,11 @@ import '../utils/bearing_utils.dart';
 import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
+import '../utils/driver_card_data.dart';
+import '../services/photo_service.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../services/event_recorder_service.dart';
+import '../widgets/user_avatar.dart';
 import '../l10n/app_localizations.dart';
 
 class RiderTrackingScreen extends StatefulWidget {
@@ -65,7 +69,36 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   StreamSubscription<Map<String, dynamic>>? _driverLocEventsSub;
   StreamSubscription<String>? _connectionStateSub;
   bool _wasDisconnected = false;
-  double _driverRating = 4.0;
+  DriverCardData _cardData =
+      const DriverCardData(name: 'Driver', rating: null);
+
+  /// Merges enriched fields (from WS payload, REST ride, reconnect, poll)
+  /// into the current card, rebuilding only when something changed.
+  bool _applyCard(DriverCardData incoming) {
+    final merged = DriverCardData(
+      name: incoming.name ?? _cardData.name,
+      photoUrl: incoming.photoUrl ?? _cardData.photoUrl,
+      vehiclePhotoUrl: incoming.vehiclePhotoUrl ?? _cardData.vehiclePhotoUrl,
+      vehicleType: incoming.vehicleType ?? _cardData.vehicleType,
+      vehicleNumber: incoming.vehicleNumber ?? _cardData.vehicleNumber,
+      vehicleModel: incoming.vehicleModel ?? _cardData.vehicleModel,
+      vehicleColor: incoming.vehicleColor ?? _cardData.vehicleColor,
+      rating: incoming.rating ?? _cardData.rating,
+    );
+    final changed =
+        merged.name != _cardData.name ||
+            merged.photoUrl != _cardData.photoUrl ||
+            merged.vehiclePhotoUrl != _cardData.vehiclePhotoUrl ||
+            merged.vehicleType != _cardData.vehicleType ||
+            merged.vehicleNumber != _cardData.vehicleNumber ||
+            merged.vehicleModel != _cardData.vehicleModel ||
+            merged.vehicleColor != _cardData.vehicleColor ||
+            merged.rating != _cardData.rating;
+    if (changed) {
+      setState(() => _cardData = merged);
+    }
+    return changed;
+  }
 
   @override
   void initState() {
@@ -127,6 +160,10 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         _updateRoute();
         _fitBounds();
         addDebugMessage('✅ Tracking state rehydrated after reconnect');
+      }
+
+      if (_applyCard(DriverCardData.fromRide(ride))) {
+        addDebugMessage('✅ Driver card enriched after reconnect');
       }
 
       if (ride.status == 'CANCELLED') {
@@ -247,6 +284,11 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
               'driverLng': _driverLocation?.longitude,
             },
           );
+          return;
+        }
+
+        if (_applyCard(DriverCardData.fromRide(ride))) {
+          addDebugMessage('🔄 Driver card refreshed via status poll');
         }
       } catch (e) {
         addDebugMessage('Status poll error: $e');
@@ -328,10 +370,18 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   }
 
   void _loadDriverRating() {
-    final rating = widget.driverData['averageRating'];
-    if (rating != null) {
-      _driverRating = (rating as num).toDouble();
-    } else {
+    final incoming = DriverCardData.fromMap(widget.driverData);
+    _cardData = DriverCardData(
+      name: incoming.name ?? _cardData.name,
+      photoUrl: incoming.photoUrl ?? _cardData.photoUrl,
+      vehiclePhotoUrl: incoming.vehiclePhotoUrl ?? _cardData.vehiclePhotoUrl,
+      vehicleType: incoming.vehicleType ?? _cardData.vehicleType,
+      vehicleNumber: incoming.vehicleNumber ?? _cardData.vehicleNumber,
+      vehicleModel: incoming.vehicleModel ?? _cardData.vehicleModel,
+      vehicleColor: incoming.vehicleColor ?? _cardData.vehicleColor,
+      rating: incoming.rating ?? _cardData.rating,
+    );
+    if (_cardData.rating == null) {
       _fetchRatingFromRideDetails();
     }
   }
@@ -341,8 +391,8 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
       final token = StorageService.getToken();
       if (token == null) return;
       final ride = await RideService.getRideDetails(widget.rideId, token);
-      if (ride != null && ride.driverAverageRating != null && mounted) {
-        setState(() => _driverRating = ride.driverAverageRating!);
+      if (ride != null && mounted) {
+        _applyCard(DriverCardData.fromRide(ride));
       }
     } catch (e) {
       addDebugMessage('⚠️ Could not fetch driver rating: $e');
@@ -667,11 +717,42 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     }
   }
 
-  String _driverName() =>
-      widget.driverData['driverName'] as String? ?? 'Driver';
+  String _driverName() => _cardData.name ?? 'Driver';
 
-  String _vehicleInfo() =>
-      '${widget.driverData['vehicleColor'] as String? ?? ''} ${widget.driverData['vehicleModel'] as String? ?? ''} • ${widget.driverData['licensePlate'] as String? ?? 'N/A'}';
+  String _vehicleInfo() {
+    final summary = _cardData.vehicleSummary;
+    return summary.isNotEmpty ? summary : 'N/A';
+  }
+
+  Widget _vehicleThumbnail(double size) {
+    final url = PhotoService.resolvePhotoUrl(_cardData.vehiclePhotoUrl);
+    if (url == null) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Icon(Icons.directions_car_rounded, color: AppColors.primary, size: size * 0.55),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: CachedNetworkImage(
+        imageUrl: url,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorWidget: (context, url, error) => Container(
+          width: size,
+          height: size,
+          color: AppColors.primary.withValues(alpha: 0.1),
+          child: Icon(Icons.directions_car_rounded, color: AppColors.primary, size: size * 0.55),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -798,18 +879,10 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
 
                   Row(
                     children: [
-                      CircleAvatar(
+                      UserAvatar(
+                        photoUrl: PhotoService.resolvePhotoUrl(_cardData.photoUrl),
+                        displayName: _driverName(),
                         radius: 28,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                        child: Text(
-                          _driverName().isNotEmpty
-                              ? _driverName()[0].toUpperCase()
-                              : 'D',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
                       ),
                       AppSpacing.hGapMd,
                       Expanded(
@@ -833,10 +906,11 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                             AppSpacing.gapXs,
                             Row(
                               children: List.generate(5, (i) {
+                                final rating = _cardData.rating;
                                 return Icon(
                                   Icons.star_rounded,
                                   size: 16,
-                                  color: i < _driverRating.round()
+                                  color: rating != null && i < rating.round()
                                       ? AppColors.warning
                                       : AppColors.outlineVariant,
                                 );
@@ -845,6 +919,10 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                           ],
                         ),
                       ),
+                      if (_cardData.vehiclePhotoUrl != null) ...[
+                        AppSpacing.hGapMd,
+                        _vehicleThumbnail(48),
+                      ],
                       Stack(
                         clipBehavior: Clip.none,
                         children: [

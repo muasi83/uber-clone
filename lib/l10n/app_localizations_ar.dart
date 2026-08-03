@@ -506,9 +506,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get confirmDestination => 'تأكيد الوجهة';
 
   @override
-  String get paymentMethod => 'طريقة الدفع';
-
-  @override
   String get promoApplied => 'تم تطبيق الترويج';
 
   @override
@@ -1476,12 +1473,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get today => 'اليوم';
 
   @override
-  String get thisWeek => 'هذا الأسبوع';
-
-  @override
-  String get thisMonth => 'هذا الشهر';
-
-  @override
   String get customRange => 'نطاق مخصص';
 
   @override
@@ -1816,9 +1807,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get waitingForPayment => 'في انتظار الدفع...';
-
-  @override
   String get destination => 'الوجهة';
 
   @override
@@ -1958,6 +1946,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get egWhite => 'مثال: أبيض';
+
+  @override
+  String get vehicleYear => 'سنة المركبة';
 
   @override
   String get license => 'الرخصة';
@@ -2253,6 +2244,114 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get create => 'إنشاء';
+
+  @override
+  String get settlementDashboard => 'لوحة التسوية';
+
+  @override
+  String get payToday => 'ادفع اليوم';
+
+  @override
+  String get recommendedSettlement => 'التسوية الموصى بها';
+
+  @override
+  String get waitingForPayment => 'بانتظار الدفع';
+
+  @override
+  String get underReview => 'قيد المراجعة';
+
+  @override
+  String get rejected => 'مرفوض';
+
+  @override
+  String get payable => 'مستحق الدفع';
+
+  @override
+  String get waitingPayment => 'بانتظار';
+
+  @override
+  String get underReviewShort => 'مراجعة';
+
+  @override
+  String get rejectedShort => 'مرفوض';
+
+  @override
+  String get settlementRange => 'الفترة';
+
+  @override
+  String get thisWeek => 'هذا الأسبوع';
+
+  @override
+  String get thisMonth => 'هذا الشهر';
+
+  @override
+  String get last30Days => 'آخر 30 يوم';
+
+  @override
+  String get custom => 'مخصص';
+
+  @override
+  String get noSettlementData => 'لا توجد بيانات تسوية للفترة المحددة';
+
+  @override
+  String get noDriversInRange => 'لم يتم العثور على سائقين في هذه الفترة';
+
+  @override
+  String get driverSettlementDetails => 'تفاصيل تسوية السائق';
+
+  @override
+  String get settlementStatus => 'حالة التسوية';
+
+  @override
+  String get verificationStatus => 'حالة التحقق';
+
+  @override
+  String get paymentStatus => 'حالة الدفع';
+
+  @override
+  String get paymentMethod => 'طريقة الدفع';
+
+  @override
+  String get reasons => 'الأسباب';
+
+  @override
+  String get sortBy => 'ترتيب حسب';
+
+  @override
+  String get sortDate => 'التاريخ';
+
+  @override
+  String get sortScore => 'الدرجة';
+
+  @override
+  String get sortNet => 'الصافي';
+
+  @override
+  String get completedTrips => 'الرحلات المكتملة';
+
+  @override
+  String get reliability => 'الموثوقية';
+
+  @override
+  String get verification => 'التحقق';
+
+  @override
+  String get settlement => 'التسوية';
+
+  @override
+  String get score => 'الدرجة';
+
+  @override
+  String get unverifiedRides => 'غير موثق';
+
+  @override
+  String get suspicious => 'مشبوه';
+
+  @override
+  String get failed => 'فاشل';
+
+  @override
+  String get trips => 'الرحلات';
 
   @override
   String trip(String id) {
@@ -3213,4 +3312,88 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get date => 'التاريخ';
+
+  @override
+  String get adminNote => 'ملاحظة المسؤول';
+
+  @override
+  String get approved => 'مقبول';
+
+  @override
+  String get approvedBy => 'تمت الموافقة من قبل';
+
+  @override
+  String get approveDocument => 'موافقة';
+
+  @override
+  String get documents => 'المستندات';
+
+  @override
+  String get documentReviewTitle => 'مراجعة المستند';
+
+  @override
+  String get expiresOn => 'تنتهي في';
+
+  @override
+  String get issueDate => 'تاريخ الإصدار';
+
+  @override
+  String get documentNumber => 'رقم المستند';
+
+  @override
+  String get reviewedBy => 'تمت المراجعة بواسطة';
+
+  @override
+  String get noDocuments => 'لا توجد مستندات مرفوعة';
+
+  @override
+  String get noteHint => 'ملاحظة (اختياري)';
+
+  @override
+  String get rejectDocument => 'رفض';
+
+  @override
+  String get requestReupload => 'طلب إعادة الرفع';
+
+  @override
+  String get reviewedAt => 'تمت المراجعة';
+
+  @override
+  String get tapToViewDocument => 'اضغط للعرض';
+
+  @override
+  String get uploadedOn => 'تم الرفع';
+
+  @override
+  String get dashboard => 'لوحة التحكم';
+
+  @override
+  String get totalDrivers => 'إجمالي السائقين';
+
+  @override
+  String get pendingDocuments => 'المستندات المعلقة';
+
+  @override
+  String get noPendingDocuments => 'لا توجد مستندات معلقة';
+
+  @override
+  String get statusDraft => 'مسودة';
+
+  @override
+  String get statusPending => 'قيد المراجعة';
+
+  @override
+  String get documentExpiry => 'انتهاء صلاحية المستندات';
+
+  @override
+  String get expiredDocuments => 'منتهية';
+
+  @override
+  String get expiringWithin7Days => 'تنتهي خلال 7 أيام';
+
+  @override
+  String get expiringWithin30Days => 'تنتهي خلال 30 يومًا';
+
+  @override
+  String get noExpiringDocuments => 'لا توجد مستندات في هذه الفترة';
 }

@@ -225,7 +225,13 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         padding: const EdgeInsets.only(bottom: AppSpacing.md),
         child: PremiumCard(
           hasRipple: true,
-          onTap: () => _showTripReceipt(ride),
+          onTap: () {
+            if (ride.status == 'COMPLETED' && ride.verification != null) {
+              _showVerificationDetails(ride);
+            } else {
+              _showTripReceipt(ride);
+            }
+          },
           shadows: AppShadows.small,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,6 +253,10 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                       ),
                     ),
                   ),
+                  if (ride.verification != null) ...[
+                    const SizedBox(width: 8),
+                    _VerificationBadge(ride: ride),
+                  ],
                   const Spacer(),
                   if (fare != null)
                     Text(
@@ -346,7 +356,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.sheet)),
       ),
-      builder: (ctx) => Padding(
+      builder: (ctx) => SingleChildScrollView(
         padding: AppSpacing.cardPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -381,6 +391,53 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
     );
   }
 
+  void _showVerificationDetails(Ride ride) {
+    final v = ride.verification;
+    if (v == null) return;
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.sheet)),
+      ),
+      builder: (ctx) => SingleChildScrollView(
+        padding: AppSpacing.cardPadding,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Center(child: BottomSheetHandle()),
+            AppSpacing.gapLg,
+            Row(
+              children: [
+                Icon(
+                  v.isVerified
+                      ? Icons.verified
+                      : (v.isSuspicious ? Icons.error_outline : Icons.cancel),
+                  color: v.isVerified
+                      ? AppColors.success
+                      : (v.isSuspicious ? AppColors.warning : AppColors.error),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  v.isVerified
+                      ? 'Verified'
+                      : (v.isSuspicious ? 'Suspicious' : 'Verification Failed'),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            AppSpacing.gapLg,
+            _receiptRow('Estimated KM', v.estimatedKm != null ? '${v.estimatedKm!.toStringAsFixed(1)} km' : '—'),
+            _receiptRow('Actual KM', v.actualKm != null ? '${v.actualKm!.toStringAsFixed(1)} km' : '—'),
+            _receiptRow('Difference', v.distanceDifference != null
+                ? '${v.distanceDifference!.toStringAsFixed(1)} km' : '—'),
+            AppSpacing.gapXl,
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _receiptRow(String label, String value, {bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -402,6 +459,49 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _VerificationBadge extends StatelessWidget {
+  final Ride ride;
+  const _VerificationBadge({required this.ride});
+
+  @override
+  Widget build(BuildContext context) {
+    final v = ride.verification;
+    if (v == null) return const SizedBox.shrink();
+    final Color color = v.isVerified
+        ? AppColors.success
+        : (v.isSuspicious ? AppColors.warning : AppColors.error);
+    return Semantics(
+      label: v.isVerified
+          ? 'Verified trip'
+          : (v.isSuspicious ? 'Suspicious trip' : 'Verification failed'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: AppRadius.smRadius,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              v.isVerified ? Icons.verified : (v.isSuspicious ? Icons.error_outline : Icons.cancel),
+              size: 14,
+              color: color,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              v.isVerified
+                  ? 'Verified'
+                  : (v.isSuspicious ? 'Suspicious' : 'Not Verified'),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+            ),
+          ],
+        ),
       ),
     );
   }

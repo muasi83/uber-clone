@@ -4,6 +4,8 @@ import '../services/storage_service.dart';
 import '../services/admin_riders_service.dart';
 import '../services/currency_service.dart';
 import '../theme/app_colors.dart';
+import '../services/photo_service.dart';
+import '../widgets/user_avatar.dart';
 import '../services/recorded_screen_mixin.dart';
 
 class AdminRiderDetailsScreen extends StatefulWidget {
@@ -140,18 +142,10 @@ class _AdminRiderDetailsScreenState extends State<AdminRiderDetailsScreen> with 
           children: [
             Row(
               children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: online ? AppColors.success.withValues(alpha: 0.15) : AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(
-                    Icons.person,
-                    color: online ? AppColors.success : AppColors.textTertiary,
-                    size: 26,
-                  ),
+                UserAvatar(
+                  photoUrl: PhotoService.resolvePhotoUrl(d['photoUrl'] as String?),
+                  displayName: d['name'] as String? ?? 'Rider',
+                  radius: 26,
                 ),
                 const SizedBox(width: 14),
                 Expanded(

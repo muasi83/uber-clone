@@ -14,6 +14,7 @@ class User {
   final String? normalizedPhone;
   final bool phoneVerified;
   final String? gender;
+  final String? photoUrl;
   final DateTime createdAt;
 
   User({
@@ -30,6 +31,7 @@ class User {
     this.normalizedPhone,
     this.phoneVerified = false,
     this.gender,
+    this.photoUrl,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -53,6 +55,7 @@ factory User.fromJson(Map<String, dynamic> json) => User(
       ? json['phoneVerified'] as bool
       : (json['phoneVerified'] as int?) == 1,
   gender: json['gender'] as String?,
+  photoUrl: json['photoUrl'] as String?,
   createdAt: json['createdAt'] != null
       ? DateTime.parse(json['createdAt'] as String)
       : DateTime.now(),
@@ -71,6 +74,7 @@ factory User.fromJson(Map<String, dynamic> json) => User(
         'normalizedPhone': normalizedPhone,
         'phoneVerified': phoneVerified ? 1 : 0,
         'gender': gender,
+        'photoUrl': photoUrl,
         'createdAt': createdAt.toIso8601String(),
       };
 }

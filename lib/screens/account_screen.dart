@@ -4,12 +4,15 @@ import 'package:http/http.dart' as http;
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../services/storage_service.dart';
+import '../services/photo_service.dart';
 import '../services/websocket_service.dart';
+import '../services/notifications_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/premium_card.dart';
+import '../widgets/user_avatar.dart';
 import 'rider_profile_screen.dart';
 import 'email_verification_screen.dart';
 import 'phone_verification_screen.dart';
@@ -17,6 +20,7 @@ import 'payment_methods_screen.dart';
 import 'support_screen.dart';
 import 'safety_screen.dart';
 import 'settings_screen.dart';
+import 'notifications_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -28,11 +32,30 @@ class AccountScreen extends StatefulWidget {
 class _AccountScreenState extends State<AccountScreen> {
   User? _user;
   bool _isLoading = true;
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUser();
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final token = StorageService.getToken();
+    if (token == null) return;
+    final count = await NotificationsApi.getUnreadCount(token);
+    if (!mounted) return;
+    setState(() => _unreadCount = count);
+  }
+
+  Future<void> _openNotifications() async {
+    final token = StorageService.getToken() ?? '';
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => NotificationsScreen(token: token)),
+    );
+    if (mounted) _loadUnreadCount();
   }
 
   Future<void> _loadUser() async {
@@ -125,15 +148,18 @@ class _AccountScreenState extends State<AccountScreen> {
                   icon: Icons.person_outline,
                   title: l10n.myProfile,
                   subtitle: 'Manage your personal information',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => RiderProfileScreen(
-                        user: _user,
-                        token: token,
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RiderProfileScreen(
+                          user: _user,
+                          token: token,
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                    if (mounted) _loadUser();
+                  },
                 ),
                 _buildMenuItem(
                   icon: Icons.verified_outlined,
@@ -169,6 +195,31 @@ class _AccountScreenState extends State<AccountScreen> {
                       builder: (_) => PaymentMethodsScreen(token: token),
                     ),
                   ),
+                ),
+                _buildMenuItem(
+                  icon: Icons.notifications_outlined,
+                  title: 'Notifications',
+                  subtitle: _unreadCount > 0
+                      ? '$_unreadCount unread'
+                      : 'Review your notifications',
+                  trailing: _unreadCount > 0
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$_unreadCount',
+                            style: const TextStyle(
+                              color: AppColors.textOnPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        )
+                      : null,
+                  onTap: _openNotifications,
                 ),
                 _buildMenuItem(
                   icon: Icons.headset_mic_outlined,
@@ -218,7 +269,6 @@ class _AccountScreenState extends State<AccountScreen> {
 
   Widget _buildProfileHeader() {
     final name = _user?.fullName ?? StorageService.getUsername() ?? 'User';
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
     return Semantics(
       label: 'Account profile for $name',
       child: PremiumCard(
@@ -227,17 +277,10 @@ class _AccountScreenState extends State<AccountScreen> {
           children: [
             Semantics(
               label: 'Profile avatar',
-              child: CircleAvatar(
+              child: UserAvatar(
+                photoUrl: PhotoService.resolvePhotoUrl(_user?.photoUrl),
+                displayName: name,
                 radius: 32,
-                backgroundColor: AppColors.primaryContainer,
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                  ),
-                ),
               ),
             ),
             AppSpacing.hGapLg,

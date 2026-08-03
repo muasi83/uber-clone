@@ -2,12 +2,22 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/admin_drivers_service.dart';
+import '../services/photo_service.dart';
+import '../utils/admin_driver_filters.dart';
 import 'admin_driver_details_screen.dart';
 import '../theme/app_colors.dart';
+import '../widgets/user_avatar.dart';
 import '../services/recorded_screen_mixin.dart';
 
 class AdminDriverListScreen extends StatefulWidget {
-  const AdminDriverListScreen({super.key});
+  const AdminDriverListScreen({
+    super.key,
+    this.initialStatusFilter = adminStatusAll,
+    this.initialExpiryFilter = adminExpiryNone,
+  });
+
+  final String initialStatusFilter;
+  final String initialExpiryFilter;
 
   @override
   State<AdminDriverListScreen> createState() => _AdminDriverListScreenState();
@@ -18,45 +28,50 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
   bool _loading = true;
   String? _token;
   String _filterText = '';
-  String _statusFilter = 'all';
+  late String _statusFilter;
+  late String _expiryFilter;
+  Set<int> _expiredIds = <int>{};
+  Set<int> _expiring7Ids = <int>{};
+  Set<int> _expiring30Ids = <int>{};
 
   @override
   void initState() {
     super.initState();
     recordEvent(eventName: 'ADMIN_SCREEN_OPENED');
     _token = StorageService.getToken();
+    _statusFilter = widget.initialStatusFilter;
+    _expiryFilter = widget.initialExpiryFilter;
     _loadDrivers();
   }
 
   Future<void> _loadDrivers() async {
     if (_token == null) return;
     setState(() => _loading = true);
-    final drivers = await AdminDriversService.getDrivers(_token!);
+    final driversFuture = AdminDriversService.getDrivers(_token!);
+    final expiryFuture = AdminDriversService.getExpirySummary(_token!);
+    final drivers = await driversFuture;
+    final expiry = await expiryFuture;
     if (!mounted) return;
     setState(() {
       _drivers = drivers;
+      _expiredIds = driverIdSet(expiry?['expired'] as List<dynamic>?);
+      _expiring7Ids = driverIdSet(expiry?['expiring7'] as List<dynamic>?);
+      _expiring30Ids = driverIdSet(expiry?['expiring30'] as List<dynamic>?);
       _loading = false;
     });
   }
 
   List<Map<String, dynamic>> get _filteredDrivers {
     if (_drivers == null) return [];
-    return _drivers!.where((d) {
-      if (_statusFilter == 'online' && d['online'] != true) return false;
-      if (_statusFilter == 'offline' && d['online'] == true) return false;
-      if (_statusFilter == 'busy' && d['currentRideId'] == null) return false;
-      if (_statusFilter == 'available' && d['currentRideId'] != null) return false;
-      if (_filterText.isNotEmpty) {
-        final name = (d['name'] as String? ?? '').toLowerCase();
-        final model = (d['vehicleModel'] as String? ?? '').toLowerCase();
-        final plate = (d['vehicleNumber'] as String? ?? '').toLowerCase();
-        final q = _filterText.toLowerCase();
-        if (!name.contains(q) && !model.contains(q) && !plate.contains(q)) {
-          return false;
-        }
-      }
-      return true;
-    }).toList();
+    return filterAdminDrivers(
+      drivers: _drivers!,
+      statusFilter: _statusFilter,
+      expiryFilter: _expiryFilter,
+      expiredDriverIds: _expiredIds,
+      expiring7DriverIds: _expiring7Ids,
+      expiring30DriverIds: _expiring30Ids,
+      filterText: _filterText,
+    );
   }
 
   @override
@@ -113,15 +128,39 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                _buildChip(l10n.all, 'all'),
+                _buildChip(l10n.all, adminStatusAll),
                 const SizedBox(width: 6),
-                _buildChip(l10n.online, 'online'),
+                _buildChip(l10n.statusDraft, adminStatusDraft),
                 const SizedBox(width: 6),
-                _buildChip(l10n.offline, 'offline'),
+                _buildChip(l10n.statusPending, adminStatusPending),
                 const SizedBox(width: 6),
-                _buildChip(l10n.available, 'available'),
+                _buildChip(l10n.approved, adminStatusApproved),
                 const SizedBox(width: 6),
-                _buildChip(l10n.onRide, 'busy'),
+                _buildChip(l10n.rejected, adminStatusRejected),
+                const SizedBox(width: 6),
+                _buildChip(l10n.online, adminStatusOnline),
+                const SizedBox(width: 6),
+                _buildChip(l10n.offline, adminStatusOffline),
+                const SizedBox(width: 6),
+                _buildChip(l10n.available, adminStatusAvailable),
+                const SizedBox(width: 6),
+                _buildChip(l10n.onRide, adminStatusBusy),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 32,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _buildExpiryChip(l10n.all, adminExpiryNone),
+                const SizedBox(width: 6),
+                _buildExpiryChip(l10n.expiredDocuments, adminExpiryExpired),
+                const SizedBox(width: 6),
+                _buildExpiryChip(l10n.expiringWithin7Days, adminExpiryExpiring7),
+                const SizedBox(width: 6),
+                _buildExpiryChip(l10n.expiringWithin30Days, adminExpiryExpiring30),
               ],
             ),
           ),
@@ -141,6 +180,25 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
       backgroundColor: AppColors.surfaceVariant,
       labelStyle: TextStyle(
         color: selected ? AppColors.primary : AppColors.textSecondary,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Widget _buildExpiryChip(String label, String value) {
+    final selected = _expiryFilter == value;
+    return FilterChip(
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      selected: selected,
+      onSelected: (_) => setState(() => _expiryFilter = value),
+      selectedColor: AppColors.warning.withValues(alpha: 0.2),
+      checkmarkColor: AppColors.warning,
+      backgroundColor: AppColors.surfaceVariant,
+      labelStyle: TextStyle(
+        color: selected ? AppColors.warning : AppColors.textSecondary,
         fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -199,6 +257,37 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
     );
   }
 
+  Widget _buildVerificationBadge(Map<String, dynamic> driver) {
+    final status = driver['verificationStatus'] as String?;
+    final pendingDocs = (driver['pendingDocs'] as num?)?.toInt() ?? 0;
+
+    final (label, color) = switch (status) {
+      'PENDING' => (pendingDocs > 0 ? 'Pending · $pendingDocs' : 'Pending', AppColors.warning),
+      'REJECTED' => ('Rejected', AppColors.error),
+      _ => (null, AppColors.textTertiary),
+    };
+    if (label == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDriverCard(Map<String, dynamic> driver) {
     final l10n = AppLocalizations.of(context);
     final online = driver['online'] == true;
@@ -248,18 +337,10 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: online ? AppColors.success.withValues(alpha: 0.15) : AppColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.person,
-                  color: online ? AppColors.success : AppColors.textTertiary,
-                  size: 22,
-                ),
+              UserAvatar(
+                photoUrl: PhotoService.resolvePhotoUrl(driver['photoUrl'] as String?),
+                displayName: driver['name'] as String? ?? 'Driver',
+                radius: 22,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -319,6 +400,7 @@ class _AdminDriverListScreenState extends State<AdminDriverListScreen> with Reco
                       ),
                     ),
                   ),
+                  _buildVerificationBadge(driver),
                   if (rating != null) ...[
                     const SizedBox(height: 4),
                     Row(

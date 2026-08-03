@@ -165,4 +165,59 @@ class AdminService {
       return false;
     }
   }
+
+  static Future<Map<String, dynamic>?> getTripVerification(int rideId, String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/admin/rides/$rideId/verification';
+      final response = await http
+          .get(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>?;
+      }
+      addDebugMessage('Admin getTripVerification error: ${response.statusCode} ${response.body}');
+      return null;
+    } catch (e) {
+      addDebugMessage('Admin getTripVerification exception: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> verifyTrip(int rideId, String token, {bool force = false}) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/admin/rides/$rideId/verify'
+          '?force=$force';
+      final response = await http
+          .post(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>?;
+      }
+      addDebugMessage('Admin verifyTrip error: ${response.statusCode} ${response.body}');
+      return null;
+    } catch (e) {
+      addDebugMessage('Admin verifyTrip exception: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> runVerificationBackfill(String token) async {
+    try {
+      final url = '${StorageService.getServerUrl()}/api/admin/verification/backfill';
+      final response = await http
+          .post(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 120));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>?;
+      }
+      addDebugMessage('Admin backfill error: ${response.statusCode} ${response.body}');
+      return null;
+    } catch (e) {
+      addDebugMessage('Admin backfill exception: $e');
+      return null;
+    }
+  }
 }

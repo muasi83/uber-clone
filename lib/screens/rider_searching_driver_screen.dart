@@ -12,6 +12,7 @@ import '../screens/debug_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/map_style_loader.dart';
+import '../utils/driver_card_data.dart';
 import '../widgets/premium_button.dart';
 import '../widgets/cancel_ride_dialog.dart';
 import '../l10n/app_localizations.dart';
@@ -153,17 +154,19 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
       if (ride.status == 'ACCEPTED' && ride.driver != null) {
         addDebugMessage('✅ Poll detected ride ACCEPTED by ${ride.driver!.fullName}');
 
+        final card = DriverCardData.fromRide(ride);
         _handleRideAccepted({
           'payload': {
             'rideId': widget.rideId,
-            'driverName': ride.driver!.fullName,
             'driverId': ride.driver!.id,
             'pickupLatitude': ride.pickupLatitude,
             'pickupLongitude': ride.pickupLongitude,
-            'vehicleColor': '',
-            'vehicleModel': '',
-            'licensePlate': '',
-            'averageRating': ride.driverAverageRating ?? 4.0,
+            'dropoffLatitude': ride.dropoffLatitude,
+            'dropoffLongitude': ride.dropoffLongitude,
+            'dropoffAddress': ride.dropoffAddress,
+            'currentLatitude': ride.driverLatitude,
+            'currentLongitude': ride.driverLongitude,
+            ...card.toPayloadMap(),
           },
         });
       }

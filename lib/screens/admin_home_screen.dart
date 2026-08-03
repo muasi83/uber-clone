@@ -7,9 +7,11 @@ import '../services/currency_service.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/shimmer_loading.dart';
 import 'admin_trip_details_screen.dart';
+import 'admin_dashboard_screen.dart';
 import 'admin_driver_list_screen.dart';
 import 'admin_earnings_dashboard_screen.dart';
 import 'admin_rider_list_screen.dart';
+import 'admin_settlement_dashboard_screen.dart';
 import '../theme/app_colors.dart';
 import '../services/recorded_screen_mixin.dart';
 
@@ -202,6 +204,19 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
     }
   }
 
+  Color _verificationColor(String? status) {
+    switch (status) {
+      case 'VERIFIED':
+        return AppColors.success;
+      case 'SUSPICIOUS':
+        return AppColors.warning;
+      case 'FAILED':
+        return AppColors.error;
+      default:
+        return AppColors.textTertiary;
+    }
+  }
+
   Future<void> _pickDate(TextEditingController controller) async {
     final date = await showDatePicker(
       context: context,
@@ -248,6 +263,19 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
         children: [
           Expanded(
             child: _navButton(
+              icon: Icons.dashboard_outlined,
+              label: AppLocalizations.of(context).dashboard,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _navButton(
               icon: Icons.people,
               label: AppLocalizations.of(context).drivers,
               onTap: () {
@@ -267,6 +295,19 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const AdminEarningsDashboardScreen()),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _navButton(
+              icon: Icons.payments,
+              label: AppLocalizations.of(context).settlementDashboard,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminSettlementDashboardScreen()),
                 );
               },
             ),
@@ -519,6 +560,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
     final requestedAt = trip['requestedAt'] as String?;
     final finalFare = trip['finalFare'] as num?;
     final paymentStatus = trip['paymentStatus'] as String?;
+    final verificationStatus = trip['verificationStatus'] as String?;
+    final actualKm = trip['actualKm'] as num?;
+    final estimatedKm = trip['estimatedKm'] as num?;
+    final differenceKm = trip['distanceDifference'] as num?;
 
     final date = requestedAt != null
         ? DateFormat('MMM dd, HH:mm').format(DateTime.parse(requestedAt))
@@ -548,6 +593,17 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
                   Text('#$rideId',
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 16)),
+                  if (verificationStatus != null) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _verificationColor(verificationStatus),
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   StatusBadge(
                     label: status ?? 'UNKNOWN',
@@ -612,6 +668,24 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> with RecordedScreenMi
                   ),
                 ],
               ),
+              if (actualKm != null || estimatedKm != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.route, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Est ${estimatedKm?.toStringAsFixed(1) ?? '—'} km · '
+                      'Act ${actualKm?.toStringAsFixed(1) ?? '—'} km'
+                      '${differenceKm != null ? ' · Diff ${differenceKm.toStringAsFixed(1)} km' : ''}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

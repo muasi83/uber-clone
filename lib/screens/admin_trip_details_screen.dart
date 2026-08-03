@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/admin_service.dart';
 import '../services/currency_service.dart';
 import '../services/ui_event_recorder.dart';
+import '../services/photo_service.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/shimmer_loading.dart';
+import '../widgets/user_avatar.dart';
 import '../theme/app_colors.dart';
 import '../utils/address_utils.dart';
 import 'trip_behaviour_screen.dart';
@@ -325,6 +328,10 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
           if (payment != null) _buildSection(l10n.payment, _buildPaymentCard(payment)),
           const SizedBox(height: 8),
           _buildInfoCard(detail),
+          if (detail['verification'] != null) ...[
+            const SizedBox(height: 12),
+            _buildVerificationCard(detail['verification'] as Map<String, dynamic>),
+          ],
           const SizedBox(height: 12),
           _buildSection(l10n.timeline, _buildTimeline()),
           const SizedBox(height: 12),
@@ -384,12 +391,10 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-              child: Text(
-                (rider['name'] as String? ?? '?')[0].toUpperCase(),
-                style: const TextStyle(color: AppColors.primary),
-              ),
+            UserAvatar(
+              photoUrl: PhotoService.resolvePhotoUrl(rider['photoUrl'] as String?),
+              displayName: rider['name'] as String? ?? 'Rider',
+              radius: 20,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -415,17 +420,19 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
   }
 
   Widget _buildDriverCard(Map<String, dynamic> driver) {
+    final driverPhotoUrl =
+        PhotoService.resolvePhotoUrl(driver['photoUrl'] as String?);
+    final vehiclePhotoUrl =
+        PhotoService.resolvePhotoUrl(driver['vehiclePhotoUrl'] as String?);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: AppColors.accent.withValues(alpha: 0.2),
-              child: Text(
-                (driver['name'] as String? ?? '?')[0].toUpperCase(),
-                style: const TextStyle(color: AppColors.accent),
-              ),
+            UserAvatar(
+              photoUrl: driverPhotoUrl,
+              displayName: driver['name'] as String? ?? 'Driver',
+              radius: 20,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -450,6 +457,25 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
                 ],
               ),
             ),
+            if (vehiclePhotoUrl != null) ...[
+              const SizedBox(width: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: CachedNetworkImage(
+                  imageUrl: vehiclePhotoUrl,
+                  width: 48,
+                  height: 40,
+                  fit: BoxFit.cover,
+                  errorWidget: (context, url, error) => Container(
+                    width: 48,
+                    height: 40,
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    child: const Icon(Icons.directions_car,
+                        color: AppColors.primary, size: 20),
+                  ),
+                ),
+              ),
+            ],
             if (driver['averageRating'] != null)
               Column(
                 children: [
@@ -555,6 +581,123 @@ class _AdminTripDetailsScreenState extends State<AdminTripDetailsScreen> with Ti
             if (detail['finalFare'] != null)
               _infoRow(Icons.receipt, l10n.finalFare,
                   CurrencyService.format((detail['finalFare'] as num).toDouble())),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerificationCard(Map<String, dynamic> v) {
+    final status = v['verificationStatus'] as String?;
+    final score = v['verificationScore'] as num?;
+    final actualKm = v['actualKm'] as num?;
+    final estimatedKm = v['estimatedKm'] as num?;
+    final diffKm = v['distanceDifference'] as num?;
+    final gpsQuality = v['gpsQuality'] as String?;
+    final algorithmVersion = v['algorithmVersion'] as num?;
+    final computedAt = v['computedAt'] as String?;
+    final reasons = (v['verificationReasons'] as List<dynamic>? ?? []).cast<String>();
+
+    final Color statusColor = _verificationColor(status);
+    final String statusLabel = status ?? 'N/A';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: statusColor,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text('Trip Verification',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const Spacer(),
+                Text(statusLabel,
+                    style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (score != null) ...[
+              Row(
+                children: [
+                  Text('Score: $score/100',
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: (score / 100).clamp(0.0, 1.0),
+                  minHeight: 6,
+                  backgroundColor: AppColors.surfaceVariant,
+                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            _infoRow(Icons.route, 'Estimated KM', '${estimatedKm?.toStringAsFixed(2) ?? '—'} km'),
+            _infoRow(Icons.directions_car, 'Actual KM', '${actualKm?.toStringAsFixed(2) ?? '—'} km'),
+            _infoRow(Icons.compare_arrows, 'Difference', '${diffKm?.toStringAsFixed(2) ?? '—'} km'),
+            if (v['actualDuration'] != null)
+              _infoRow(Icons.timer, 'Actual Duration', '${v['actualDuration']} min'),
+            if (v['estimatedDuration'] != null)
+              _infoRow(Icons.schedule, 'Estimated Duration', '${v['estimatedDuration']} min'),
+            if (gpsQuality != null)
+              _infoRow(Icons.satellite_alt, 'GPS Quality', gpsQuality),
+            if (v['pickupReached'] != null)
+              _infoRow(Icons.trip_origin, 'Pickup reached',
+                  v['pickupReached'] == true ? 'Yes' : 'No',
+                  valueColor: v['pickupReached'] == true ? AppColors.success : AppColors.error),
+            if (v['dropoffReached'] != null)
+              _infoRow(Icons.flag, 'Dropoff reached',
+                  v['dropoffReached'] == true ? 'Yes' : 'No',
+                  valueColor: v['dropoffReached'] == true ? AppColors.success : AppColors.error),
+            if (v['movementDetected'] != null)
+              _infoRow(Icons.directions_walk, 'Movement detected',
+                  v['movementDetected'] == true ? 'Yes' : 'No',
+                  valueColor: v['movementDetected'] == true ? AppColors.success : AppColors.error),
+            if (reasons.isNotEmpty) ...[
+              const Divider(height: 24),
+              const Text('Reasons',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+              const SizedBox(height: 6),
+              for (final reason in reasons)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, size: 14, color: AppColors.error),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(reason,
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.textSecondary)),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            if (algorithmVersion != null || computedAt != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'v${algorithmVersion?.toString() ?? '?'} · ${computedAt != null ? _formatDate(computedAt) : ''}',
+                style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+              ),
+            ],
           ],
         ),
       ),
@@ -867,7 +1010,7 @@ child: Text(AppLocalizations.of(context).noMessages,
     );
   }
 
-  Widget _infoRow(IconData icon, String label, String value) {
+  Widget _infoRow(IconData icon, String label, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -879,12 +1022,28 @@ child: Text(AppLocalizations.of(context).noMessages,
                   fontSize: 12, color: AppColors.textSecondary)),
           Expanded(
             child: Text(value,
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: valueColor ?? AppColors.textPrimary,
+                ),
                 overflow: TextOverflow.ellipsis),
           ),
         ],
       ),
     );
+  }
+
+  Color _verificationColor(String? status) {
+    switch (status) {
+      case 'VERIFIED':
+        return AppColors.success;
+      case 'SUSPICIOUS':
+        return AppColors.warning;
+      case 'FAILED':
+        return AppColors.error;
+      default:
+        return AppColors.textTertiary;
+    }
   }
 
   Color _statusColor(String? status) {

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/storage_service.dart';
 import '../services/admin_riders_service.dart';
+import '../services/photo_service.dart';
 import 'admin_rider_details_screen.dart';
 import '../theme/app_colors.dart';
+import '../widgets/user_avatar.dart';
 import '../services/recorded_screen_mixin.dart';
 
 class AdminRiderListScreen extends StatefulWidget {
@@ -211,11 +213,10 @@ class _AdminRiderListScreenState extends State<AdminRiderListScreen> with Record
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              CircleAvatar(
-                backgroundColor: blocked
-                    ? AppColors.error.withValues(alpha: 0.2)
-                    : AppColors.primary.withValues(alpha: 0.1),
-                child: Icon(Icons.person, color: blocked ? AppColors.error : AppColors.primary),
+              UserAvatar(
+                photoUrl: PhotoService.resolvePhotoUrl(rider['photoUrl'] as String?),
+                displayName: name,
+                radius: 20,
               ),
               const SizedBox(width: 12),
               Expanded(

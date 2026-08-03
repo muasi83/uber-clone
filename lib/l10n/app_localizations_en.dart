@@ -507,9 +507,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmDestination => 'Confirm destination';
 
   @override
-  String get paymentMethod => 'Payment method';
-
-  @override
   String get promoApplied => 'Promo applied';
 
   @override
@@ -1480,12 +1477,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get today => 'Today';
 
   @override
-  String get thisWeek => 'This week';
-
-  @override
-  String get thisMonth => 'This month';
-
-  @override
   String get customRange => 'Custom range';
 
   @override
@@ -1820,9 +1811,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get waitingForPayment => 'Waiting for payment...';
-
-  @override
   String get destination => 'DESTINATION';
 
   @override
@@ -1963,6 +1951,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get egWhite => 'e.g., White';
+
+  @override
+  String get vehicleYear => 'Vehicle Year';
 
   @override
   String get license => 'License';
@@ -2257,6 +2248,114 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get create => 'Create';
+
+  @override
+  String get settlementDashboard => 'Settlement Dashboard';
+
+  @override
+  String get payToday => 'Pay Today';
+
+  @override
+  String get recommendedSettlement => 'Recommended Settlement';
+
+  @override
+  String get waitingForPayment => 'Waiting for Payment';
+
+  @override
+  String get underReview => 'Under Review';
+
+  @override
+  String get rejected => 'Rejected';
+
+  @override
+  String get payable => 'Payable';
+
+  @override
+  String get waitingPayment => 'Waiting';
+
+  @override
+  String get underReviewShort => 'Review';
+
+  @override
+  String get rejectedShort => 'Rejected';
+
+  @override
+  String get settlementRange => 'Range';
+
+  @override
+  String get thisWeek => 'This Week';
+
+  @override
+  String get thisMonth => 'This Month';
+
+  @override
+  String get last30Days => 'Last 30 Days';
+
+  @override
+  String get custom => 'Custom';
+
+  @override
+  String get noSettlementData => 'No settlement data for the selected period';
+
+  @override
+  String get noDriversInRange => 'No drivers found in this range';
+
+  @override
+  String get driverSettlementDetails => 'Driver Settlement Details';
+
+  @override
+  String get settlementStatus => 'Settlement Status';
+
+  @override
+  String get verificationStatus => 'Verification Status';
+
+  @override
+  String get paymentStatus => 'Payment Status';
+
+  @override
+  String get paymentMethod => 'Payment Method';
+
+  @override
+  String get reasons => 'Reasons';
+
+  @override
+  String get sortBy => 'Sort by';
+
+  @override
+  String get sortDate => 'Date';
+
+  @override
+  String get sortScore => 'Score';
+
+  @override
+  String get sortNet => 'Net Amount';
+
+  @override
+  String get completedTrips => 'Completed Trips';
+
+  @override
+  String get reliability => 'Reliability';
+
+  @override
+  String get verification => 'Verification';
+
+  @override
+  String get settlement => 'Settlement';
+
+  @override
+  String get score => 'Score';
+
+  @override
+  String get unverifiedRides => 'Unverified';
+
+  @override
+  String get suspicious => 'Suspicious';
+
+  @override
+  String get failed => 'Failed';
+
+  @override
+  String get trips => 'Trips';
 
   @override
   String trip(String id) {
@@ -3223,4 +3322,88 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get date => 'Date';
+
+  @override
+  String get adminNote => 'Admin note';
+
+  @override
+  String get approved => 'Approved';
+
+  @override
+  String get approvedBy => 'Approved by';
+
+  @override
+  String get approveDocument => 'Approve';
+
+  @override
+  String get documents => 'Documents';
+
+  @override
+  String get documentReviewTitle => 'Document Review';
+
+  @override
+  String get expiresOn => 'Expires';
+
+  @override
+  String get issueDate => 'Issue date';
+
+  @override
+  String get documentNumber => 'Document number';
+
+  @override
+  String get reviewedBy => 'Reviewed by';
+
+  @override
+  String get noDocuments => 'No documents uploaded';
+
+  @override
+  String get noteHint => 'Note (optional)';
+
+  @override
+  String get rejectDocument => 'Reject';
+
+  @override
+  String get requestReupload => 'Request re-upload';
+
+  @override
+  String get reviewedAt => 'Reviewed';
+
+  @override
+  String get tapToViewDocument => 'Tap to view';
+
+  @override
+  String get uploadedOn => 'Uploaded';
+
+  @override
+  String get dashboard => 'Dashboard';
+
+  @override
+  String get totalDrivers => 'Total Drivers';
+
+  @override
+  String get pendingDocuments => 'Pending Documents';
+
+  @override
+  String get noPendingDocuments => 'No pending documents';
+
+  @override
+  String get statusDraft => 'Draft';
+
+  @override
+  String get statusPending => 'Pending';
+
+  @override
+  String get documentExpiry => 'Document Expiry';
+
+  @override
+  String get expiredDocuments => 'Expired';
+
+  @override
+  String get expiringWithin7Days => 'Expiring within 7 days';
+
+  @override
+  String get expiringWithin30Days => 'Expiring within 30 days';
+
+  @override
+  String get noExpiringDocuments => 'No documents in this window';
 }
