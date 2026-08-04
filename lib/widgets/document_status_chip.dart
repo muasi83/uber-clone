@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
 import '../utils/document_status_style.dart';
 
 class DocumentStatusChip extends StatelessWidget {

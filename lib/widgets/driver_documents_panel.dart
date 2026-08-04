@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/driver_document.dart';
 import '../services/driver_service.dart';
+import '../services/expiry_config_service.dart';
 import '../services/photo_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -43,6 +44,7 @@ class _DriverDocumentsPanelState extends State<DriverDocumentsPanel> {
 
   Future<void> _refresh() async {
     setState(() => _loading = true);
+    await ExpiryConfigService.load(token: widget.token);
     final docs = await DriverService.getDriverDocuments(widget.token);
     final completeness = await DriverService.getDocumentCompleteness(widget.token);
     final profile = await DriverService.getDriverProfile(widget.token);
@@ -577,7 +579,8 @@ class _DriverDocumentsPanelState extends State<DriverDocumentsPanel> {
             const SizedBox(height: 10),
             _buildMetaRow('Uploaded', _formatDate(doc.uploadedAt)),
             _buildMetaRow('Expires', _formatDate(doc.expiryDate),
-                valueColor: documentExpiryColor(_tryParseDate(doc.expiryDate))),
+                valueColor: documentExpiryColor(_tryParseDate(doc.expiryDate),
+                    soonDays: ExpiryConfigService.soonDays)),
             if (doc.reviewedAt != null) _buildMetaRow('Reviewed', _formatDate(doc.reviewedAt)),
             if (doc.reviewedBy != null) _buildMetaRow('Reviewed by', 'Admin #${doc.reviewedBy}'),
             if (doc.documentNumber != null && doc.documentNumber!.isNotEmpty)

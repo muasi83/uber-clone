@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/admin_drivers_service.dart';
 import '../services/currency_service.dart';
+import '../services/expiry_config_service.dart';
 import '../theme/app_colors.dart';
 import '../services/photo_service.dart';
 import '../widgets/user_avatar.dart';
@@ -13,6 +14,7 @@ import '../models/driver_document.dart';
 import '../widgets/admin_document_viewer.dart';
 import '../widgets/document_status_chip.dart';
 import '../utils/address_utils.dart';
+import '../utils/document_status_style.dart';
 import '../services/recorded_screen_mixin.dart';
 import 'driver_audit_screen.dart';
 
@@ -40,6 +42,7 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
     super.initState();
     recordEvent(eventName: 'ADMIN_SCREEN_OPENED');
     _token = StorageService.getToken();
+    ExpiryConfigService.load(token: _token ?? '');
     _loadDetail();
   }
 
@@ -645,7 +648,11 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
                     const SizedBox(height: 2),
                     Text(
                       '${l10n.expiresOn}: ${doc.expiryDate}',
-                      style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: documentExpiryColor(_tryParseDate(doc.expiryDate),
+                            soonDays: ExpiryConfigService.soonDays),
+                      ),
                     ),
                   ],
                 ],
@@ -947,6 +954,15 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
       return DateFormat('MMM dd, yyyy HH:mm').format(dt);
     } catch (_) {
       return dateStr;
+    }
+  }
+
+  DateTime? _tryParseDate(String? s) {
+    if (s == null || s.isEmpty) return null;
+    try {
+      return DateTime.parse(s);
+    } catch (_) {
+      return null;
     }
   }
 }
