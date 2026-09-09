@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../services/ride_service.dart';
 import '../services/firebase_service.dart';
+import '../services/notification_service.dart';
 import '../screens/auth_screen.dart';
 import '../screens/rider_home_screen.dart';
 import '../screens/driver_home_screen.dart';
@@ -21,7 +22,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _animationController;
   bool _logoVisible = false;
   bool _showWelcome = false;
@@ -33,6 +34,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
@@ -47,9 +49,71 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       await Future.delayed(const Duration(seconds: 2));
 
-      if (mounted) setState(() => _showWelcome = true);
+      if (!mounted) return;
+
+      final locationGranted = await _isLocationGranted();
+      final notificationGranted = await NotificationService.isNotificationPermissionGranted();
+
+      if (!mounted) return;
+
+      if (locationGranted && notificationGranted) {
+        _checkSession();
+      } else {
+        setState(() {
+          _locationGranted = locationGranted;
+          _notificationGranted = notificationGranted;
+          if (!locationGranted) {
+            _locationDeniedForever = false;
+          }
+          if (!notificationGranted) {
+            _notificationDeniedForever = false;
+          }
+          _showWelcome = true;
+        });
+      }
     } catch (e) {
       _navigateToAuth();
+    }
+  }
+
+  /// Read-only OS check of the current Location permission state.
+  /// Returns true only when Location is actually granted (always/whileInUse).
+  Future<bool> _isLocationGranted() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      return permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _showWelcome && mounted) {
+      _refreshPermissionState();
+    }
+  }
+
+  /// Re-read actual OS permission state and update the overlay UI.
+  /// Called on resume; never triggers _checkSession() or navigation here.
+  Future<void> _refreshPermissionState() async {
+    try {
+      final locationGranted = await _isLocationGranted();
+      final notificationGranted = await NotificationService.isNotificationPermissionGranted();
+      if (!mounted) return;
+      setState(() {
+        _locationGranted = locationGranted;
+        _notificationGranted = notificationGranted;
+        if (locationGranted) {
+          _locationDeniedForever = false;
+        }
+        if (notificationGranted) {
+          _notificationDeniedForever = false;
+        }
+      });
+    } catch (e) {
+      // Ignore refresh errors; the next render keeps the last known state.
     }
   }
 
@@ -182,6 +246,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
     super.dispose();
   }

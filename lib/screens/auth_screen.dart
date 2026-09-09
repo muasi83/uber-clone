@@ -347,10 +347,12 @@ class _AuthScreenState extends State<AuthScreen>
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         body: CustomScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
             SliverPersistentHeader(
               pinned: true,
@@ -365,57 +367,62 @@ class _AuthScreenState extends State<AuthScreen>
                 },
               ),
             ),
-            SliverToBoxAdapter(
-              child: Transform.translate(
-                offset: const Offset(0, -24),
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(AppRadius.xl),
-                      topRight: Radius.circular(AppRadius.xl),
+            SliverPadding(
+              padding: EdgeInsets.only(
+                bottom: bottomInset > 0 ? bottomInset + 16 : 0,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: Transform.translate(
+                  offset: const Offset(0, -24),
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(AppRadius.xl),
+                        topRight: Radius.circular(AppRadius.xl),
+                      ),
                     ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                    child: Column(
-                      children: [
-                        AppSpacing.gapLg,
-                        FadeTransition(
-                          opacity: _fadeAnim,
-                          child: SlideTransition(
-                            position: _slideAnim,
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 250),
-                              transitionBuilder: (child, animation) {
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: child,
-                                );
-                              },
-                              child: _isLogin
-                                  ? _buildLoginForm()
-                                  : _buildRegisterForm(),
-                            ),
-                          ),
-                        ),
-                        AppSpacing.gapLg,
-                        if (kDebugMode)
-                          TextButton(
-                            onPressed: _showServerUrlDialog,
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.textTertiary,
-                            ),
-            child: const Text(
-              'Server Settings (Dev)',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                      child: Column(
+                        children: [
+                          AppSpacing.gapLg,
+                          FadeTransition(
+                            opacity: _fadeAnim,
+                            child: SlideTransition(
+                              position: _slideAnim,
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 250),
+                                transitionBuilder: (child, animation) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  );
+                                },
+                                child: _isLogin
+                                    ? _buildLoginForm()
+                                    : _buildRegisterForm(),
                               ),
                             ),
                           ),
-                      ],
+                          AppSpacing.gapLg,
+                          if (kDebugMode)
+                            TextButton(
+                              onPressed: _showServerUrlDialog,
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.textTertiary,
+                              ),
+              child: const Text(
+                'Server Settings (Dev)',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

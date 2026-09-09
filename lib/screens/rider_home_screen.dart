@@ -1551,25 +1551,36 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
               child: InkWell(
                 onTap: _onRidePressed,
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                child: Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.directions_car_rounded, color: AppColors.textOnPrimary, size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        AppLocalizations.of(context).ride,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: AppColors.textOnPrimary,
-                              fontWeight: FontWeight.w600,
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: FractionallySizedBox(
+                            widthFactor: 0.85,
+                            heightFactor: 0.9,
+                            child: Image.asset(
+                              'assets/images/ride.png',
+                              fit: BoxFit.contain,
                             ),
-                      ),
-                    ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          AppLocalizations.of(context).ride,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: AppColors.textOnPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1583,26 +1594,37 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
               child: InkWell(
                 onTap: _onSchedulePressed,
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                child: Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                    border: Border.all(color: AppColors.outline),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.schedule_rounded, color: AppColors.primary, size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        AppLocalizations.of(context).schedule,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      border: Border.all(color: AppColors.outline),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: FractionallySizedBox(
+                            widthFactor: 0.85,
+                            heightFactor: 0.9,
+                            child: Image.asset(
+                              'assets/images/schedule ride.png',
+                              fit: BoxFit.contain,
                             ),
-                      ),
-                    ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          AppLocalizations.of(context).schedule,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

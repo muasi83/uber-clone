@@ -81,6 +81,39 @@ class NotificationService {
     }
   }
 
+  /// Read-only check of the current notification authorization state.
+  ///
+  /// Uses flutter_local_notifications (v20.1.0) without prompting the user:
+  ///  - iOS: `IOSFlutterLocalNotificationsPlugin.checkPermissions()` -> isEnabled
+  ///  - Android: `AndroidFlutterLocalNotificationsPlugin.areNotificationsEnabled()`
+  ///    (reflects POST_NOTIFICATIONS on Android 13+, enabled state on older)
+  ///
+  /// Returns `true` only when notifications are actually enabled. A `null` or
+  /// `false` result (uninitialized plugin, unavailable status, or denied) is
+  /// treated as NOT granted.
+  static Future<bool> isNotificationPermissionGranted() async {
+    if (!_initialized) return false;
+    try {
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) {
+        final status = await ios.checkPermissions();
+        return status?.isEnabled ?? false;
+      }
+
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        return await android.areNotificationsEnabled() ?? false;
+      }
+
+      return false;
+    } catch (e) {
+      addDebugMessage('❌ isNotificationPermissionGranted error: $e');
+      return false;
+    }
+  }
+
   static Future<void> showChatNotification({
     required String senderName,
     required String message,
