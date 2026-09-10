@@ -14,7 +14,6 @@ import '../screens/rider_pickup_location_screen.dart';
 import '../screens/rider_dropoff_location_screen.dart';
 import '../screens/debug_screen.dart';
 import '../screens/ride_collector_screen.dart';
-import '../widgets/schedule_ride_sheet.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_shadows.dart';
@@ -73,6 +72,8 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
 
   bool _isAdmin = false;
   int _riderTabIndex = 0;
+  int _ridesInitialTab = 0;
+  int _ridesNonce = 0;
   int _adminTabIndex = 0;
   StreamSubscription<bool>? _gpsSub;
 
@@ -867,7 +868,10 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
           index: _riderTabIndex,
           children: [
             _buildMapBodyWithOverlays(),
-            const RidesScreen(),
+            RidesScreen(
+              key: ValueKey('rides-$_ridesNonce'),
+              initialTab: _ridesInitialTab,
+            ),
             const AccountScreen(),
           ],
         ),
@@ -1659,18 +1663,14 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
   }
 
   void _onSchedulePressed() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      enableDrag: false,
-      isDismissible: false,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => ScheduleRideSheet(
-        selectedDate: DateTime.now(),
-      ),
-    );
+    // Schedule tile → Rides section with the Upcoming tab selected.
+    // Bumping _ridesNonce recreates the tab controller so this always
+    // lands on Upcoming, even on repeat presses.
+    setState(() {
+      _ridesInitialTab = 1;
+      _ridesNonce++;
+      _riderTabIndex = 1;
+    });
   }
 
   Widget _buildConnectivityBanner() {

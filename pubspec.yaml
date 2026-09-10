@@ -2,7 +2,7 @@ name: chat_app
 description: "A professional Uber clone with real-time ride matching, location tracking, and WebSocket support."
 publish_to: 'none'
 
-version: 1.0.1+8
+version: 1.0.1+9
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -89,5 +89,15 @@ flutter:
 flutter_launcher_icons:
   ios: true
   android: true
-  image_path: "assets/images/app_icon.png"
+  image_path: "new icon for app/new_icon.png_20260910161159.jpeg"
   remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "new icon for app/new_icon.png_20260910161159.jpeg"
+  windows:
+    generate: true
+    image_path: "new icon for app/new_icon.png_20260910161159.jpeg"
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: "new icon for app/new_icon.png_20260910161159.jpeg"

@@ -5,13 +5,16 @@ import '../widgets/past_rides_view.dart';
 import '../widgets/upcoming_rides_view.dart';
 
 class RidesScreen extends StatelessWidget {
-  const RidesScreen({super.key});
+  const RidesScreen({super.key, this.initialTab = 0});
+
+  final int initialTab;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return DefaultTabController(
       length: 2,
+      initialIndex: initialTab,
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.yourRides),

@@ -5,13 +5,15 @@ import '../screens/debug_screen.dart';
 
 class PlaceSearchResult {
   final String placeId;
+  final String name;
   final String description;
 
-  PlaceSearchResult({required this.placeId, required this.description});
+  PlaceSearchResult({required this.placeId, required this.name, required this.description});
 
   factory PlaceSearchResult.fromJson(Map<String, dynamic> json) {
     return PlaceSearchResult(
       placeId: json['placeId'] as String? ?? '',
+      name: json['name'] as String? ?? '',
       description: json['description'] as String? ?? '',
     );
   }

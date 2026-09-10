@@ -738,7 +738,7 @@ bool get _canSchedule =>
                   size: 20,
                 ),
                 title: Text(
-                  result.description,
+                  result.name.isNotEmpty ? result.name : result.description,
                   style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.textPrimary,
@@ -746,6 +746,17 @@ bool get _canSchedule =>
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                subtitle: result.name.isNotEmpty
+                    ? Text(
+                        result.description,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : null,
                 onTap: () => _onSelectResult(result),
               );
             },

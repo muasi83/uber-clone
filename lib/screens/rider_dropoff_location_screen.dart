@@ -989,11 +989,19 @@ class _RiderDropoffLocationScreenState
                                   dense: true,
                                   leading: const Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
                                   title: Text(
-                                    result.description,
+                                    result.name.isNotEmpty ? result.name : result.description,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
                                   ),
+                                  subtitle: result.name.isNotEmpty
+                                      ? Text(
+                                          result.description,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                        )
+                                      : null,
                                   onTap: () => _selectSearchResult(result),
                                 );
                               },
