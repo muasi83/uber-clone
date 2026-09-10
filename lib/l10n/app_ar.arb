@@ -165,6 +165,7 @@
   "noResultsFound": "لم يتم العثور على نتائج",
   "requestANewRide": "طلب رحلة جديدة",
   "ride": "رحلة",
+  "rideLater": "رحلة لاحقاً",
   "scheduleARideForLater": "جدولة رحلة لاحقاً",
   "schedule": "جدولة",
   "connectionLostRetrying": "فُقد الاتصال — إعادة المحاولة...",
@@ -1656,5 +1657,8 @@
   "expiredDocuments": "منتهية",
   "expiringWithin7Days": "تنتهي خلال 7 أيام",
   "expiringWithin30Days": "تنتهي خلال 30 يومًا",
-  "noExpiringDocuments": "لا توجد مستندات في هذه الفترة"
+  "noExpiringDocuments": "لا توجد مستندات في هذه الفترة",
+  "welcomeToTaligo": "مرحباً بك في تاليجو",
+  "hereToHelpWithTrips": "نحن هنا لمساعدتك في رحلاتك",
+  "appName": "تاليجو"
 }

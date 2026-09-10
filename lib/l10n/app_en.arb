@@ -165,6 +165,7 @@
   "noResultsFound": "No results found",
   "requestANewRide": "Request a new ride",
   "ride": "Ride",
+  "rideLater": "Ride Later",
   "scheduleARideForLater": "Schedule a ride for later",
   "schedule": "Schedule",
   "connectionLostRetrying": "Connection lost — retrying...",
@@ -1656,5 +1657,8 @@
   "expiredDocuments": "Expired",
   "expiringWithin7Days": "Expiring within 7 days",
   "expiringWithin30Days": "Expiring within 30 days",
-  "noExpiringDocuments": "No documents in this window"
+  "noExpiringDocuments": "No documents in this window",
+  "welcomeToTaligo": "Welcome to Taligo",
+  "hereToHelpWithTrips": "Here to help you with your trips",
+  "appName": "Taligo"
 }

@@ -305,7 +305,7 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         AppSpacing.gapXxl,
         Text(
-          l10n.ridenow,
+          l10n.appName,
           style: AppTypography.textTheme.displayMedium?.copyWith(
             color: AppColors.primaryLight,
           ),
@@ -334,6 +334,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Widget _buildWelcomeOverlay() {
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -356,7 +357,7 @@ class _SplashScreenState extends State<SplashScreen>
             ),
             const SizedBox(height: 24),
             Text(
-              'Welcome to U-Go',
+              l10n.welcomeToTaligo,
               style: AppTypography.textTheme.headlineMedium?.copyWith(
                 color: AppColors.primaryLight,
               ),

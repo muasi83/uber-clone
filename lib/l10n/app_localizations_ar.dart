@@ -410,6 +410,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get ride => 'رحلة';
 
   @override
+  String get rideLater => 'رحلة لاحقاً';
+
+  @override
   String get scheduleARideForLater => 'جدولة رحلة لاحقاً';
 
   @override
@@ -3396,4 +3399,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noExpiringDocuments => 'لا توجد مستندات في هذه الفترة';
+
+  @override
+  String get welcomeToTaligo => 'مرحباً بك في تاليجو';
+
+  @override
+  String get hereToHelpWithTrips => 'نحن هنا لمساعدتك في رحلاتك';
+
+  @override
+  String get appName => 'تاليجو';
 }

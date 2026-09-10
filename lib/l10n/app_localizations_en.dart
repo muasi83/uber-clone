@@ -411,6 +411,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ride => 'Ride';
 
   @override
+  String get rideLater => 'Ride Later';
+
+  @override
   String get scheduleARideForLater => 'Schedule a ride for later';
 
   @override
@@ -3406,4 +3409,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noExpiringDocuments => 'No documents in this window';
+
+  @override
+  String get welcomeToTaligo => 'Welcome to Taligo';
+
+  @override
+  String get hereToHelpWithTrips => 'Here to help you with your trips';
+
+  @override
+  String get appName => 'Taligo';
 }

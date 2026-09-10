@@ -69,6 +69,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
   bool _isLoadingHistory = false;
   late DraggableScrollableController _sheetController;
   bool _isSheetExpanded = false;
+  double _sheetSize = 0.50;
 
   bool _isAdmin = false;
   int _riderTabIndex = 0;
@@ -109,6 +110,15 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
         if (!_isSheetExpanded) setState(() => _isSheetExpanded = true);
       } else {
         if (_isSheetExpanded) setState(() => _isSheetExpanded = false);
+      }
+      final liveSize = _sheetController.size.clamp(0.1, 0.85);
+      if ((liveSize - _sheetSize).abs() > 0.001) {
+        setState(() => _sheetSize = liveSize);
+        // A-only: keep rider centered in the map area visible above the sheet.
+        // Fires only on actual sheet movement (not on location updates),
+        // so there is no follow mode and an active map pan is never fought:
+        // the sheet cannot move while the map is being panned.
+        if (mounted) _centerOnLocation();
       }
     });
   }
@@ -1017,6 +1027,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
           zoomControlsEnabled: false,
           myLocationButtonEnabled: false,
           myLocationEnabled: true,
+          // A-only: bottom padding = live sheet height, so the camera's
+          // usable viewport is the map area visible ABOVE the sheet.
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * _sheetSize,
+          ),
           scrollGesturesEnabled: !_isSheetExpanded,
           zoomGesturesEnabled: !_isSheetExpanded,
           rotateGesturesEnabled: !_isSheetExpanded,
@@ -1098,8 +1113,8 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
         Positioned(
           left: 0,
           right: 0,
-          bottom: MediaQuery.of(context).size.height * 0.25,
-          height: 60,
+          bottom: MediaQuery.of(context).size.height * _sheetSize,
+          height: 30,
           child: IgnorePointer(
             child: Container(
               decoration: BoxDecoration(
@@ -1119,7 +1134,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
         // Recenter button
         PositionedDirectional(
           key: const ValueKey('recenter'),
-          bottom: MediaQuery.of(context).size.height * 0.25 + 16,
+          bottom: MediaQuery.of(context).size.height * _sheetSize + 16,
           end: 16,
           child: Semantics(
             button: true,
@@ -1143,7 +1158,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
             child: DraggableScrollableSheet(
               key: const ValueKey('sheet'),
               controller: _sheetController,
-              initialChildSize: 0.25,
+              initialChildSize: 0.50,
               minChildSize: 0.1,
               maxChildSize: 0.85,
               builder: (context, scrollController) {
@@ -1555,8 +1570,9 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                   aspectRatio: 1,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: AppColors.surfaceVariant,
                       borderRadius: BorderRadius.circular(AppRadius.lg),
+                      border: Border.all(color: AppColors.outline),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1573,9 +1589,9 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          AppLocalizations.of(context).ride,
+                          '${AppLocalizations.of(context).ride} ${AppLocalizations.of(context).search2}',
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                color: AppColors.textOnPrimary,
+                                color: AppColors.primary,
                                 fontWeight: FontWeight.w600,
                               ),
                         ),
@@ -1617,7 +1633,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          AppLocalizations.of(context).schedule,
+                          AppLocalizations.of(context).rideLater,
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w600,

@@ -842,6 +842,12 @@ abstract class AppLocalizations {
   /// **'Ride'**
   String get ride;
 
+  /// No description provided for @rideLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride Later'**
+  String get rideLater;
+
   /// No description provided for @scheduleARideForLater.
   ///
   /// In en, this message translates to:
@@ -6337,6 +6343,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No documents in this window'**
   String get noExpiringDocuments;
+
+  /// No description provided for @welcomeToTaligo.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Taligo'**
+  String get welcomeToTaligo;
+
+  /// No description provided for @hereToHelpWithTrips.
+  ///
+  /// In en, this message translates to:
+  /// **'Here to help you with your trips'**
+  String get hereToHelpWithTrips;
+
+  /// No description provided for @appName.
+  ///
+  /// In en, this message translates to:
+  /// **'Taligo'**
+  String get appName;
 }
 
 class _AppLocalizationsDelegate

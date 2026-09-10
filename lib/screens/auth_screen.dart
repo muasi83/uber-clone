@@ -358,7 +358,7 @@ class _AuthScreenState extends State<AuthScreen>
               pinned: true,
               delegate: _AuthHeaderDelegate(
                 minExtent: kToolbarHeight + MediaQuery.of(context).padding.top + 4,
-                maxExtent: 260,
+                maxExtent: 170,
                 onLongPress: () {
                   Navigator.push(
                     context,
@@ -1008,7 +1008,11 @@ class _AuthHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    final progress = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    final extentRange = maxExtent - minExtent;
+    final progress = (extentRange <= 0
+            ? 0.0
+            : (shrinkOffset / extentRange))
+        .clamp(0.0, 1.0);
     final topPadding = MediaQuery.of(context).padding.top;
 
     return GestureDetector(
@@ -1023,33 +1027,16 @@ class _AuthHeaderDelegate extends SliverPersistentHeaderDelegate {
           alignment: Alignment.center,
           children: [
             Positioned(
-              top: lerpDouble(16, 0, progress),
-              child: Opacity(
-                opacity: 1.0 - progress,
-                child: Container(
-                  padding: AppSpacing.cardPadding,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                    boxShadow: AppShadows.medium,
-                  ),
-                  child: const Icon(
-                    Icons.directions_car_rounded,
-                    size: 36,
-                    color: AppColors.primaryLight,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: lerpDouble(32, 12, progress),
-              left: 0,
-              right: 0,
+              bottom: lerpDouble(52, 12, progress),
+              left: 16,
+              right: 16,
               child: Text(
-                AppLocalizations.of(context).ridenow,
+                AppLocalizations.of(context).welcomeToTaligo,
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: lerpDouble(28, 20, progress),
+                  fontSize: lerpDouble(26, 20, progress),
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryLight,
                   letterSpacing: -0.5,
@@ -1058,14 +1045,16 @@ class _AuthHeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
             if (progress < 0.8)
               Positioned(
-                bottom: lerpDouble(6, -20, progress),
-                left: 0,
-                right: 0,
+                bottom: lerpDouble(24, -20, progress),
+                left: 16,
+                right: 16,
                 child: Opacity(
                   opacity: 1.0 - (progress / 0.8),
                   child: Text(
-                    'Sign in to continue',
+                    AppLocalizations.of(context).hereToHelpWithTrips,
                     textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 14,
                       color: AppColors.primaryLight.withValues(alpha: 0.85),
