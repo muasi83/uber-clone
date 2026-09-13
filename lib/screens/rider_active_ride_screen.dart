@@ -21,9 +21,8 @@ import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../utils/address_utils.dart';
 import '../utils/driver_card_data.dart';
-import '../services/photo_service.dart';
+import '../widgets/driver_arriving_card.dart';
 import '../widgets/cancel_ride_dialog.dart';
-import '../widgets/user_avatar.dart';
 import '../widgets/payment_dialog.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../services/event_recorder_service.dart';
@@ -999,67 +998,12 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                   ),
 
                   if (_driverName != null) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                      child: Divider(
-                        height: 1,
-                        color: AppColors.outline.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        UserAvatar(
-                          photoUrl: PhotoService.resolvePhotoUrl(_cardData.photoUrl),
-                          displayName: _driverName ?? 'Driver',
-                          radius: 16,
-                        ),
-                        AppSpacing.hGapMd,
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _driverName!,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              if (_cardData.vehicleSummary.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  _cardData.vehicleSummary,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(AppRadius.md),
-                              ),
-                              child: Semantics(
-                                button: true,
-                label: AppLocalizations.of(context).chatWithRider,
-                                child: IconButton(
-                                  icon: const Icon(Icons.chat_rounded,
-                                      color: AppColors.primary, size: 20),
-                                  onPressed: _openChat,
-                                ),
-                              ),
-                            ),
-                            _buildUnreadBadge(),
-                          ],
-                        ),
-                      ],
+                    DriverArrivingCard(
+                      cardData: _cardData,
+                      etaText: '$_remainingMinutes min remaining',
+                      onChat: _openChat,
+                      unreadCount:
+                          WebSocketService.unreadCounts[_otherUserId!] ?? 0,
                     ),
                   ],
                 ],

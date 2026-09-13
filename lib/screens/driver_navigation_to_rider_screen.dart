@@ -535,30 +535,6 @@ class _DriverNavigationToRiderScreenState
             myLocationButtonEnabled: true,
             style: _mapStyle,
           ),
-          PositionedDirectional(
-            top: 16,
-            end: 16,
-            child:             Semantics(
-              button: true,
-              label: AppLocalizations.of(context).toggleDriverMarker,
-              child: FloatingActionButton(
-                heroTag: 'toggle_marker_nav',
-                mini: true,
-                onPressed: () {
-                  setState(() => _showDriverMarker = !_showDriverMarker);
-                  _updateMarkers();
-                },
-                backgroundColor: _showDriverMarker
-                    ? AppColors.primary
-                    : AppColors.surfaceVariant,
-                child: Icon(
-                  Icons.my_location,
-                  color: _showDriverMarker ? AppColors.primaryLight : AppColors.textSecondary,
-                  size: 20,
-                ),
-              ),
-            ),
-          ),
           if (_isArriving)
             Positioned.fill(
               child: AnimatedOpacity(

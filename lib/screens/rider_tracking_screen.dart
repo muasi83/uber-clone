@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/directions_service.dart';
 import '../services/ride_service.dart';
@@ -21,10 +20,9 @@ import '../utils/marker_utils.dart';
 import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../utils/driver_card_data.dart';
-import '../services/photo_service.dart';
+import '../widgets/driver_arriving_card.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../services/event_recorder_service.dart';
-import '../widgets/user_avatar.dart';
 import '../l10n/app_localizations.dart';
 
 class RiderTrackingScreen extends StatefulWidget {
@@ -717,43 +715,6 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     }
   }
 
-  String _driverName() => _cardData.name ?? 'Driver';
-
-  String _vehicleInfo() {
-    final summary = _cardData.vehicleSummary;
-    return summary.isNotEmpty ? summary : 'N/A';
-  }
-
-  Widget _vehicleThumbnail(double size) {
-    final url = PhotoService.resolvePhotoUrl(_cardData.vehiclePhotoUrl);
-    if (url == null) {
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: Icon(Icons.directions_car_rounded, color: AppColors.primary, size: size * 0.55),
-      );
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: CachedNetworkImage(
-        imageUrl: url,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorWidget: (context, url, error) => Container(
-          width: size,
-          height: size,
-          color: AppColors.primary.withValues(alpha: 0.1),
-          child: Icon(Icons.directions_car_rounded, color: AppColors.primary, size: size * 0.55),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -877,130 +838,16 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                     ),
                   ),
 
-                  Row(
-                    children: [
-                      UserAvatar(
-                        photoUrl: PhotoService.resolvePhotoUrl(_cardData.photoUrl),
-                        displayName: _driverName(),
-                        radius: 28,
-                      ),
-                      AppSpacing.hGapMd,
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _driverName(),
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            AppSpacing.gapXs,
-                            Text(
-                              _vehicleInfo(),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            AppSpacing.gapXs,
-                            Row(
-                              children: List.generate(5, (i) {
-                                final rating = _cardData.rating;
-                                return Icon(
-                                  Icons.star_rounded,
-                                  size: 16,
-                                  color: rating != null && i < rating.round()
-                                      ? AppColors.warning
-                                      : AppColors.outlineVariant,
-                                );
-                              }),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (_cardData.vehiclePhotoUrl != null) ...[
-                        AppSpacing.hGapMd,
-                        _vehicleThumbnail(48),
-                      ],
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                            ),
-                            child: Semantics(
-                              button: true,
-                              label: AppLocalizations.of(context).chatWithRider,
-                              child: IconButton(
-                                icon: const Icon(Icons.chat_rounded,
-                                    color: AppColors.primary, size: 20),
-                                onPressed: _openChat,
-                              ),
-                            ),
-                          ),
-                          _buildUnreadBadge(),
-                        ],
-                      ),
-                    ],
-                  ),
-                  AppSpacing.gapXl,
-
-                  Container(
-                    width: double.infinity,
-                    padding: AppSpacing.cardPadding,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(AppSpacing.sm),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                          ),
-                          child: const Icon(
-                            Icons.access_time_rounded,
-                            color: AppColors.primary,
-                            size: 22,
-                          ),
-                        ),
-                        AppSpacing.hGapMd,
-                        if (_remainingMinutes > 0)
-                          RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '$_remainingMinutes',
-                                  style: theme.textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.primary,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: ' min',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          Text(
-                            'Calculating...',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                      ],
-                    ),
+                  DriverArrivingCard(
+                    cardData: _cardData,
+                    etaText: _remainingMinutes > 0
+                        ? AppLocalizations.of(context)
+                            .pickupInMin('$_remainingMinutes')
+                        : 'Calculating...',
+                    onChat: _openChat,
+                    unreadCount: WebSocketService.unreadCounts[
+                            widget.driverData['driverId'] as int?] ??
+                        0,
                   ),
                   AppSpacing.gapMd,
 
