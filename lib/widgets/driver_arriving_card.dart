@@ -20,12 +20,14 @@ class DriverArrivingCard extends StatelessWidget {
     required this.etaText,
     required this.onChat,
     required this.unreadCount,
+    this.onCall,
   });
 
   final DriverCardData cardData;
   final String etaText;
   final VoidCallback onChat;
   final int unreadCount;
+  final VoidCallback? onCall;
 
   @override
   Widget build(BuildContext context) {
@@ -265,18 +267,26 @@ class DriverArrivingCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.outline),
-              ),
-              child: const Icon(
-                Icons.call_rounded,
-                size: 22,
-                color: AppColors.textSecondary,
+            Semantics(
+              button: true,
+              label: 'Call driver',
+              child: InkWell(
+                onTap: onCall,
+                borderRadius: BorderRadius.circular(26),
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.outline),
+                  ),
+                  child: const Icon(
+                    Icons.call_rounded,
+                    size: 22,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               ),
             ),
           ],

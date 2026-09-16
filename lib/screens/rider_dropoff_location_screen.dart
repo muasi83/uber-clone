@@ -180,10 +180,13 @@ class _RiderDropoffLocationScreenState
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
-    controller.animateCamera(
-      CameraUpdate.newLatLngZoom(
-          LatLng(widget.pickupLat, widget.pickupLng), 17),
-    );
+    // Initial fit: both pickup + dropoff visible, pickup top-biased via map padding, balanced zoom (not too in/out)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fitBoundsToRouteForReview();
+    });
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) _fitBoundsToRouteForReview();
+    });
   }
 
   void _onCameraMove(CameraPosition position) {
@@ -628,6 +631,7 @@ class _RiderDropoffLocationScreenState
   }
 
   void _autoShowReview() {
+    _fitBoundsToRouteForReview();
     _selectedFare = RideTypeSelector.calculateFare(rideTypes, 'ECONOMY', 0.0);
     setState(() {
       _isDropoffConfirmed = true;
@@ -638,26 +642,58 @@ class _RiderDropoffLocationScreenState
 
   void _fitBoundsToRouteForReview() {
     if (mapController == null) return;
-    if (_currentPolylinePoints.isEmpty) return;
 
-    double minLat = _currentPolylinePoints.first.latitude;
-    double maxLat = _currentPolylinePoints.first.latitude;
-    double minLng = _currentPolylinePoints.first.longitude;
-    double maxLng = _currentPolylinePoints.first.longitude;
+    // Prefer the full route polyline for the tightest fit. If it hasn't
+    // finished loading yet, fall back to just pickup + dropoff so the
+    // camera still fits both pins instead of doing nothing.
+    final List<LatLng> points = _currentPolylinePoints.isNotEmpty
+        ? _currentPolylinePoints
+        : (_dropoffLocation != null
+            ? [LatLng(widget.pickupLat, widget.pickupLng), _dropoffLocation!]
+            : const <LatLng>[]);
 
-    for (final p in _currentPolylinePoints) {
+    if (points.isEmpty) return;
+
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (final p in points) {
       minLat = math.min(minLat, p.latitude);
       maxLat = math.max(maxLat, p.latitude);
       minLng = math.min(minLng, p.longitude);
       maxLng = math.max(maxLng, p.longitude);
     }
 
+    // Guard against a degenerate (near zero-size) box, e.g. pickup and
+    // dropoff being right next to each other.
+    const minSpan = 0.003; // ~300m
+    final latSpan = maxLat - minLat;
+    final lngSpan = maxLng - minLng;
+    final latPad = latSpan < minSpan ? (minSpan - latSpan) / 2 : 0.0;
+    final lngPad = lngSpan < minSpan ? (minSpan - lngSpan) / 2 : 0.0;
+
     final bounds = LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
+      southwest: LatLng(minLat - latPad, minLng - lngPad),
+      northeast: LatLng(maxLat + latPad, maxLng + lngPad),
     );
 
-    mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 140));
+    void fit() {
+      addDebugMessage(
+          '🗺️ Fitting review map: sw=(${bounds.southwest.latitude}, ${bounds.southwest.longitude}) ne=(${bounds.northeast.latitude}, ${bounds.northeast.longitude})');
+      mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 140));
+    }
+
+    // Run after the current frame, and once more shortly after as a
+    // fallback for Flutter web, where the map view can still be settling
+    // its size right when the trip-details sheet first appears.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) fit();
+    });
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) fit();
+    });
   }
 
   void _changeDropoff() {
@@ -862,6 +898,9 @@ class _RiderDropoffLocationScreenState
             onMapCreated: _onMapCreated,
             onCameraMove: _onCameraMove,
             onCameraIdle: _onCameraIdle,
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height * 0.45,
+            ),
             initialCameraPosition: CameraPosition(target: initial, zoom: 15),
             markers: {
               ..._markers,
@@ -1295,9 +1334,7 @@ class _RiderDropoffLocationScreenState
           borderRadius: AppRadius.sheetTopRadius,
           boxShadow: AppShadows.large,
         ),
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1322,162 +1359,151 @@ class _RiderDropoffLocationScreenState
                   ),
                 ],
               ),
-              // Addresses
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.trip_origin, color: AppColors.pickupMarker, size: 20),
-                  AppSpacing.hGapMd,
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(widget.pickupAddress,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                        Text(
-                          formatLatLng(widget.pickupLat, widget.pickupLng),
-                          style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                child: Column(
-                  children: List.generate(3, (i) => Container(
-                    width: 2, height: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 1),
-                    decoration: BoxDecoration(
-                      color: AppColors.outlineVariant,
-                      borderRadius: BorderRadius.circular(1),
-                    ),
-                  )),
-                ),
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.location_on, color: AppColors.dropoffMarker, size: 20),
-                  AppSpacing.hGapMd,
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _dropoffAddress.isEmpty
-                               ? AppLocalizations.of(context).dropoffLocation
-                               : _dropoffAddress,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                        ),
-                        if (_dropoffLocation != null && _dropoffAddress.isNotEmpty)
-                          Text(
-                            formatLatLng(_dropoffLocation!.latitude, _dropoffLocation!.longitude),
-                            style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              AppSpacing.gapSm,
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _routeInfoChip(Icons.route, AppLocalizations.of(context).km(_routeDistanceKm!.toStringAsFixed(1))),
-                  _routeInfoChip(Icons.access_time, AppLocalizations.of(context).min('$_routeDurationMin')),
-                ],
-              ),
-              const Divider(height: 24),
-
-              // Ride type selection
-              Text(AppLocalizations.of(context).selectRideType,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              AppSpacing.gapMd,
-              RideTypeSelector(
-                rideTypes: rideTypes,
-                selectedApiName: _selectedRideType,
-                onChanged: (type) {
-                  setState(() {
-                    _selectedRideType = type;
-                    _selectedFare = _routeDistanceKm != null
-                        ? RideTypeSelector.calculateFare(
-                            rideTypes, type, _routeDistanceKm!,
-                          )
-                        : 0.0;
-                  });
-                },
-                distanceKm: _routeDistanceKm,
-              ),
-              AppSpacing.gapLg,
-
-              // Payment method
-              Text(AppLocalizations.of(context).paymentMethod,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              AppSpacing.gapMd,
-              GestureDetector(
-                onTap: _showPaymentMethodSelector,
-                child: PremiumCard(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  hasRipple: true,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36, height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryContainer,
-                          borderRadius: AppRadius.smRadius,
-                        ),
-                        child: Icon(
-                          _selectedPaymentMethod == 'WALLET'
-                              ? Icons.account_balance_wallet
-                              : _selectedPaymentMethod == 'CASH' ? Icons.money : Icons.credit_card,
-                          color: AppColors.primary, size: 20,
-                        ),
-                      ),
-                      AppSpacing.hGapMd,
-                      Expanded(
-                        child: Text(_selectedPaymentMethod,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                      ),
-                      const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 22),
-                    ],
-                  ),
-                ),
-              ),
-              AppSpacing.gapLg,
-
-              // Price breakdown
-              PremiumCard(
-                padding: AppSpacing.cardPadding,
-                child: Column(
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                   children: [
-                    _priceRow(AppLocalizations.of(context).baseFare, CurrencyService.format(2.0)),
-                    AppSpacing.gapMd,
-                    _priceRow(
-                      AppLocalizations.of(context).distanceKm(_routeDistanceKm!.toStringAsFixed(1)),
-                      '${CurrencyService.format(_routeDistanceKm! * RideTypeSelector.getRatePerKm(rideTypes, _selectedRideType))}',
+                    // Addresses — compact single line
+                    Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: AppColors.pickupMarker,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            widget.pickupAddress,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 6),
+                          child: Icon(Icons.arrow_forward, size: 14, color: AppColors.textTertiary),
+                        ),
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: AppColors.dropoffMarker,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _dropoffAddress.isEmpty
+                                ? AppLocalizations.of(context).dropoffLocation
+                                : _dropoffAddress,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const Divider(height: 24),
-                    _priceRow(AppLocalizations.of(context).total, '${CurrencyService.format(_selectedFare)}', isTotal: true),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _routeInfoChip(Icons.route, AppLocalizations.of(context).km(_routeDistanceKm!.toStringAsFixed(1))),
+                        const SizedBox(width: 8),
+                        _routeInfoChip(Icons.access_time, AppLocalizations.of(context).min('$_routeDurationMin')),
+                      ],
+                    ),
+                    const Divider(height: 12),
+
+                    // Ride type selection
+                    Text(AppLocalizations.of(context).selectRideType,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                    AppSpacing.gapMd,
+                    RideTypeSelector(
+                      rideTypes: rideTypes,
+                      selectedApiName: _selectedRideType,
+                      variant: RideTypeSelectorVariant.cardHorizontal,
+                      onChanged: (type) {
+                        setState(() {
+                          _selectedRideType = type;
+                          _selectedFare = _routeDistanceKm != null
+                              ? RideTypeSelector.calculateFare(
+                                  rideTypes, type, _routeDistanceKm!,
+                                )
+                              : 0.0;
+                        });
+                      },
+                      distanceKm: _routeDistanceKm,
+                    ),
+                    AppSpacing.gapLg,
+
+                    // Payment method
+                    Text(AppLocalizations.of(context).paymentMethod,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                    AppSpacing.gapMd,
+                    GestureDetector(
+                      onTap: _showPaymentMethodSelector,
+                      child: PremiumCard(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        hasRipple: true,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36, height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryContainer,
+                                borderRadius: AppRadius.smRadius,
+                              ),
+                              child: Icon(
+                                _selectedPaymentMethod == 'WALLET'
+                                    ? Icons.account_balance_wallet
+                                    : _selectedPaymentMethod == 'CASH' ? Icons.money : Icons.credit_card,
+                                color: AppColors.primary, size: 20,
+                              ),
+                            ),
+                            AppSpacing.hGapMd,
+                            Expanded(
+                              child: Text(_selectedPaymentMethod,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                            ),
+                            const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 22),
+                          ],
+                        ),
+                      ),
+                    ),
+                    AppSpacing.gapLg,
+
+                    // Price — total only
+                    PremiumCard(
+                      padding: AppSpacing.cardPadding,
+                      child: _priceRow(AppLocalizations.of(context).total, CurrencyService.format(_selectedFare), isTotal: true),
+                    ),
                   ],
                 ),
               ),
-              AppSpacing.gapLg,
-
-              // Confirm button
-              PremiumButton(
-                label: _isSubmitting ? AppLocalizations.of(context).requesting : AppLocalizations.of(context).confirmRide,
-                isLoading: _isSubmitting,
-                onPressed: _isSubmitting ? null : _submitRideRequest,
-                icon: _isSubmitting ? null : Icons.check_circle_outline,
-                variant: ButtonVariant.gradient,
-                height: 56,
+              Padding(
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 12 + MediaQuery.of(context).padding.bottom),
+                child: PremiumButton(
+                  label: _isSubmitting ? AppLocalizations.of(context).requesting : AppLocalizations.of(context).confirmRide,
+                  isLoading: _isSubmitting,
+                  onPressed: _isSubmitting ? null : _submitRideRequest,
+                  icon: _isSubmitting ? null : Icons.check_circle_outline,
+                  variant: ButtonVariant.gradient,
+                  height: 56,
+                ),
               ),
             ],
           ),

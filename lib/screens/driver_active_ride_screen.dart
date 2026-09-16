@@ -662,6 +662,15 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
               _buildUnreadBadge(),
             ],
           ),
+          Semantics(
+            button: true,
+            label: 'Call rider',
+            child: IconButton(
+              icon: const Icon(Icons.call_rounded, color: AppColors.primary),
+              tooltip: 'Call rider',
+              onPressed: _callRider,
+            ),
+          ),
         ],
       ),
       body: Stack(
@@ -1103,6 +1112,56 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
       }
     } catch (e) {
       addDebugMessage('❌ Chat error: $e');
+    }
+  }
+
+  String? _buildTel(String? countryCode, String? phoneNumber) {
+    if (countryCode == null || phoneNumber == null) return null;
+    final cc = countryCode.trim();
+    final raw = phoneNumber.trim();
+    if (cc.isEmpty || raw.isEmpty) return null;
+    final ccNorm = cc.startsWith('+') ? cc : '+$cc';
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '').replaceFirst(RegExp(r'^0+'), '');
+    if (digits.isEmpty) return null;
+    final ccDigits = ccNorm.replaceAll('+', '');
+    if (digits.startsWith(ccDigits)) return '+$digits';
+    return '$ccNorm$digits';
+  }
+
+  Future<void> _callRider() async {
+    try {
+      final token = StorageService.getToken();
+      if (token == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+        );
+        return;
+      }
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      final tel = _buildTel(ride?.rider.countryCode, ride?.rider.phoneNumber);
+      if (tel == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+        );
+        return;
+      }
+      final uri = Uri(scheme: 'tel', path: tel);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (e) {
+      addDebugMessage('Call error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+      );
     }
   }
 

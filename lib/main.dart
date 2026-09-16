@@ -33,7 +33,7 @@ import 'screens/rider_home_screen.dart';
 import 'screens/rider_ride_completed_screen.dart';
 import 'screens/rider_searching_driver_screen.dart';
 import 'screens/rider_tracking_screen.dart';
-import 'screens/rider_trip_details_screen.dart';
+// TEMP DISABLED FOR TEST: import 'screens/rider_trip_details_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/admin_home_screen.dart';
@@ -273,36 +273,37 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         // Rider
         '/rider-home': (_) => const RiderHomeScreen(),
 
-        '/rider-trip-details': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments;
-          if (args is! Map<String, dynamic>) {
-            return _routeError(context, 'Missing arguments for /rider-trip-details');
-          }
-          final pickupLat = (args['pickupLat'] as num?)?.toDouble();
-          final pickupLng = (args['pickupLng'] as num?)?.toDouble();
-          final pickupAddress = args['pickupAddress'] as String?;
-          final dropoffLat = (args['dropoffLat'] as num?)?.toDouble();
-          final dropoffLng = (args['dropoffLng'] as num?)?.toDouble();
-          final dropoffAddress = args['dropoffAddress'] as String?;
-          final distance = (args['estimatedDistance'] as num?)?.toDouble();
-          final duration = (args['estimatedDuration'] as num?)?.toInt();
-          if (pickupLat == null || pickupLng == null || pickupAddress == null ||
-              dropoffLat == null || dropoffLng == null || dropoffAddress == null ||
-              distance == null || duration == null) {
-            return _routeError(context, 'Invalid /rider-trip-details arguments');
-          }
-          return RiderTripDetailsScreen(
-            pickupLat: pickupLat,
-            pickupLng: pickupLng,
-            pickupAddress: pickupAddress,
-            dropoffLat: dropoffLat,
-            dropoffLng: dropoffLng,
-            dropoffAddress: dropoffAddress,
-            estimatedDistance: distance,
-            estimatedDuration: duration,
-            initialRideType: (args['rideType'] as String?) ?? 'ECONOMY',
-          );
-        },
+        // TEMP DISABLED FOR TEST - RiderTripDetailsScreen route
+        // '/rider-trip-details': (context) {
+        //   final args = ModalRoute.of(context)?.settings.arguments;
+        //   if (args is! Map<String, dynamic>) {
+        //     return _routeError(context, 'Missing arguments for /rider-trip-details');
+        //   }
+        //   final pickupLat = (args['pickupLat'] as num?)?.toDouble();
+        //   final pickupLng = (args['pickupLng'] as num?)?.toDouble();
+        //   final pickupAddress = args['pickupAddress'] as String?;
+        //   final dropoffLat = (args['dropoffLat'] as num?)?.toDouble();
+        //   final dropoffLng = (args['dropoffLng'] as num?)?.toDouble();
+        //   final dropoffAddress = args['dropoffAddress'] as String?;
+        //   final distance = (args['estimatedDistance'] as num?)?.toDouble();
+        //   final duration = (args['estimatedDuration'] as num?)?.toInt();
+        //   if (pickupLat == null || pickupLng == null || pickupAddress == null ||
+        //       dropoffLat == null || dropoffLng == null || dropoffAddress == null ||
+        //       distance == null || duration == null) {
+        //     return _routeError(context, 'Invalid /rider-trip-details arguments');
+        //   }
+        //   return RiderTripDetailsScreen(
+        //     pickupLat: pickupLat,
+        //     pickupLng: pickupLng,
+        //     pickupAddress: pickupAddress,
+        //     dropoffLat: dropoffLat,
+        //     dropoffLng: dropoffLng,
+        //     dropoffAddress: dropoffAddress,
+        //     estimatedDistance: distance,
+        //     estimatedDuration: duration,
+        //     initialRideType: (args['rideType'] as String?) ?? 'ECONOMY',
+        //   );
+        // },
 
         '/rider-searching': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;

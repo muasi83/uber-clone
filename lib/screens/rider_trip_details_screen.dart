@@ -270,26 +270,61 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                   children: [
                     GoogleMap(
                       onMapCreated: (controller) {
+                        // Use the real min/max of the two points (no fixed
+                        // 0.01-degree fudge factor) so the fit is correct
+                        // whether pickup/dropoff are 200m or 20km apart.
+                        final swLat = widget.pickupLat < widget.dropoffLat
+                            ? widget.pickupLat
+                            : widget.dropoffLat;
+                        final neLat = widget.pickupLat > widget.dropoffLat
+                            ? widget.pickupLat
+                            : widget.dropoffLat;
+                        final swLng = widget.pickupLng < widget.dropoffLng
+                            ? widget.pickupLng
+                            : widget.dropoffLng;
+                        final neLng = widget.pickupLng > widget.dropoffLng
+                            ? widget.pickupLng
+                            : widget.dropoffLng;
+
+                        // If pickup and dropoff are the same point or very
+                        // close together, pad out to a minimum span so
+                        // LatLngBounds isn't degenerate and the camera
+                        // doesn't over-zoom into a single point.
+                        const minSpan = 0.003; // ~300m
+                        final latSpan = (neLat - swLat).abs();
+                        final lngSpan = (neLng - swLng).abs();
+                        final latPad =
+                            latSpan < minSpan ? (minSpan - latSpan) / 2 : 0.0;
+                        final lngPad =
+                            lngSpan < minSpan ? (minSpan - lngSpan) / 2 : 0.0;
+
                         final bounds = LatLngBounds(
-                          southwest: LatLng(
-                            widget.pickupLat < widget.dropoffLat
-                                ? widget.pickupLat - 0.01
-                                : widget.dropoffLat - 0.01,
-                            widget.pickupLng < widget.dropoffLng
-                                ? widget.pickupLng - 0.01
-                                : widget.dropoffLng - 0.01,
-                          ),
-                          northeast: LatLng(
-                            widget.pickupLat > widget.dropoffLat
-                                ? widget.pickupLat + 0.01
-                                : widget.dropoffLat + 0.01,
-                            widget.pickupLng > widget.dropoffLng
-                                ? widget.pickupLng + 0.01
-                                : widget.dropoffLng + 0.01,
-                          ),
+                          southwest: LatLng(swLat - latPad, swLng - lngPad),
+                          northeast: LatLng(neLat + latPad, neLng + lngPad),
                         );
-                        controller.moveCamera(
-                            CameraUpdate.newLatLngBounds(bounds, 80));
+
+                        // Fit the camera after the map has finished laying
+                        // out. Calling this synchronously inside
+                        // onMapCreated can silently fail to fit on first
+                        // launch because the map doesn't have its final
+                        // size yet. On Flutter web in particular, one
+                        // post-frame callback is sometimes not enough
+                        // because the underlying map view hasn't finished
+                        // sizing itself, so we also retry after a short
+                        // delay as a fallback.
+                        void fitBounds() {
+                          addDebugMessage(
+                              '🗺️ Fitting map to bounds: sw=(${bounds.southwest.latitude}, ${bounds.southwest.longitude}) ne=(${bounds.northeast.latitude}, ${bounds.northeast.longitude})');
+                          controller.animateCamera(
+                              CameraUpdate.newLatLngBounds(bounds, 80));
+                        }
+
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) fitBounds();
+                        });
+                        Future.delayed(const Duration(milliseconds: 300), () {
+                          if (mounted) fitBounds();
+                        });
                       },
                       initialCameraPosition: CameraPosition(
                         target: LatLng(widget.pickupLat, widget.pickupLng),
@@ -479,6 +514,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
                   RideTypeSelector(
                     rideTypes: rideTypes,
                     selectedApiName: _selectedRideType,
+                    variant: RideTypeSelectorVariant.cardHorizontal,
                     onChanged: (type) {
                       setState(() {
                         _selectedRideType = type;
@@ -557,27 +593,16 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
             ),
             AppSpacing.gapXxl,
 
-            // Price breakdown
+            // Price — total only
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: PremiumCard(
                 padding: AppSpacing.cardPadding,
                 shadows: AppShadows.small,
-                child: Column(
-                  children: [
-                    _priceRow(AppLocalizations.of(context).baseFare, CurrencyService.format(2.0)),
-                    AppSpacing.gapMd,
-                    _priceRow(
-                      AppLocalizations.of(context).distanceKm(widget.estimatedDistance.toStringAsFixed(1)),
-                      '${CurrencyService.format(widget.estimatedDistance * (_selectedRideType == 'ECONOMY' ? 0.20 : 0.35))}',
-                    ),
-                    const Divider(height: 32, color: AppColors.outline),
-                    _priceRow(
-                      AppLocalizations.of(context).total,
-                      '${CurrencyService.format(_selectedFare)}',
-                      isTotal: true,
-                    ),
-                  ],
+                child: _priceRow(
+                  AppLocalizations.of(context).total,
+                  CurrencyService.format(_selectedFare),
+                  isTotal: true,
                 ),
               ),
             ),

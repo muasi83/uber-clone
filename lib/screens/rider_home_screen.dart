@@ -1571,7 +1571,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                 onTap: _onRidePressed,
                 borderRadius: BorderRadius.circular(AppRadius.lg),
                 child: AspectRatio(
-                  aspectRatio: 1,
+                  aspectRatio: 1.54,
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.surfaceVariant,
@@ -1615,7 +1615,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
                 onTap: _onSchedulePressed,
                 borderRadius: BorderRadius.circular(AppRadius.lg),
                 child: AspectRatio(
-                  aspectRatio: 1,
+                  aspectRatio: 1.54,
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.surfaceVariant,

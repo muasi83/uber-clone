@@ -21,6 +21,7 @@ import '../utils/map_style_loader.dart';
 import '../utils/marker_factory.dart';
 import '../utils/driver_card_data.dart';
 import '../widgets/driver_arriving_card.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/recorded_screen_mixin.dart';
 import '../services/event_recorder_service.dart';
 import '../l10n/app_localizations.dart';
@@ -715,6 +716,56 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     }
   }
 
+  String? _buildTel(String? countryCode, String? phoneNumber) {
+    if (countryCode == null || phoneNumber == null) return null;
+    final cc = countryCode.trim();
+    final raw = phoneNumber.trim();
+    if (cc.isEmpty || raw.isEmpty) return null;
+    final ccNorm = cc.startsWith('+') ? cc : '+$cc';
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '').replaceFirst(RegExp(r'^0+'), '');
+    if (digits.isEmpty) return null;
+    final ccDigits = ccNorm.replaceAll('+', '');
+    if (digits.startsWith(ccDigits)) return '+$digits';
+    return '$ccNorm$digits';
+  }
+
+  Future<void> _callDriver() async {
+    try {
+      final token = StorageService.getToken();
+      if (token == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+        );
+        return;
+      }
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      final tel = _buildTel(ride?.driver?.countryCode, ride?.driver?.phoneNumber);
+      if (tel == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+        );
+        return;
+      }
+      final uri = Uri(scheme: 'tel', path: tel);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (e) {
+      addDebugMessage('Call error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -845,6 +896,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                             .pickupInMin('$_remainingMinutes')
                         : 'Calculating...',
                     onChat: _openChat,
+                    onCall: _callDriver,
                     unreadCount: WebSocketService.unreadCounts[
                             widget.driverData['driverId'] as int?] ??
                         0,

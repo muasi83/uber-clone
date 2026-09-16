@@ -22,6 +22,7 @@ import '../utils/marker_factory.dart';
 import '../utils/address_utils.dart';
 import '../utils/driver_card_data.dart';
 import '../widgets/driver_arriving_card.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/cancel_ride_dialog.dart';
 import '../widgets/payment_dialog.dart';
 import '../services/recorded_screen_mixin.dart';
@@ -1002,6 +1003,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
                       cardData: _cardData,
                       etaText: '$_remainingMinutes min remaining',
                       onChat: _openChat,
+                      onCall: _callDriver,
                       unreadCount:
                           WebSocketService.unreadCounts[_otherUserId!] ?? 0,
                     ),
@@ -1043,6 +1045,56 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
       }
     } catch (e) {
       addDebugMessage('❌ Chat error: $e');
+    }
+  }
+
+  String? _buildTel(String? countryCode, String? phoneNumber) {
+    if (countryCode == null || phoneNumber == null) return null;
+    final cc = countryCode.trim();
+    final raw = phoneNumber.trim();
+    if (cc.isEmpty || raw.isEmpty) return null;
+    final ccNorm = cc.startsWith('+') ? cc : '+$cc';
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '').replaceFirst(RegExp(r'^0+'), '');
+    if (digits.isEmpty) return null;
+    final ccDigits = ccNorm.replaceAll('+', '');
+    if (digits.startsWith(ccDigits)) return '+$digits';
+    return '$ccNorm$digits';
+  }
+
+  Future<void> _callDriver() async {
+    try {
+      final token = StorageService.getToken();
+      if (token == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+        );
+        return;
+      }
+      final ride = await RideService.getRideDetails(widget.rideId, token);
+      final tel = _buildTel(ride?.driver?.countryCode, ride?.driver?.phoneNumber);
+      if (tel == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+        );
+        return;
+      }
+      final uri = Uri(scheme: 'tel', path: tel);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (e) {
+      addDebugMessage('Call error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Phone not available'), behavior: SnackBarBehavior.floating),
+      );
     }
   }
 

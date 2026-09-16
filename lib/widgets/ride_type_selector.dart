@@ -6,7 +6,22 @@ import '../theme/app_shadows.dart';
 import '../services/currency_service.dart';
 import '../theme/app_spacing.dart';
 
-enum RideTypeSelectorVariant { card, chip }
+String _assetForRideType(String apiName) {
+  switch (apiName) {
+    case 'ECONOMY':
+      return 'assets/images/Economy.png';
+    case 'COMFORT':
+      return 'assets/images/Confort.png';
+    case 'LUXURY':
+      return 'assets/images/Luxuary.png';
+    case 'WOMEN_DRIVER':
+      return 'assets/images/Women.png';
+    default:
+      return 'assets/images/Economy.png';
+  }
+}
+
+enum RideTypeSelectorVariant { card, chip, cardHorizontal }
 
 class RideTypeSelector extends StatelessWidget {
   final List<RideType> rideTypes;
@@ -61,6 +76,7 @@ class RideTypeSelector extends StatelessWidget {
     return switch (variant) {
       RideTypeSelectorVariant.card => _buildCardList(),
       RideTypeSelectorVariant.chip => _buildChipRow(),
+      RideTypeSelectorVariant.cardHorizontal => _buildCardHorizontal(),
     };
   }
 
@@ -94,8 +110,8 @@ class RideTypeSelector extends StatelessWidget {
                   children: [
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
-                      width: 48,
-                      height: 48,
+                      width: 80,
+                      height: 64,
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppColors.primary.withValues(alpha: 0.1)
@@ -103,9 +119,11 @@ class RideTypeSelector extends StatelessWidget {
                         borderRadius: AppRadius.mdRadius,
                       ),
                       child: Center(
-                        child: Text(
-                          rt.icon,
-                          style: const TextStyle(fontSize: 22),
+                        child: Image.asset(
+                          _assetForRideType(apiName),
+                          width: 76,
+                          height: 60,
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
@@ -186,64 +204,206 @@ class RideTypeSelector extends StatelessWidget {
     );
   }
 
-  Widget _buildChipRow() {
-    return Row(
-      children: rideTypes.map((rt) {
-        final apiName = toApiName(rt.name);
-        final isSelected = selectedApiName == apiName;
-        return Padding(
-          padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
-          child: GestureDetector(
-            onTap: () => onChanged(apiName),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(
-                vertical: AppSpacing.sm,
-                horizontal: AppSpacing.md,
-              ),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : AppColors.surfaceVariant,
-                borderRadius: AppRadius.smRadius,
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.outline,
+  Widget _buildCardHorizontal() {
+    return SizedBox(
+      height: 125,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: rideTypes.map((rt) {
+            final apiName = toApiName(rt.name);
+            final isSelected = selectedApiName == apiName;
+            final fare = distanceKm != null
+                ? rt.baseFare + distanceKm! * rt.perKmRate
+                : null;
+            return Padding(
+              padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+              child: SizedBox(
+                width: 155,
+                child: GestureDetector(
+                  onTap: () => onChanged(apiName),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.surface : AppColors.surfaceVariant,
+                      borderRadius: AppRadius.mdRadius,
+                      border: Border.all(
+                        color: isSelected ? AppColors.primary : AppColors.outline,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      boxShadow: isSelected ? AppShadows.medium : [],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 250),
+                                width: 64,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary.withValues(alpha: 0.1)
+                                      : AppColors.surfaceVariant,
+                                  borderRadius: AppRadius.mdRadius,
+                                ),
+                                child: Center(
+                                  child: Image.asset(
+                                    _assetForRideType(apiName),
+                                    width: 60,
+                                    height: 44,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                rt.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : AppColors.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                rt.description,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: AppColors.textTertiary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 2),
+                              if (fare != null)
+                                AnimatedDefaultTextStyle(
+                                  duration: const Duration(milliseconds: 250),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.textPrimary,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  child: Text(CurrencyService.format(fare)),
+                                )
+                              else
+                                Text(
+                                  '\$${rt.perKmRate.toStringAsFixed(2)}/km',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                            ],
+                          ),
+                          if (isSelected)
+                            Positioned(
+                              top: 0,
+                              right: 0,
+                              child: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check,
+                                  color: AppColors.primaryLight,
+                                  size: 12,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    rt.icon,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isSelected ? AppColors.primaryLight : AppColors.textSecondary,
-                    ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChipRow() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: rideTypes.map((rt) {
+          final apiName = toApiName(rt.name);
+          final isSelected = selectedApiName == apiName;
+          return Padding(
+            padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+            child: GestureDetector(
+              onTap: () => onChanged(apiName),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.sm,
+                  horizontal: AppSpacing.md,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : AppColors.surfaceVariant,
+                  borderRadius: AppRadius.smRadius,
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : AppColors.outline,
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    rt.name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                      color: isSelected ? AppColors.primaryLight : AppColors.textPrimary,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      _assetForRideType(apiName),
+                      width: 22,
+                      height: 14,
+                      fit: BoxFit.contain,
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '\$${rt.perKmRate.toStringAsFixed(2)}/km',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected
-                          ? AppColors.primaryLight.withValues(alpha: 0.8)
-                          : AppColors.textTertiary,
+                    const SizedBox(width: 6),
+                    Text(
+                      rt.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        color: isSelected ? AppColors.primaryLight : AppColors.textPrimary,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 4),
+                    Text(
+                      '\$${rt.perKmRate.toStringAsFixed(2)}/km',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected
+                            ? AppColors.primaryLight.withValues(alpha: 0.8)
+                            : AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        }).toList(),
+      ),
     );
   }
 }
