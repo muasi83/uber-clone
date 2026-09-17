@@ -14,8 +14,8 @@ class StorageService {
   static const String _roleKey = 'role';
   static const String _genderKey = 'gender';
   
-  static const String _defaultServerUrl = 'https://catalog-staring-hamstring.ngrok-free.dev';
-
+  //static const String _defaultServerUrl = 'https://catalog-staring-hamstring.ngrok-free.dev';
+    static const String _defaultServerUrl = 'https://taligo-backend.onrender.com';
   static late SharedPreferences _prefs;
   static bool _initialized = false;
   static bool _warnedNotInitialized = false;
