@@ -31,7 +31,7 @@
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>com.google.ios.API_KEY</key>
-    <string>AIzaSyAzAVhrBKWMJZNrXyD9DGk6AZVM1yv2KiY</string>
+    <string>AIzaSyCqHqprs0LhW5DmjBQgOWNkJZq9gQO1mMo</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
