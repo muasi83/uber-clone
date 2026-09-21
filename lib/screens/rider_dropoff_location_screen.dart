@@ -107,6 +107,9 @@ class _RiderDropoffLocationScreenState
   // Trip details panel state
   bool _showTripDetails = false;
   bool _isAutoReviewing = false;
+  // Pending review-fit: set when details fit is requested before mapController exists.
+  // Consumed exactly once in _onMapCreated only when review/details is active.
+  bool _pendingReviewFit = false;
   String _selectedRideType = 'ECONOMY';
   String _selectedPaymentMethod = 'CASH';
   double _selectedFare = 0.0;
@@ -180,13 +183,13 @@ class _RiderDropoffLocationScreenState
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
-    // Initial fit: both pickup + dropoff visible, pickup top-biased via map padding, balanced zoom (not too in/out)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _fitBoundsToRouteForReview();
-    });
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) _fitBoundsToRouteForReview();
-    });
+    // No automatic fit during ordinary drop-off selection.
+    // Consume a pending review fit exactly once, only when review/details
+    // mode is already active (auto-review finished before map creation).
+    if (_pendingReviewFit && _showTripDetails && mounted) {
+      _pendingReviewFit = false;
+      _fitBoundsToRouteForReview();
+    }
   }
 
   void _onCameraMove(CameraPosition position) {
@@ -204,6 +207,9 @@ class _RiderDropoffLocationScreenState
       if (_isDropoffConfirmed || _isSheetExpanded || _isAutoReviewing) return;
 
       final region = await mapController!.getVisibleRegion();
+
+      if (_isDropoffConfirmed || _isSheetExpanded || _isAutoReviewing) return;
+
       final center = LatLng(
         (region.northeast.latitude + region.southwest.latitude) / 2,
         (region.northeast.longitude + region.southwest.longitude) / 2,
@@ -608,6 +614,21 @@ class _RiderDropoffLocationScreenState
     if (mounted) setState(() {});
   }
 
+  /// Single mechanism for the intentional trip-details fit.
+  /// Guarantees max one request per transition: callers set details state
+  /// first, then call here. If controller is missing, marks pending for
+  /// _onMapCreated to consume exactly once.
+  void _requestReviewFit() {
+    if (!mounted) return;
+    if (!_showTripDetails) return;
+    if (mapController == null) {
+      _pendingReviewFit = true;
+      return;
+    }
+    _pendingReviewFit = false;
+    _fitBoundsToRouteForReview();
+  }
+
   void _confirmDropoffPoint() {
     if (_dropoffLocation == null) return;
 
@@ -621,80 +642,70 @@ class _RiderDropoffLocationScreenState
       return;
     }
 
-    _fitBoundsToRouteForReview();
     _selectedFare = RideTypeSelector.calculateFare(rideTypes, 'ECONOMY', 0.0);
     setState(() {
       _isDropoffConfirmed = true;
       _showTripDetails = true;
     });
+    _requestReviewFit();
     _startMovingDotAnimation();
   }
 
   void _autoShowReview() {
-    _fitBoundsToRouteForReview();
     _selectedFare = RideTypeSelector.calculateFare(rideTypes, 'ECONOMY', 0.0);
     setState(() {
       _isDropoffConfirmed = true;
       _showTripDetails = true;
     });
+    _requestReviewFit();
     _startMovingDotAnimation();
   }
 
-  void _fitBoundsToRouteForReview() {
-    if (mapController == null) return;
+ void _fitBoundsToRouteForReview() {
+  if (mapController == null) return;
 
-    // Prefer the full route polyline for the tightest fit. If it hasn't
-    // finished loading yet, fall back to just pickup + dropoff so the
-    // camera still fits both pins instead of doing nothing.
-    final List<LatLng> points = _currentPolylinePoints.isNotEmpty
-        ? _currentPolylinePoints
-        : (_dropoffLocation != null
-            ? [LatLng(widget.pickupLat, widget.pickupLng), _dropoffLocation!]
-            : const <LatLng>[]);
+  final List<LatLng> points = _currentPolylinePoints.isNotEmpty
+      ? _currentPolylinePoints
+      : (_dropoffLocation != null
+          ? [LatLng(widget.pickupLat, widget.pickupLng), _dropoffLocation!]
+          : const <LatLng>[]);
 
-    if (points.isEmpty) return;
+  if (points.isEmpty) return;
 
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
+  double minLat = points.first.latitude;
+  double maxLat = points.first.latitude;
+  double minLng = points.first.longitude;
+  double maxLng = points.first.longitude;
 
-    for (final p in points) {
-      minLat = math.min(minLat, p.latitude);
-      maxLat = math.max(maxLat, p.latitude);
-      minLng = math.min(minLng, p.longitude);
-      maxLng = math.max(maxLng, p.longitude);
-    }
-
-    // Guard against a degenerate (near zero-size) box, e.g. pickup and
-    // dropoff being right next to each other.
-    const minSpan = 0.003; // ~300m
-    final latSpan = maxLat - minLat;
-    final lngSpan = maxLng - minLng;
-    final latPad = latSpan < minSpan ? (minSpan - latSpan) / 2 : 0.0;
-    final lngPad = lngSpan < minSpan ? (minSpan - lngSpan) / 2 : 0.0;
-
-    final bounds = LatLngBounds(
-      southwest: LatLng(minLat - latPad, minLng - lngPad),
-      northeast: LatLng(maxLat + latPad, maxLng + lngPad),
-    );
-
-    void fit() {
-      addDebugMessage(
-          '🗺️ Fitting review map: sw=(${bounds.southwest.latitude}, ${bounds.southwest.longitude}) ne=(${bounds.northeast.latitude}, ${bounds.northeast.longitude})');
-      mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 140));
-    }
-
-    // Run after the current frame, and once more shortly after as a
-    // fallback for Flutter web, where the map view can still be settling
-    // its size right when the trip-details sheet first appears.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) fit();
-    });
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) fit();
-    });
+  for (final p in points) {
+    minLat = math.min(minLat, p.latitude);
+    maxLat = math.max(maxLat, p.latitude);
+    minLng = math.min(minLng, p.longitude);
+    maxLng = math.max(maxLng, p.longitude);
   }
+
+  const minSpan = 0.003; // ~300m
+  final latSpan = maxLat - minLat;
+  final lngSpan = maxLng - minLng;
+  final latPad = latSpan < minSpan ? (minSpan - latSpan) / 2 : 0.0;
+  final lngPad = lngSpan < minSpan ? (minSpan - lngSpan) / 2 : 0.0;
+
+  final bounds = LatLngBounds(
+    southwest: LatLng(minLat - latPad, minLng - lngPad),
+    northeast: LatLng(maxLat + latPad, maxLng + lngPad),
+  );
+
+  void fit() {
+    if (!mounted) return;
+    if (!_showTripDetails) return;
+    mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 140));
+  }
+
+  // Wait until after the sheet/padding rebuild is applied, then fit.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.delayed(const Duration(milliseconds: 250), fit);
+  });
+}
 
   void _changeDropoff() {
     setState(() {
@@ -894,44 +905,50 @@ class _RiderDropoffLocationScreenState
     return Scaffold(
       body: Stack(
         children: [
-          GoogleMap(
-            onMapCreated: _onMapCreated,
-            onCameraMove: _onCameraMove,
-            onCameraIdle: _onCameraIdle,
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height * 0.45,
-            ),
-            initialCameraPosition: CameraPosition(target: initial, zoom: 15),
-            markers: {
-              ..._markers,
-              ..._driverMarkers.values.toSet(),
-              if (_isDropoffConfirmed && _dropoffLocation != null && _stickDropoffIcon != BitmapDescriptor.defaultMarker)
-                Marker(
-                  markerId: const MarkerId('dropoff'),
-                  position: _dropoffLocation!,
-                  icon: _stickDropoffIcon,
-                  anchor: const Offset(0.5, 0.85),
-                  infoWindow: InfoWindow(title: AppLocalizations.of(context).dropoff),
-                ),
-              if (_showTripDetails && _currentPolylinePoints.length > 1 && _dotProgress <= 1.0)
-                Marker(
-                  markerId: const MarkerId('moving_dot'),
-                  position: _interpolateAlongRoute(_dotProgress),
-                  icon: _dotMarker,
-                  anchor: const Offset(0.5, 0.5),
-                  zIndexInt: 10,
-                ),
-            },
-            polylines: _showTripDetails ? _polylines : {},
-            compassEnabled: true,
-            zoomControlsEnabled: false,
-            myLocationButtonEnabled: false,
-            scrollGesturesEnabled: !_isSheetExpanded,
-            zoomGesturesEnabled: !_isSheetExpanded,
-            rotateGesturesEnabled: !_isSheetExpanded,
-            tiltGesturesEnabled: !_isSheetExpanded,
-            style: _mapStyle,
-          ),
+GoogleMap(
+  onMapCreated: _onMapCreated,
+  onCameraMove: _onCameraMove,
+  onCameraIdle: _onCameraIdle,
+  padding: EdgeInsets.only(
+    bottom: _showTripDetails
+        ? MediaQuery.of(context).size.height * 0.45
+        : 0,
+  ),
+  initialCameraPosition: CameraPosition(target: initial, zoom: 15),
+  markers: {
+    ..._markers,
+    ..._driverMarkers.values.toSet(),
+    if (_isDropoffConfirmed &&
+        _dropoffLocation != null &&
+        _stickDropoffIcon != BitmapDescriptor.defaultMarker)
+      Marker(
+        markerId: const MarkerId('dropoff'),
+        position: _dropoffLocation!,
+        icon: _stickDropoffIcon,
+        anchor: const Offset(0.5, 0.85),
+        infoWindow: InfoWindow(title: AppLocalizations.of(context).dropoff),
+      ),
+    if (_showTripDetails &&
+        _currentPolylinePoints.length > 1 &&
+        _dotProgress <= 1.0)
+      Marker(
+        markerId: const MarkerId('moving_dot'),
+        position: _interpolateAlongRoute(_dotProgress),
+        icon: _dotMarker,
+        anchor: const Offset(0.5, 0.5),
+        zIndexInt: 10,
+      ),
+  },
+  polylines: _showTripDetails ? _polylines : {},
+  compassEnabled: true,
+  zoomControlsEnabled: false,
+  myLocationButtonEnabled: false,
+  scrollGesturesEnabled: !_isSheetExpanded,
+  zoomGesturesEnabled: !_isSheetExpanded,
+  rotateGesturesEnabled: !_isSheetExpanded,
+  tiltGesturesEnabled: !_isSheetExpanded,
+  style: _mapStyle,
+),
           Positioned(
             top: 0,
             left: 0,

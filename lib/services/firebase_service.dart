@@ -15,15 +15,14 @@ Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
 
   final data = message.data;
   final type = data['type'] ?? '';
-  final title = message.notification?.title ?? data['title'] ?? 'New Ride Request';
-  final body = message.notification?.body ?? data['body'] ?? 'A passenger needs a ride!';
 
   if (type == 'ride_available') {
-    await NotificationService.showRideAlertNotification(
-      title: title,
-      body: body,
-      rideId: data['rideId'] != null ? int.tryParse(data['rideId']!) : null,
-    );
+    // Option 1B: do NOT show a local notification here. On Android
+    // background/killed the OS already displays message.notification{}
+    // in the tray, so showing another one would duplicate it.
+    // Tap navigation still works via message.data in
+    // getInitialMessage/onMessageOpenedApp.
+    return;
   }
 }
 

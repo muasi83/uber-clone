@@ -33,29 +33,42 @@ class DriverArrivingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final driverName = cardData.name ?? 'Driver';
-    final modelColor = [
-      if (cardData.vehicleModel != null) cardData.vehicleModel!,
+    final vehicleLine = [
       if (cardData.vehicleColor != null) cardData.vehicleColor!,
-    ].join(' ');
+      if (cardData.vehicleModel != null) cardData.vehicleModel!,
+    ].join(' · ');
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Handle bar: centered, subtle, with top padding so it never sticks.
+        const SizedBox(height: 8),
+        Center(
+          child: Container(
+            width: 40,
+            height: 5,
+            decoration: BoxDecoration(
+              color: AppColors.outlineVariant.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(2.5),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Header row: live ETA title.
         Text(
           etaText,
-          textAlign: TextAlign.center,
-          maxLines: 2,
+          maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
-            color: AppColors.primary,
+            color: AppColors.textPrimary,
             letterSpacing: -0.5,
           ),
         ),
-        AppSpacing.gapMd,
+        const SizedBox(height: 14),
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Stack(
               clipBehavior: Clip.none,
@@ -66,7 +79,7 @@ class DriverArrivingCard extends StatelessWidget {
                   radius: 28,
                 ),
                 Positioned(
-                  top: -2,
+                  bottom: -2,
                   right: -2,
                   child: Container(
                     width: 20,
@@ -96,29 +109,30 @@ class DriverArrivingCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
-                        vertical: 6,
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Text(
                         cardData.vehicleNumber!,
-                        style: theme.textTheme.titleLarge?.copyWith(
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: AppColors.textOnPrimary,
-                          letterSpacing: 2,
+                          color: AppColors.textPrimary,
+                          letterSpacing: 1.5,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  if (modelColor.isNotEmpty) ...[
+                  if (vehicleLine.isNotEmpty) ...[
                     AppSpacing.gapXs,
                     Text(
-                      modelColor,
+                      vehicleLine,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -130,9 +144,9 @@ class DriverArrivingCard extends StatelessWidget {
                       Flexible(
                         child: Text(
                           driverName,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -141,9 +155,9 @@ class DriverArrivingCard extends StatelessWidget {
                       if (cardData.rating != null)
                         Text(
                           '  ★ ${cardData.rating!.toStringAsFixed(1)}',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.warning,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textTertiary,
                           ),
                         ),
                     ],
@@ -155,7 +169,7 @@ class DriverArrivingCard extends StatelessWidget {
             _vehicleThumbnail(context, 72),
           ],
         ),
-        AppSpacing.gapLg,
+        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
@@ -167,70 +181,33 @@ class DriverArrivingCard extends StatelessWidget {
                     label: 'Chat with driver',
                     child: InkWell(
                       onTap: onChat,
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      borderRadius: BorderRadius.circular(26),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,
-                          vertical: 13,
+                          vertical: 14,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                          border: Border.all(color: AppColors.outline),
+                          color: AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(26),
                         ),
-                        child: Row(
+                        child: const Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 4,
-                                    height: 4,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Container(
-                                    width: 4,
-                                    height: 4,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Container(
-                                    width: 4,
-                                    height: 4,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              size: 20,
+                              color: AppColors.textSecondary,
                             ),
-                            const SizedBox(width: 10),
-                            const Expanded(
+                            SizedBox(width: 10),
+                            Expanded(
                               child: Text(
-                                'Chat with driver',
+                                'Any pickup notes?',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
                             ),
@@ -276,10 +253,9 @@ class DriverArrivingCard extends StatelessWidget {
                 child: Container(
                   width: 52,
                   height: 52,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.surfaceVariant,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.outline),
                   ),
                   child: const Icon(
                     Icons.call_rounded,
@@ -302,12 +278,12 @@ class DriverArrivingCard extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
+          color: AppColors.surfaceVariant,
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Icon(
           Icons.directions_car_rounded,
-          color: AppColors.primary,
+          color: AppColors.textTertiary,
           size: size * 0.55,
         ),
       );
@@ -316,9 +292,8 @@ class DriverArrivingCard extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.outlineVariant),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -330,10 +305,10 @@ class DriverArrivingCard extends StatelessWidget {
           errorWidget: (context, url, error) => Container(
             width: size,
             height: size,
-            color: AppColors.primary.withValues(alpha: 0.1),
+            color: AppColors.surfaceVariant,
             child: Icon(
               Icons.directions_car_rounded,
-              color: AppColors.primary,
+              color: AppColors.textTertiary,
               size: size * 0.55,
             ),
           ),
