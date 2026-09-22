@@ -46,3 +46,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local operational files — never commit
+/logs/
+*.log
+/backups/
+*.sql
+*.dump
+/assets-src/
