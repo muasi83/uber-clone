@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -233,7 +234,8 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
       double rotation;
       if (existing == null) {
         rotation = 0;
-      } else if (lastPollPos != null && lastPollPos != position) {
+      } else if (lastPollPos != null &&
+          _distanceMeters(lastPollPos, position) >= 3.0) {
         rotation = calculateBearing(lastPollPos, position);
       } else {
         rotation = existing.rotation;
@@ -255,6 +257,22 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
     }
     _driverMarkers.removeWhere((key, _) => !currentIds.contains(key));
     _lastPollPositions.removeWhere((key, _) => !currentIds.contains(key));
+  }
+
+  /// Haversine distance in meters (rotation-gate helper).
+  double _distanceMeters(LatLng a, LatLng b) {
+    const earthRadius = 6371000.0;
+    const toRad = math.pi / 180.0;
+    final dLat = (b.latitude - a.latitude) * toRad;
+    final dLng = (b.longitude - a.longitude) * toRad;
+    final s1 = math.sin(dLat / 2);
+    final s2 = math.sin(dLng / 2);
+    final h = s1 * s1 +
+        math.cos(a.latitude * toRad) *
+            math.cos(b.latitude * toRad) *
+            s2 *
+            s2;
+    return 2 * earthRadius * math.asin(math.sqrt(h.clamp(0.0, 1.0)));
   }
 
   void _setupWebSocketListeners() {
@@ -360,7 +378,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> with RecordedScreenMi
     final existing = _driverMarkers[id];
     final heading = payload['heading'];
     double rotation = 0;
-    if (heading != null) {
+    // Last-known-good rotation gate: only trust heading/bearing on movement.
+    final moved = existing == null ||
+        _distanceMeters(existing.position, position) >= 3.0;
+    if (!moved) {
+      rotation = existing.rotation;
+    } else if (heading != null) {
       rotation = (heading as num).toDouble();
     } else if (existing != null) {
       rotation = calculateBearing(existing.position, position);

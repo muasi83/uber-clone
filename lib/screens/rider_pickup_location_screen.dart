@@ -262,7 +262,8 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
       double rotation;
       if (existing == null) {
         rotation = 0;
-      } else if (lastPollPos != null && lastPollPos != position) {
+      } else if (lastPollPos != null &&
+          _distanceMeters(lastPollPos, position) >= 3.0) {
         rotation = _bearingBetween(lastPollPos, position);
       } else {
         rotation = existing.rotation;
@@ -307,6 +308,21 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
   double _toRadians(double deg) => deg * math.pi / 180;
   double _toDegrees(double rad) => rad * 180 / math.pi;
 
+  /// Haversine distance in meters (rotation-gate helper).
+  double _distanceMeters(LatLng a, LatLng b) {
+    const earthRadius = 6371000.0;
+    final dLat = _toRadians(b.latitude - a.latitude);
+    final dLng = _toRadians(b.longitude - a.longitude);
+    final s1 = math.sin(dLat / 2);
+    final s2 = math.sin(dLng / 2);
+    final h = s1 * s1 +
+        math.cos(_toRadians(a.latitude)) *
+            math.cos(_toRadians(b.latitude)) *
+            s2 *
+            s2;
+    return 2 * earthRadius * math.asin(math.sqrt(h.clamp(0.0, 1.0)));
+  }
+
 
 
   void _handleDriverLocationEvent(Map<String, dynamic> event) {
@@ -343,7 +359,12 @@ class _RiderPickupLocationScreenState extends State<RiderPickupLocationScreen>
 
     final heading = payload['heading'];
     double rotation;
-    if (heading != null) {
+    // Last-known-good rotation gate: only trust heading/bearing on movement.
+    final moved = existing == null ||
+        _distanceMeters(existing.position, position) >= 3.0;
+    if (!moved) {
+      rotation = existing.rotation;
+    } else if (heading != null) {
       rotation = normalizeCarHeading((heading as num).toDouble() % 360);
     } else if (existing != null) {
       rotation = normalizeCarHeading(_bearingBetween(existing.position, position));

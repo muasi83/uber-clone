@@ -359,6 +359,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
     return r * cc;
   }
 
+  /// Distance in meters (rotation-gate helper).
+  double _distanceMeters(LatLng a, LatLng b) => _haversineKm(a, b) * 1000.0;
+
   void _handleRideConfirmed(Map<String, dynamic> event) {
     if (!mounted) return;
     final rideId = event['rideId'];
@@ -619,8 +622,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
         if (!mounted) return;
 
         final newLocation = LatLng(position.latitude, position.longitude);
+        // Last-known-good rotation gate: ignore heading jitter unless moved.
+        final prevLocation = _driverCurrentLocation;
+        if (prevLocation == null ||
+            _distanceMeters(prevLocation, newLocation) >= 3.0) {
+          _lastHeading = position.heading;
+        }
         _driverCurrentLocation = newLocation;
-        _lastHeading = position.heading;
         _startDriverMarkerAnimation(newLocation);
 
         if (_isUpdatingLocation) return;

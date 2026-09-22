@@ -74,6 +74,16 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
   BitmapDescriptor _userLocationMarker = BitmapDescriptor.defaultMarker;
   String? _mapStyle;
 
+  // Follow engine (Option 2): pause on touch, silent auto-resume after 30s.
+  bool _userInteracted = false;
+  int _suppressCameraMove = 0;
+  Timer? _followResumeTimer;
+  DateTime? _lastFollowFitAt;
+  LatLng? _lastFollowFitPos;
+  static const Duration _followResumeDelay = Duration(seconds: 30);
+  static const Duration _followMinInterval = Duration(seconds: 3);
+  static const double _followMinMoveMeters = 50;
+
   Timer? _driverAnimTimer;
   LatLng? _animatedDriverPos;
 
@@ -218,7 +228,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
   Future<void> _initCarIcon() async {
     try {
       _carIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(48, 48)),
+        const ImageConfiguration(size: Size(64, 64)),
         'assets/images/car_marker.png',
       );
     } catch (e) {
@@ -254,16 +264,21 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         final lat = (payload['latitude'] ?? payload['lat']) as double?;
         final lng = (payload['longitude'] ?? payload['lng']) as double?;
 
-          if (lat != null && lng != null) {
-            final prev = _driverLocation;
-            final newLoc = LatLng(lat, lng);
-            _driverLocation = newLoc;
-            final heading = payload['heading'];
-            if (heading != null) {
-              _driverHeading = (heading as num).toDouble();
-            } else if (prev != null) {
-              _driverHeading = _bearingBetween(prev, _driverLocation!);
-            }
+    if (lat != null && lng != null) {
+      final prev = _driverLocation;
+      final newLoc = LatLng(lat, lng);
+      _driverLocation = newLoc;
+      // Last-known-good rotation gate: ignore heading/bearing unless moved.
+      final moved =
+          prev == null || _distanceMeters(prev, newLoc) >= 3.0;
+      final heading = payload['heading'];
+      if (moved) {
+        if (heading != null) {
+          _driverHeading = (heading as num).toDouble();
+        } else if (prev != null) {
+          _driverHeading = _bearingBetween(prev, _driverLocation!);
+        }
+      }
             _startDriverMarkerAnimation(newLoc);
 
             addDebugMessage(
@@ -272,6 +287,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
               'to(${_driverLocation!.latitude.toStringAsFixed(5)},${_driverLocation!.longitude.toStringAsFixed(5)})'
             );
 
+          if (!_userInteracted) _maybeFollow(newLoc);
           _routeDebounceTimer?.cancel();
           _routeDebounceTimer = Timer(const Duration(milliseconds: 1500), _updateRoute);
         }
@@ -288,6 +304,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
           if (_rideCompleting) return;
           _rideCompleting = true;
           _statusPollTimer?.cancel();
+          _cancelFollowResume();
           ChatScreen.clearAllCache();
           final payload = event['payload'] as Map<String, dynamic>? ?? {};
           _handlePayment(
@@ -297,6 +314,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         } else if (event['type'] == 'payment_finalized') {
           if (!_paymentInProgress) return;
           _paymentInProgress = false;
+          _cancelFollowResume();
           if (mounted) {
             Navigator.pushReplacementNamed(
               context,
@@ -311,6 +329,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         } else if (event['type'] == 'payment_refunded') {
           if (!_paymentInProgress) return;
           _paymentInProgress = false;
+          _cancelFollowResume();
           if (mounted) {
             Navigator.pushReplacementNamed(
               context,
@@ -329,6 +348,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
             summary: 'Ride cancelled via WebSocket',
           );
           _statusPollTimer?.cancel();
+          _cancelFollowResume();
           ChatScreen.clearAllCache();
           Navigator.pushNamedAndRemoveUntil(
             context,
@@ -520,6 +540,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         _paymentPollTimer?.cancel();
         _paymentInProgress = false;
         _rideCompleting = false;
+        _cancelFollowResume();
         Navigator.pushReplacementNamed(
           context,
           '/rider-completed',
@@ -550,6 +571,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
       );
       _rideCompleting = true;
       _statusPollTimer?.cancel();
+      _cancelFollowResume();
       ChatScreen.clearAllCache();
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
@@ -577,6 +599,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
           if (_paymentInProgress) return;
           _rideCompleting = true;
           _statusPollTimer?.cancel();
+          _cancelFollowResume();
           addDebugMessage('✅ Poll detected ride COMPLETED');
           ChatScreen.clearAllCache();
 
@@ -787,6 +810,132 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
+    _fitBoundsToTrip();
+    _lastFollowFitAt = DateTime.now();
+    if (_driverLocation != null) {
+      _lastFollowFitPos = _driverLocation;
+    }
+  }
+
+  void _fitBoundsToTrip() {
+    if (mapController == null || _driverLocation == null) return;
+    final destination = LatLng(widget.dropoffLat, widget.dropoffLng);
+
+    _suppressCameraMove++;
+    final bounds = LatLngBounds(
+      southwest: LatLng(
+        _driverLocation!.latitude < destination.latitude
+            ? _driverLocation!.latitude - 0.01
+            : destination.latitude - 0.01,
+        _driverLocation!.longitude < destination.longitude
+            ? _driverLocation!.longitude - 0.01
+            : destination.longitude - 0.01,
+      ),
+      northeast: LatLng(
+        _driverLocation!.latitude > destination.latitude
+            ? _driverLocation!.latitude + 0.01
+            : destination.latitude + 0.01,
+        _driverLocation!.longitude > destination.longitude
+            ? _driverLocation!.longitude + 0.01
+            : destination.longitude + 0.01,
+      ),
+    );
+
+    mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 100),
+    ).then((_) {
+      _suppressCameraMove--;
+    }).catchError((_) {
+      _suppressCameraMove--;
+    });
+  }
+
+  void _pauseFollowForUserGesture() {
+    _followResumeTimer?.cancel();
+    final wasFollowing = !_userInteracted;
+    _userInteracted = true;
+    if (wasFollowing && mounted) setState(() {});
+    _followResumeTimer = Timer(_followResumeDelay, () {
+      if (!mounted) return;
+      // Silent resume (no hint): gentle refit only.
+      setState(() => _userInteracted = false);
+      _fitBoundsToTrip();
+      _lastFollowFitAt = DateTime.now();
+      if (_driverLocation != null) {
+        _lastFollowFitPos = _driverLocation;
+      }
+    });
+  }
+
+  void _cancelFollowResume() {
+    _followResumeTimer?.cancel();
+    _followResumeTimer = null;
+  }
+
+  bool _followAllowed(LatLng driverPos) {
+    final now = DateTime.now();
+    if (_lastFollowFitAt != null &&
+        now.difference(_lastFollowFitAt!) < _followMinInterval) {
+      return false;
+    }
+    if (_lastFollowFitPos != null &&
+        _distanceMeters(_lastFollowFitPos!, driverPos) <
+            _followMinMoveMeters) {
+      return false;
+    }
+    return true;
+  }
+
+  /// Throttled follower: time + distance gates, plus a best-effort
+  /// visible-region check (never blocks; falls back to time+distance).
+  /// Never called from onCameraMove, so it cannot loop camera moves.
+  void _maybeFollow(LatLng driverPos) async {
+    if (_userInteracted || !mounted) return;
+    if (!_followAllowed(driverPos)) return;
+    try {
+      final region = await mapController?.getVisibleRegion();
+      if (!mounted || _userInteracted) return;
+      final destination = LatLng(widget.dropoffLat, widget.dropoffLng);
+      if (region != null &&
+          _containsWithMargin(region, driverPos) &&
+          _containsWithMargin(region, destination)) {
+        _lastFollowFitAt = DateTime.now();
+        _lastFollowFitPos = driverPos;
+        return;
+      }
+    } catch (_) {
+      // Fall through to time+distance throttle only.
+    }
+    if (!mounted || _userInteracted) return;
+    _fitBoundsToTrip();
+    _lastFollowFitAt = DateTime.now();
+    _lastFollowFitPos = driverPos;
+  }
+
+  bool _containsWithMargin(LatLngBounds region, LatLng point) {
+    const margin = 0.15;
+    final latSpan = (region.northeast.latitude - region.southwest.latitude).abs();
+    final lngSpan = (region.northeast.longitude - region.southwest.longitude).abs();
+    return point.latitude >
+            region.southwest.latitude + latSpan * margin &&
+        point.latitude < region.northeast.latitude - latSpan * margin &&
+        point.longitude >
+            region.southwest.longitude + lngSpan * margin &&
+        point.longitude < region.northeast.longitude - lngSpan * margin;
+  }
+
+  double _distanceMeters(LatLng a, LatLng b) {
+    const earthRadius = 6371000.0;
+    final dLat = _toRadians(b.latitude - a.latitude);
+    final dLng = _toRadians(b.longitude - a.longitude);
+    final s1 = math.sin(dLat / 2);
+    final s2 = math.sin(dLng / 2);
+    final h = s1 * s1 +
+        math.cos(_toRadians(a.latitude)) *
+            math.cos(_toRadians(b.latitude)) *
+            s2 *
+            s2;
+    return 2 * earthRadius * math.asin(math.sqrt(h.clamp(0.0, 1.0)));
   }
 
   @override
@@ -839,6 +988,11 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
         children: [
           GoogleMap(
             onMapCreated: _onMapCreated,
+            onCameraMove: (_) {
+              if (_suppressCameraMove == 0) {
+                _pauseFollowForUserGesture();
+              }
+            },
             style: _mapStyle,
             initialCameraPosition: CameraPosition(
               target: LatLng(widget.pickupLat, widget.pickupLng),
@@ -849,6 +1003,33 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
             compassEnabled: true,
             zoomControlsEnabled: false,
           ),
+          if (_userInteracted)
+            Positioned(
+              right: 16,
+              bottom:
+                  MediaQuery.of(context).padding.bottom + 220,
+              child: Semantics(
+                button: true,
+                label: AppLocalizations.of(context).recenterMap,
+                child: FloatingActionButton.small(
+                  heroTag: 'recenterActiveRide',
+                  onPressed: () {
+                    _cancelFollowResume();
+                    setState(() {
+                      _userInteracted = false;
+                      _fitBoundsToTrip();
+                    });
+                    _lastFollowFitAt = DateTime.now();
+                    if (_driverLocation != null) {
+                      _lastFollowFitPos = _driverLocation;
+                    }
+                  },
+                  backgroundColor: AppColors.surface,
+                  child: const Icon(Icons.my_location,
+                      color: AppColors.primary),
+                ),
+              ),
+            ),
           Positioned(
             bottom: 0,
             left: 0,
@@ -1011,6 +1192,7 @@ class _RiderActiveRideScreenState extends State<RiderActiveRideScreen> with Reco
   @override
   void dispose() {
     _rideCompleting = false;
+    _cancelFollowResume();
     _driverAnimTimer?.cancel();
     _statusPollTimer?.cancel();
     _paymentPollTimer?.cancel();

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui' show lerpDouble;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +9,6 @@ import 'package:country_code_picker/country_code_picker.dart';
 import '../services/storage_service.dart';
 import '../services/firebase_service.dart';
 import '../services/recorded_screen_mixin.dart';
-import '../screens/debug_screen.dart';
 import '../screens/forgot_password_screen.dart';
 import '../screens/password_screen.dart';
 import '../theme/app_colors.dart';
@@ -348,43 +346,25 @@ class _AuthScreenState extends State<AuthScreen>
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final topPadding = MediaQuery.of(context).padding.top;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: SystemUiOverlayStyle.dark,
       child: Scaffold(
+        backgroundColor: AppColors.surface,
         body: CustomScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _AuthHeaderDelegate(
-                minExtent: kToolbarHeight + MediaQuery.of(context).padding.top + 4,
-                maxExtent: 170,
-                onLongPress: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const DebugScreen()),
-                  );
-                },
-              ),
-            ),
             SliverPadding(
               padding: EdgeInsets.only(
+                top: topPadding + 16,
                 bottom: bottomInset > 0 ? bottomInset + 16 : 0,
               ),
               sliver: SliverToBoxAdapter(
-                child: Transform.translate(
-                  offset: const Offset(0, -24),
-                  child: Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(AppRadius.xl),
-                        topRight: Radius.circular(AppRadius.xl),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                child: Container(
+                  width: double.infinity,
+                  color: AppColors.surface,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                       child: Column(
                         children: [
                           AppSpacing.gapLg,
@@ -427,10 +407,9 @@ class _AuthScreenState extends State<AuthScreen>
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
     );
   }
 
@@ -576,6 +555,22 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
+  Widget _buildBottomLogo() {
+    final width = MediaQuery.of(context).size.width;
+    final size = (width * 0.18).clamp(72.0, 120.0).toDouble();
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Center(
+        child: Image.asset(
+          'assets/images/new_icon.png_20260910161159.jpeg',
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSwitchLink({required bool isLogin}) {
     return Align(
       alignment: Alignment.center,
@@ -677,6 +672,7 @@ class _AuthScreenState extends State<AuthScreen>
         _buildDisabledSocialSection(),
         AppSpacing.gapLg,
         _buildSwitchLink(isLogin: true),
+        _buildBottomLogo(),
       ],
     );
   }
@@ -841,6 +837,7 @@ class _AuthScreenState extends State<AuthScreen>
         _buildDisabledSocialSection(),
         AppSpacing.gapLg,
         _buildSwitchLink(isLogin: false),
+        _buildBottomLogo(),
       ],
     );
   }
@@ -987,87 +984,4 @@ class _AuthScreenState extends State<AuthScreen>
     _confirmPasswordController.dispose();
     super.dispose();
   }
-}
-
-class _AuthHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _AuthHeaderDelegate({
-    required this.minExtent,
-    required this.maxExtent,
-    required this.onLongPress,
-  });
-
-  @override
-  final double minExtent;
-  @override
-  final double maxExtent;
-  final VoidCallback onLongPress;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    final extentRange = maxExtent - minExtent;
-    final progress = (extentRange <= 0
-            ? 0.0
-            : (shrinkOffset / extentRange))
-        .clamp(0.0, 1.0);
-    final topPadding = MediaQuery.of(context).padding.top;
-
-    return GestureDetector(
-      onLongPress: onLongPress,
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.only(top: topPadding),
-        decoration: const BoxDecoration(
-          gradient: AppColors.darkGradient,
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned(
-              bottom: lerpDouble(52, 12, progress),
-              left: 16,
-              right: 16,
-              child: Text(
-                AppLocalizations.of(context).welcomeToTaligo,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: lerpDouble(26, 20, progress),
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryLight,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ),
-            if (progress < 0.8)
-              Positioned(
-                bottom: lerpDouble(24, -20, progress),
-                left: 16,
-                right: 16,
-                child: Opacity(
-                  opacity: 1.0 - (progress / 0.8),
-                  child: Text(
-                    AppLocalizations.of(context).hereToHelpWithTrips,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.primaryLight.withValues(alpha: 0.85),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _AuthHeaderDelegate oldDelegate) => true;
 }

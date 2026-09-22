@@ -68,6 +68,16 @@ class _DriverNavigationToRiderScreenState
   int _remainingMinutes = 15;
   double? _distanceKm;
 
+  // Follow engine: pause on touch, silent auto-resume after 30s.
+  bool _userInteracted = false;
+  int _suppressCameraMove = 0;
+  Timer? _followResumeTimer;
+  DateTime? _lastFollowFitAt;
+  LatLng? _lastFollowFitPos;
+  static const Duration _followResumeDelay = Duration(seconds: 30);
+  static const Duration _followMinInterval = Duration(seconds: 3);
+  static const double _followMinMoveMeters = 50;
+
   StreamSubscription<Position>? _positionStream;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
   LatLng? _animatedDriverPos;
@@ -148,9 +158,15 @@ class _DriverNavigationToRiderScreenState
         if (!mounted) return;
 
         final newLocation = LatLng(position.latitude, position.longitude);
+        // Last-known-good rotation gate: ignore heading jitter unless moved.
+        final prevLocation = _driverLocation;
+        if (prevLocation == null ||
+            _distanceMeters(prevLocation, newLocation) >= 3.0) {
+          _driverHeading = position.heading;
+        }
         _driverLocation = newLocation;
-        _driverHeading = position.heading;
         _startDriverMarkerAnimation(newLocation);
+        if (!_userInteracted && !_isArriving) _maybeFollow(newLocation);
 
         addDebugMessage(
           '📍 Driver moved 50m+ — ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
@@ -301,11 +317,16 @@ class _DriverNavigationToRiderScreenState
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
     _fitBounds();
+    _lastFollowFitAt = DateTime.now();
+    if (_driverLocation != null) {
+      _lastFollowFitPos = _driverLocation;
+    }
   }
 
   void _fitBounds() {
     if (_driverLocation == null) return;
 
+    _suppressCameraMove++;
     final bounds = LatLngBounds(
       southwest: LatLng(
         _driverLocation!.latitude < _pickupLocation.latitude
@@ -327,11 +348,106 @@ class _DriverNavigationToRiderScreenState
 
     mapController?.animateCamera(
       CameraUpdate.newLatLngBounds(bounds, 100),
-    );
+    ).then((_) {
+      _suppressCameraMove--;
+    }).catchError((_) {
+      _suppressCameraMove--;
+    });
   }
+
+  void _pauseFollowForUserGesture() {
+    _followResumeTimer?.cancel();
+    final wasFollowing = !_userInteracted;
+    _userInteracted = true;
+    if (wasFollowing && mounted) setState(() {});
+    _followResumeTimer = Timer(_followResumeDelay, () {
+      if (!mounted || _isArriving) return;
+      // Silent resume (no hint): gentle refit only.
+      setState(() => _userInteracted = false);
+      _fitBounds();
+      _lastFollowFitAt = DateTime.now();
+      if (_driverLocation != null) {
+        _lastFollowFitPos = _driverLocation;
+      }
+    });
+  }
+
+  void _cancelFollowResume() {
+    _followResumeTimer?.cancel();
+    _followResumeTimer = null;
+  }
+
+  bool _followAllowed(LatLng driverPos) {
+    final now = DateTime.now();
+    if (_lastFollowFitAt != null &&
+        now.difference(_lastFollowFitAt!) < _followMinInterval) {
+      return false;
+    }
+    if (_lastFollowFitPos != null &&
+        _distanceMeters(_lastFollowFitPos!, driverPos) <
+            _followMinMoveMeters) {
+      return false;
+    }
+    return true;
+  }
+
+  /// Throttled follower: time + distance gates, plus a best-effort
+  /// visible-region check (never blocks; falls back to time+distance).
+  /// Never called from onCameraMove, so it cannot loop camera moves.
+  /// Never runs while the arrival overlay is showing.
+  void _maybeFollow(LatLng driverPos) async {
+    if (_userInteracted || _isArriving || !mounted) return;
+    if (!_followAllowed(driverPos)) return;
+    try {
+      final region = await mapController?.getVisibleRegion();
+      if (!mounted || _userInteracted || _isArriving) return;
+      if (region != null &&
+          _containsWithMargin(region, driverPos) &&
+          _containsWithMargin(region, _pickupLocation)) {
+        _lastFollowFitAt = DateTime.now();
+        _lastFollowFitPos = driverPos;
+        return;
+      }
+    } catch (_) {
+      // Fall through to time+distance throttle only.
+    }
+    if (!mounted || _userInteracted || _isArriving) return;
+    _fitBounds();
+    _lastFollowFitAt = DateTime.now();
+    _lastFollowFitPos = driverPos;
+  }
+
+  bool _containsWithMargin(LatLngBounds region, LatLng point) {
+    const margin = 0.15;
+    final latSpan = (region.northeast.latitude - region.southwest.latitude).abs();
+    final lngSpan = (region.northeast.longitude - region.southwest.longitude).abs();
+    return point.latitude >
+            region.southwest.latitude + latSpan * margin &&
+        point.latitude < region.northeast.latitude - latSpan * margin &&
+        point.longitude >
+            region.southwest.longitude + lngSpan * margin &&
+        point.longitude < region.northeast.longitude - lngSpan * margin;
+  }
+
+  double _distanceMeters(LatLng a, LatLng b) {
+    const earthRadius = 6371000.0;
+    final dLat = _toRadians(b.latitude - a.latitude);
+    final dLng = _toRadians(b.longitude - a.longitude);
+    final s1 = math.sin(dLat / 2);
+    final s2 = math.sin(dLng / 2);
+    final h = s1 * s1 +
+        math.cos(_toRadians(a.latitude)) *
+            math.cos(_toRadians(b.latitude)) *
+            s2 *
+            s2;
+    return 2 * earthRadius * math.asin(math.sqrt(h.clamp(0.0, 1.0)));
+  }
+
+  double _toRadians(double deg) => deg * (math.pi / 180.0);
 
   Future<void> _notifyArrival() async {
     recordEvent(eventName: 'DRIVER_ARRIVED');
+    _cancelFollowResume();
     try {
       _stopLocationStream();
       setState(() => _isArriving = true);
@@ -408,6 +524,7 @@ class _DriverNavigationToRiderScreenState
         if (token == null) return;
         await RideService.cancelRide(widget.rideId, token, reason: reason);
         ChatScreen.clearAllCache();
+        _cancelFollowResume();
         if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -533,6 +650,11 @@ class _DriverNavigationToRiderScreenState
         children: [
           GoogleMap(
             onMapCreated: _onMapCreated,
+            onCameraMove: (_) {
+              if (_suppressCameraMove == 0) {
+                _pauseFollowForUserGesture();
+              }
+            },
             initialCameraPosition: CameraPosition(
               target: _pickupLocation,
               zoom: 15,
@@ -544,6 +666,33 @@ class _DriverNavigationToRiderScreenState
             myLocationButtonEnabled: true,
             style: _mapStyle,
           ),
+          if (_userInteracted && !_isArriving)
+            Positioned(
+              right: 16,
+              bottom:
+                  MediaQuery.of(context).padding.bottom + 230,
+              child: Semantics(
+                button: true,
+                label: AppLocalizations.of(context).recenterMap,
+                child: FloatingActionButton.small(
+                  heroTag: 'recenterNavToRider',
+                  onPressed: () {
+                    _cancelFollowResume();
+                    setState(() {
+                      _userInteracted = false;
+                      _fitBounds();
+                    });
+                    _lastFollowFitAt = DateTime.now();
+                    if (_driverLocation != null) {
+                      _lastFollowFitPos = _driverLocation;
+                    }
+                  },
+                  backgroundColor: AppColors.surface,
+                  child: const Icon(Icons.gps_fixed,
+                      color: AppColors.primary),
+                ),
+              ),
+            ),
           if (_isArriving)
             Positioned.fill(
               child: AnimatedOpacity(
@@ -585,215 +734,174 @@ class _DriverNavigationToRiderScreenState
                 ),
               ),
             ),
-          // ── Bottom sheet ────────────────────────────────────
+          // ── Bottom floating overlay (hit-test limited to card + buttons).
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(AppRadius.xl),
-                  topRight: Radius.circular(AppRadius.xl),
-                ),
-                boxShadow: AppShadows.large,
-              ),
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.xxxl,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // ── Premium Address Card ──────────────────────────
+            left: 16,
+            right: 16,
+            bottom: MediaQuery.of(context).padding.bottom + 12,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                  // ── Compact pickup card ───────────────────────
                   Container(
                     width: double.infinity,
-                    padding: AppSpacing.cardPadding,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 14),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
-                      borderRadius: AppRadius.lgRadius,
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: AppShadows.medium,
                     ),
-                    child: Row(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(AppSpacing.sm),
-                          decoration: BoxDecoration(
-                            color: AppColors.error.withValues(alpha: 0.1),
-                            borderRadius: AppRadius.smRadius,
-                          ),
-                          child: const Icon(Icons.location_on,
-                              color: AppColors.error, size: 20),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                AppLocalizations.of(context).pickup3,
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: AppColors.textTertiary,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.8,
-                                    ),
-                              ),
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                widget.pickupAddress,
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.location_on,
+                                color: AppColors.error, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                widget.pickupAddress.trim().isNotEmpty
+                                    ? widget.pickupAddress
+                                    : formatLatLng(widget.pickupLat,
+                                        widget.pickupLng),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.textPrimary,
+                                    ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              '$_remainingMinutes min',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textPrimary,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures()
+                                    ],
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                '${_distanceKm?.toStringAsFixed(1) ?? '--'} km',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: AppColors.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures()
+                                      ],
                                     ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                formatLatLng(widget.pickupLat, widget.pickupLng),
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppColors.textTertiary,
-                                    ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  // ── Time & Distance Side by Side ──────────────────
+                  const SizedBox(height: 10),
+                  // ── Actions (compact side-by-side + cancel link) ─
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Container(
-                          padding: AppSpacing.cardPadding,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
-                            borderRadius: AppRadius.lgRadius,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            await _openGoogleMaps();
+                          },
+                          icon: const Icon(Icons.map, size: 18),
+                          label: Text(
+                            AppLocalizations.of(context).openGoogleMaps,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.access_time,
-                                  color: AppColors.primary, size: 22),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                '$_remainingMinutes',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
-                                    ),
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                'min',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: AppColors.textSecondary,
-                                    ),
-                              ),
-                            ],
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            backgroundColor:
+                                AppColors.surface.withValues(alpha: 0.9),
+                            elevation: 2,
+                            shadowColor:
+                                Colors.black.withValues(alpha: 0.2),
+                            side: BorderSide(
+                                color: AppColors.primary
+                                    .withValues(alpha: 0.3)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: AppRadius.mdRadius,
+                            ),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                            minimumSize: const Size(0, 52),
                           ),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.md),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Container(
-                          padding: AppSpacing.cardPadding,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
-                            borderRadius: AppRadius.lgRadius,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.straighten,
-                                  color: AppColors.primary, size: 22),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                _distanceKm?.toStringAsFixed(1) ?? '--',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
-                                    ),
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                'km',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: AppColors.textSecondary,
-                                    ),
-                              ),
-                            ],
+                        child: Semantics(
+                          button: true,
+                          label: AppLocalizations.of(context).iveArrived,
+                          child: SwipeButton(
+                            label: AppLocalizations.of(context).iveArrived,
+                            processingLabel:
+                                AppLocalizations.of(context).notifying,
+                            icon: Icons.check_circle,
+                            onConfirmed: _notifyArrival,
+                            isDisabled: _isArriving,
+                            height: 52,
+                            borderRadius: 14,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  Semantics(
-                    button: true,
-                    label: AppLocalizations.of(context).iveArrived,
-                    child: SwipeButton(
-                      label: AppLocalizations.of(context).iveArrived,
-                      processingLabel: AppLocalizations.of(context).notifying,
-                      icon: Icons.check_circle,
-                      onConfirmed: _notifyArrival,
-                      isDisabled: _isArriving,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async { await _openGoogleMaps(); },
-                      icon: const Icon(Icons.map, size: 18),
-                      label: Text(AppLocalizations.of(context).openGoogleMaps),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppRadius.mdRadius,
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Semantics(
-                    button: true,
-                    label: 'Cancel ride',
-                    child: PremiumButton(
-                      label: AppLocalizations.of(context).cancelRide2,
+                  const SizedBox(height: 4),
+                  Center(
+                    child: TextButton(
                       onPressed: _showCancelRideDialog,
-                      variant: ButtonVariant.danger,
-                      icon: Icons.close,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        minimumSize: const Size(0, 36),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        AppLocalizations.of(context).cancelRide2,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
+          ],
+        ),
+      );
+    }
   Future<void> _loadMapStyle() async {
     _mapStyle = await MapStyleLoader.load();
   }
@@ -949,6 +1057,7 @@ class _DriverNavigationToRiderScreenState
 
   @override
   void dispose() {
+    _cancelFollowResume();
     _stopLocationStream();
     _rideEventsSub?.cancel();
     _driverAnimTimer?.cancel();

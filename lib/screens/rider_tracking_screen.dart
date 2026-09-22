@@ -57,6 +57,14 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   bool _userInteracted = false;
   int _suppressCameraMove = 0;
 
+  // Follow engine (Option 2): pause on touch, silent auto-resume after 30s.
+  Timer? _followResumeTimer;
+  DateTime? _lastFollowFitAt;
+  LatLng? _lastFollowFitPos;
+  static const Duration _followResumeDelay = Duration(seconds: 30);
+  static const Duration _followMinInterval = Duration(seconds: 3);
+  static const double _followMinMoveMeters = 50;
+
   Timer? _driverAnimTimer;
   LatLng? _animatedDriverPos;
 
@@ -201,6 +209,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         if (_rideStarting) return;
         _rideStarting = true;
         _statusPollTimer?.cancel();
+        _cancelFollowResume();
         if (mounted) {
           Navigator.pushReplacementNamed(
             context,
@@ -269,6 +278,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
           _rideStarting = true;
           addDebugMessage('Poll detected ride STARTED');
           _statusPollTimer?.cancel();
+          _cancelFollowResume();
           Navigator.pushReplacementNamed(
             context,
             '/rider-active-ride',
@@ -302,7 +312,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   Future<void> _initCarIcon() async {
     try {
       _carIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(48, 48)),
+        const ImageConfiguration(size: Size(64, 64)),
         'assets/images/car_marker.png',
       );
     } catch (e) {
@@ -407,6 +417,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
         if (type == 'ride_started') {
           if (_rideStarting) return;
           _rideStarting = true;
+          _cancelFollowResume();
           recordEvent(
             eventName: 'RIDE_STARTED',
             category: 'FRONTEND',
@@ -526,14 +537,19 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
       final prev = _driverLocation;
       final newLoc = LatLng(lat, lng);
       _driverLocation = newLoc;
+      // Last-known-good rotation gate: ignore heading/bearing unless moved.
+      final moved =
+          prev == null || _distanceMeters(prev, newLoc) >= 3.0;
       final heading = payload['heading'];
-      if (heading != null) {
-        _driverHeading = (heading as num).toDouble();
-      } else if (prev != null) {
-        _driverHeading = _bearingBetween(prev, _driverLocation!);
+      if (moved) {
+        if (heading != null) {
+          _driverHeading = (heading as num).toDouble();
+        } else if (prev != null) {
+          _driverHeading = _bearingBetween(prev, _driverLocation!);
+        }
       }
       _startDriverMarkerAnimation(newLoc);
-      if (!_userInteracted) _fitBounds();
+      if (!_userInteracted) _maybeFollow(newLoc);
       _routeDebounceTimer?.cancel();
       _routeDebounceTimer = Timer(const Duration(milliseconds: 1500), () {
         if (mounted) _updateRoute();
@@ -637,6 +653,10 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
     _fitBounds();
+    _lastFollowFitAt = DateTime.now();
+    if (_driverLocation != null) {
+      _lastFollowFitPos = _driverLocation;
+    }
   }
 
   void _fitBounds() {
@@ -671,6 +691,80 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
     });
   }
 
+  void _pauseFollowForUserGesture() {
+    _followResumeTimer?.cancel();
+    final wasFollowing = !_userInteracted;
+    _userInteracted = true;
+    if (wasFollowing && mounted) setState(() {});
+    _followResumeTimer = Timer(_followResumeDelay, () {
+      if (!mounted) return;
+      // Silent resume (no hint): gentle refit only.
+      setState(() => _userInteracted = false);
+      _fitBounds();
+      _lastFollowFitAt = DateTime.now();
+      if (_driverLocation != null) {
+        _lastFollowFitPos = _driverLocation;
+      }
+    });
+  }
+
+  void _cancelFollowResume() {
+    _followResumeTimer?.cancel();
+    _followResumeTimer = null;
+  }
+
+  bool _followAllowed(LatLng driverPos) {
+    final now = DateTime.now();
+    if (_lastFollowFitAt != null &&
+        now.difference(_lastFollowFitAt!) < _followMinInterval) {
+      return false;
+    }
+    if (_lastFollowFitPos != null &&
+        _distanceMeters(_lastFollowFitPos!, driverPos) <
+            _followMinMoveMeters) {
+      return false;
+    }
+    return true;
+  }
+
+  /// Throttled follower: time + distance gates, plus a best-effort
+  /// visible-region check (never blocks; falls back to time+distance).
+  /// Never called from onCameraMove, so it cannot loop camera moves.
+  void _maybeFollow(LatLng driverPos) async {
+    if (_userInteracted || !mounted) return;
+    if (!_followAllowed(driverPos)) return;
+    try {
+      final region = await mapController?.getVisibleRegion();
+      if (!mounted || _userInteracted) return;
+      if (region != null &&
+          _containsWithMargin(region, driverPos) &&
+          _pickupLocation != null &&
+          _containsWithMargin(region, _pickupLocation!)) {
+        _lastFollowFitAt = DateTime.now();
+        _lastFollowFitPos = driverPos;
+        return;
+      }
+    } catch (_) {
+      // Fall through to time+distance throttle only.
+    }
+    if (!mounted || _userInteracted) return;
+    _fitBounds();
+    _lastFollowFitAt = DateTime.now();
+    _lastFollowFitPos = driverPos;
+  }
+
+  bool _containsWithMargin(LatLngBounds region, LatLng point) {
+    const margin = 0.15;
+    final latSpan = (region.northeast.latitude - region.southwest.latitude).abs();
+    final lngSpan = (region.northeast.longitude - region.southwest.longitude).abs();
+    return point.latitude >
+            region.southwest.latitude + latSpan * margin &&
+        point.latitude < region.northeast.latitude - latSpan * margin &&
+        point.longitude >
+            region.southwest.longitude + lngSpan * margin &&
+        point.longitude < region.northeast.longitude - lngSpan * margin;
+  }
+
   double _bearingBetween(LatLng from, LatLng to) {
     final dLon = _toRadians(to.longitude - from.longitude);
     final fromLat = _toRadians(from.latitude);
@@ -683,6 +777,21 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
 
   double _toRadians(double deg) => deg * math.pi / 180;
   double _toDegrees(double rad) => rad * 180 / math.pi;
+
+  /// Haversine distance in meters (rotation-gate helper).
+  double _distanceMeters(LatLng a, LatLng b) {
+    const earthRadius = 6371000.0;
+    final dLat = _toRadians(b.latitude - a.latitude);
+    final dLng = _toRadians(b.longitude - a.longitude);
+    final s1 = math.sin(dLat / 2);
+    final s2 = math.sin(dLng / 2);
+    final h = s1 * s1 +
+        math.cos(_toRadians(a.latitude)) *
+            math.cos(_toRadians(b.latitude)) *
+            s2 *
+            s2;
+    return 2 * earthRadius * math.asin(math.sqrt(h.clamp(0.0, 1.0)));
+  }
 
 
 
@@ -819,7 +928,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
             onMapCreated: _onMapCreated,
             onCameraMove: (_) {
               if (_suppressCameraMove == 0) {
-                _userInteracted = true;
+                _pauseFollowForUserGesture();
               }
             },
             initialCameraPosition: CameraPosition(
@@ -847,10 +956,15 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
                 child: FloatingActionButton.small(
                   heroTag: 'recenter',
                   onPressed: () {
+                    _cancelFollowResume();
                     setState(() {
                       _userInteracted = false;
                       _fitBounds();
                     });
+                    _lastFollowFitAt = DateTime.now();
+                    if (_driverLocation != null) {
+                      _lastFollowFitPos = _driverLocation;
+                    }
                   },
                   backgroundColor: AppColors.surface,
                   child: const Icon(Icons.my_location, color: AppColors.primary),
@@ -1040,6 +1154,7 @@ class _RiderTrackingScreenState extends State<RiderTrackingScreen>
   @override
   void dispose() {
     _rideStarting = false;
+    _cancelFollowResume();
     _driverAnimTimer?.cancel();
     _statusPollTimer?.cancel();
     _routeDebounceTimer?.cancel();

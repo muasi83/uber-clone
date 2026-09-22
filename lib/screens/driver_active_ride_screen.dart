@@ -57,6 +57,16 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
   double _driverHeading = 0;
   String? _mapStyle;
   bool _showDriverMarker = true;
+
+  // Follow engine: pause on touch, silent auto-resume after 30s.
+  bool _userInteracted = false;
+  int _suppressCameraMove = 0;
+  Timer? _followResumeTimer;
+  DateTime? _lastFollowFitAt;
+  LatLng? _lastFollowFitPos;
+  static const Duration _followResumeDelay = Duration(seconds: 30);
+  static const Duration _followMinInterval = Duration(seconds: 3);
+  static const double _followMinMoveMeters = 50;
   bool _rideStarted = false;
   bool _isCompleting = false;
   bool _awaitingPayment = false;
@@ -152,9 +162,16 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
       (Position position) async {
         if (!mounted) return;
 
-        _driverLocation = LatLng(position.latitude, position.longitude);
-        _driverHeading = position.heading;
+        final newLocation = LatLng(position.latitude, position.longitude);
+        // Last-known-good rotation gate: ignore heading jitter unless moved.
+        final prevLocation = _driverLocation;
+        if (prevLocation == null ||
+            _distanceMeters(prevLocation, newLocation) >= 3.0) {
+          _driverHeading = position.heading;
+        }
+        _driverLocation = newLocation;
         _startDriverMarkerAnimation(_driverLocation!);
+        if (!_userInteracted) _maybeFollow(_driverLocation!);
 
         addDebugMessage(
           '📍 Driver moved 50m+ — ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
@@ -303,7 +320,133 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
+    _fitBoundsToTrip();
+    _lastFollowFitAt = DateTime.now();
+    if (_driverLocation != null) {
+      _lastFollowFitPos = _driverLocation;
+    }
   }
+
+  void _fitBoundsToTrip() {
+    if (mapController == null || _driverLocation == null) return;
+
+    _suppressCameraMove++;
+    final bounds = LatLngBounds(
+      southwest: LatLng(
+        _driverLocation!.latitude < _destinationLocation.latitude
+            ? _driverLocation!.latitude - 0.01
+            : _destinationLocation.latitude - 0.01,
+        _driverLocation!.longitude < _destinationLocation.longitude
+            ? _driverLocation!.longitude - 0.01
+            : _destinationLocation.longitude - 0.01,
+      ),
+      northeast: LatLng(
+        _driverLocation!.latitude > _destinationLocation.latitude
+            ? _driverLocation!.latitude + 0.01
+            : _destinationLocation.latitude + 0.01,
+        _driverLocation!.longitude > _destinationLocation.longitude
+            ? _driverLocation!.longitude + 0.01
+            : _destinationLocation.longitude + 0.01,
+      ),
+    );
+
+    mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 100),
+    ).then((_) {
+      _suppressCameraMove--;
+    }).catchError((_) {
+      _suppressCameraMove--;
+    });
+  }
+
+  void _pauseFollowForUserGesture() {
+    _followResumeTimer?.cancel();
+    final wasFollowing = !_userInteracted;
+    _userInteracted = true;
+    if (wasFollowing && mounted) setState(() {});
+    _followResumeTimer = Timer(_followResumeDelay, () {
+      if (!mounted) return;
+      // Silent resume (no hint): gentle refit only.
+      setState(() => _userInteracted = false);
+      _fitBoundsToTrip();
+      _lastFollowFitAt = DateTime.now();
+      if (_driverLocation != null) {
+        _lastFollowFitPos = _driverLocation;
+      }
+    });
+  }
+
+  void _cancelFollowResume() {
+    _followResumeTimer?.cancel();
+    _followResumeTimer = null;
+  }
+
+  bool _followAllowed(LatLng driverPos) {
+    final now = DateTime.now();
+    if (_lastFollowFitAt != null &&
+        now.difference(_lastFollowFitAt!) < _followMinInterval) {
+      return false;
+    }
+    if (_lastFollowFitPos != null &&
+        _distanceMeters(_lastFollowFitPos!, driverPos) <
+            _followMinMoveMeters) {
+      return false;
+    }
+    return true;
+  }
+
+  /// Throttled follower: time + distance gates, plus a best-effort
+  /// visible-region check (never blocks; falls back to time+distance).
+  /// Never called from onCameraMove, so it cannot loop camera moves.
+  void _maybeFollow(LatLng driverPos) async {
+    if (_userInteracted || !mounted) return;
+    if (!_followAllowed(driverPos)) return;
+    try {
+      final region = await mapController?.getVisibleRegion();
+      if (!mounted || _userInteracted) return;
+      if (region != null &&
+          _containsWithMargin(region, driverPos) &&
+          _containsWithMargin(region, _destinationLocation)) {
+        _lastFollowFitAt = DateTime.now();
+        _lastFollowFitPos = driverPos;
+        return;
+      }
+    } catch (_) {
+      // Fall through to time+distance throttle only.
+    }
+    if (!mounted || _userInteracted) return;
+    _fitBoundsToTrip();
+    _lastFollowFitAt = DateTime.now();
+    _lastFollowFitPos = driverPos;
+  }
+
+  bool _containsWithMargin(LatLngBounds region, LatLng point) {
+    const margin = 0.15;
+    final latSpan = (region.northeast.latitude - region.southwest.latitude).abs();
+    final lngSpan = (region.northeast.longitude - region.southwest.longitude).abs();
+    return point.latitude >
+            region.southwest.latitude + latSpan * margin &&
+        point.latitude < region.northeast.latitude - latSpan * margin &&
+        point.longitude >
+            region.southwest.longitude + lngSpan * margin &&
+        point.longitude < region.northeast.longitude - lngSpan * margin;
+  }
+
+  double _distanceMeters(LatLng a, LatLng b) {
+    const earthRadius = 6371000.0;
+    final dLat = _toRadians(b.latitude - a.latitude);
+    final dLng = _toRadians(b.longitude - a.longitude);
+    final s1 = math.sin(dLat / 2);
+    final s2 = math.sin(dLng / 2);
+    final h = s1 * s1 +
+        math.cos(_toRadians(a.latitude)) *
+            math.cos(_toRadians(b.latitude)) *
+            s2 *
+            s2;
+    return 2 * earthRadius * math.asin(math.sqrt(h.clamp(0.0, 1.0)));
+  }
+
+  double _toRadians(double deg) => deg * (math.pi / 180.0);
 
   Future<void> _startRide() async {
     try {
@@ -417,6 +560,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
       } else if (type == 'payment_finalized' || type == 'payment_refunded') {
         _awaitingPayment = false;
         _paymentPollTimer?.cancel();
+        _cancelFollowResume();
         if (mounted) {
           Navigator.pushReplacementNamed(
             context,
@@ -485,6 +629,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
       }
 
       _stopLocationStream();
+      _cancelFollowResume();
 
       addDebugMessage('✅ Ride completed');
       recordEvent(
@@ -523,6 +668,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
         addDebugMessage('✅ Cash received confirmed');
         _awaitingPayment = false;
         _paymentPollTimer?.cancel();
+        _cancelFollowResume();
         Navigator.pushReplacementNamed(
           context,
           '/driver-summary',
@@ -559,6 +705,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
         addDebugMessage('✅ Cash marked as unpaid');
         _awaitingPayment = false;
         _paymentPollTimer?.cancel();
+        _cancelFollowResume();
         Navigator.pushReplacementNamed(
           context,
           '/driver-summary',
@@ -677,6 +824,11 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
         children: [
           GoogleMap(
             onMapCreated: _onMapCreated,
+            onCameraMove: (_) {
+              if (_suppressCameraMove == 0) {
+                _pauseFollowForUserGesture();
+              }
+            },
             initialCameraPosition: CameraPosition(
               target: _destinationLocation,
               zoom: 15,
@@ -687,6 +839,33 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
             zoomControlsEnabled: false,
             style: _mapStyle,
           ),
+          if (_userInteracted)
+            Positioned(
+              right: 16,
+              bottom:
+                  MediaQuery.of(context).padding.bottom + 280,
+              child: Semantics(
+                button: true,
+                label: AppLocalizations.of(context).recenterMap,
+                child: FloatingActionButton.small(
+                  heroTag: 'recenterDriverActive',
+                  onPressed: () {
+                    _cancelFollowResume();
+                    setState(() {
+                      _userInteracted = false;
+                      _fitBoundsToTrip();
+                    });
+                    _lastFollowFitAt = DateTime.now();
+                    if (_driverLocation != null) {
+                      _lastFollowFitPos = _driverLocation;
+                    }
+                  },
+                  backgroundColor: AppColors.surface,
+                  child: const Icon(Icons.gps_fixed,
+                      color: AppColors.primary),
+                ),
+              ),
+            ),
           PositionedDirectional(
             top: 16,
             end: 16,
@@ -711,289 +890,309 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
               ),
             ),
           ),
+          // Top status pill (SafeArea-aware, below AppBar, clear of FAB).
           Positioned(
-            bottom: 0,
+            top: 0,
             left: 0,
             right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(AppRadius.xl),
-                  topRight: Radius.circular(AppRadius.xl),
-                ),
-                boxShadow: AppShadows.large,
-              ),
-              padding: const EdgeInsetsDirectional.fromSTEB(
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.xxxl,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // ── Ride Progress Header ───────────────────────────
-                  if (_rideStarted) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: AppSpacing.cardPadding,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: AppRadius.lgRadius,
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            _formatElapsedTime(),
-                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                  color: AppColors.textOnPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontFeatures: const [FontFeature.tabularFigures()],
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.only(top: kToolbarHeight + 4),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color:
+                          AppColors.surface.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: AppShadows.medium,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            AppLocalizations.of(context).rideInProgress,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
                                 ),
                           ),
-                          const SizedBox(height: AppSpacing.xs),
+                        ),
+                        if (_rideStarted) ...[
+                          const SizedBox(width: 8),
                           Text(
-                            AppLocalizations.of(context).rideInProgress,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.textOnPrimary.withValues(alpha: 0.8),
+                            _formatElapsedTime(),
+                            maxLines: 1,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures()
+                                  ],
                                 ),
                           ),
                         ],
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                  ],
-                  // ── Destination Premium Card ──────────────────────
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Bottom floating overlay (hit-test limited to card + buttons).
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: MediaQuery.of(context).padding.bottom + 12,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                  // ── Destination floating card (compact) ─────────
                   Container(
                     width: double.infinity,
-                    padding: AppSpacing.cardPadding,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 14),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
-                      borderRadius: AppRadius.lgRadius,
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: AppShadows.medium,
                     ),
-                    child: Row(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(AppSpacing.sm),
-                          decoration: BoxDecoration(
-                            color: AppColors.error.withValues(alpha: 0.1),
-                            borderRadius: AppRadius.smRadius,
-                          ),
-                          child: const Icon(Icons.location_on,
-                              color: AppColors.error, size: 20),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                AppLocalizations.of(context).destination,
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: AppColors.textTertiary,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.8,
-                                    ),
-                              ),
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                widget.dropoffAddress,
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.location_on,
+                                color: AppColors.error, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                widget.dropoffAddress.trim().isNotEmpty
+                                    ? widget.dropoffAddress
+                                    : formatLatLng(widget.dropoffLat,
+                                        widget.dropoffLng),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.textPrimary,
+                                    ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              '$_remainingMinutes min',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textPrimary,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures()
+                                    ],
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                '${_distanceKm?.toStringAsFixed(1) ?? '--'} km',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: AppColors.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures()
+                                      ],
                                     ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                formatLatLng(widget.dropoffLat, widget.dropoffLng),
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppColors.textTertiary,
-                                    ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  // ── Time & Distance Side by Side ──────────────────
+                  const SizedBox(height: 10),
+                  // ── Action Section (compact side-by-side) ──────────
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Container(
-                          padding: AppSpacing.cardPadding,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
-                            borderRadius: AppRadius.lgRadius,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            await _openGoogleMapsToDestination();
+                          },
+                          icon: const Icon(Icons.map, size: 18),
+                          label: Text(
+                            AppLocalizations.of(context)
+                                .navigateToDestination,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.access_time,
-                                  color: AppColors.primary, size: 22),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                '$_remainingMinutes',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
-                                    ),
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                'min',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: AppColors.textSecondary,
-                                    ),
-                              ),
-                            ],
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            backgroundColor:
+                                AppColors.surface.withValues(alpha: 0.9),
+                            elevation: 2,
+                            shadowColor:
+                                Colors.black.withValues(alpha: 0.2),
+                            side: BorderSide(
+                                color: AppColors.primary
+                                    .withValues(alpha: 0.3)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: AppRadius.mdRadius,
+                            ),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                            minimumSize: const Size(0, 52),
                           ),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.md),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Container(
-                          padding: AppSpacing.cardPadding,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
-                            borderRadius: AppRadius.lgRadius,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.straighten,
-                                  color: AppColors.primary, size: 22),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                _distanceKm?.toStringAsFixed(1) ?? '--',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
+                        child: _rideStarted
+                            ? _awaitingPayment
+                                ? _paymentMethod == 'CASH'
+                                    ? Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            AppLocalizations.of(context)
+                                                .didTheCustomerPayInCash,
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color:
+                                                      AppColors.textPrimary,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Semantics(
+                                            button: true,
+                                            label: AppLocalizations.of(
+                                                    context)
+                                                .cashReceived,
+                                            child: SwipeButton(
+                                              label:
+                                                  AppLocalizations.of(context)
+                                                      .cashReceived,
+                                              processingLabel:
+                                                  AppLocalizations.of(context)
+                                                      .processing,
+                                              icon: Icons.check_circle,
+                                              onConfirmed: _onCashReceived,
+                                              isDisabled:
+                                                  _cashActionInProgress,
+                                              backgroundColor:
+                                                  AppColors.success,
+                                              height: 48,
+                                              borderRadius: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Semantics(
+                                            button: true,
+                                            label: 'Mark as unpaid',
+                                            child: SwipeButton(
+                                              label: AppLocalizations.of(
+                                                      context)
+                                                  .didNotPay,
+                                              processingLabel:
+                                                  AppLocalizations.of(context)
+                                                      .processing,
+                                              icon: Icons.cancel,
+                                              onConfirmed: _onCashUnpaid,
+                                              isDisabled:
+                                                  _cashActionInProgress,
+                                              backgroundColor: AppColors.error,
+                                              height: 48,
+                                              borderRadius: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : _buildWaitingForPayment()
+                                : Semantics(
+                                    button: true,
+                                    label: 'Complete ride',
+                                    child: SwipeButton(
+                                      key: const ValueKey('complete_ride'),
+                                      label: AppLocalizations.of(context)
+                                          .completeRide,
+                                      processingLabel:
+                                          AppLocalizations.of(context)
+                                              .completing,
+                                      icon: Icons.flag,
+                                      onConfirmed: _completeRide,
+                                      isDisabled: _isCompleting,
+                                      backgroundColor: AppColors.error,
+                                      height: 52,
+                                      borderRadius: 14,
                                     ),
+                                  )
+                            : Semantics(
+                                button: true,
+                                label: 'Start ride',
+                                child: SwipeButton(
+                                  key: const ValueKey('start_ride'),
+                                  label: AppLocalizations.of(context).startRide,
+                                  icon: Icons.play_arrow,
+                                  onConfirmed: _startRide,
+                                  backgroundColor: AppColors.success,
+                                  height: 52,
+                                  borderRadius: 14,
+                                ),
                               ),
-                              const SizedBox(width: 2),
-                              Text(
-                                'km',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: AppColors.textSecondary,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  // ── Action Section ─────────────────────────────────
-                  _rideStarted
-                      ? _awaitingPayment
-                          ? _paymentMethod == 'CASH'
-                              ? Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                Text(
-                  AppLocalizations.of(context).didTheCustomerPayInCash,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                ),
-                                    const SizedBox(height: 16),
-                                    Semantics(
-                                      button: true,
-                                      label: AppLocalizations.of(context).cashReceived,
-                                      child: SwipeButton(
-                                        label: AppLocalizations.of(context).cashReceived,
-                                        processingLabel: AppLocalizations.of(context).processing,
-                                        icon: Icons.check_circle,
-                                        onConfirmed: _onCashReceived,
-                                        isDisabled: _cashActionInProgress,
-                                        backgroundColor: AppColors.success,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Semantics(
-                                      button: true,
-                                      label: 'Mark as unpaid',
-                                      child: SwipeButton(
-                                        label: AppLocalizations.of(context).didNotPay,
-                                        processingLabel: AppLocalizations.of(context).processing,
-                                        icon: Icons.cancel,
-                                        onConfirmed: _onCashUnpaid,
-                                        isDisabled: _cashActionInProgress,
-                                        backgroundColor: AppColors.error,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : _buildWaitingForPayment()
-                          : Semantics(
-                              button: true,
-                              label: 'Complete ride',
-                              child: SwipeButton(
-                                key: const ValueKey('complete_ride'),
-                                label: AppLocalizations.of(context).completeRide,
-                                processingLabel: AppLocalizations.of(context).completing,
-                                icon: Icons.flag,
-                                onConfirmed: _completeRide,
-                                isDisabled: _isCompleting,
-                                backgroundColor: AppColors.error,
-                              ),
-                            )
-                      : Semantics(
-                          button: true,
-                          label: 'Start ride',
-                          child: SwipeButton(
-                            key: const ValueKey('start_ride'),
-                            label: AppLocalizations.of(context).startRide,
-                            icon: Icons.play_arrow,
-                            onConfirmed: _startRide,
-                            backgroundColor: AppColors.success,
-                          ),
-                        ),
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async { await _openGoogleMapsToDestination(); },
-                      icon: const Icon(Icons.map, size: 18),
-                      label: Text(AppLocalizations.of(context).navigateToDestination),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppRadius.mdRadius,
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
+    }
 
   Future<void> _loadMapStyle() async {
     _mapStyle = await MapStyleLoader.load();
@@ -1167,6 +1366,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
 
   @override
   void dispose() {
+    _cancelFollowResume();
     _stopLocationStream();
     _driverAnimTimer?.cancel();
     _rideTimer?.cancel();
