@@ -34,6 +34,11 @@ class RidePreviewScreen extends StatefulWidget {
   final VoidCallback? onAccept;
   final VoidCallback? onIgnore;
 
+  // Tiered dispatch: what the rider requested (fare basis) + free-upgrade flag.
+  final String requestedRideType;
+  final String? fareBasisType;
+  final bool isUpgrade;
+
   const RidePreviewScreen({
     super.key,
     required this.pickupLat,
@@ -49,6 +54,9 @@ class RidePreviewScreen extends StatefulWidget {
     this.driverMode = false,
     this.onAccept,
     this.onIgnore,
+    this.requestedRideType = 'ECONOMY',
+    this.fareBasisType,
+    this.isUpgrade = false,
   });
 
   @override
@@ -336,6 +344,67 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
     super.dispose();
   }
 
+  /// Tiered-dispatch banner (driver mode): requested type + fare basis.
+  static String _displayRideType(String apiName) {
+    if (apiName.isEmpty) return apiName;
+    final parts = apiName.split('_');
+    return parts.map((p) => p[0] + p.substring(1).toLowerCase()).join(' ');
+  }
+
+  Widget _buildRequestedTypeBanner(AppLocalizations l10n) {
+    final requested = _displayRideType(widget.requestedRideType);
+    final basis = _displayRideType(
+        widget.fareBasisType ?? widget.requestedRideType);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: AppRadius.mdRadius,
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.workspace_premium,
+              size: 18, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.requestedRide(requested),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+                Text(
+                  l10n.fareBasedOn(basis),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                if (widget.isUpgrade)
+                  Text(
+                    l10n.freeUpgradeDriver,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -466,6 +535,10 @@ class _RidePreviewScreenState extends State<RidePreviewScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
+                    ],
+                    if (widget.driverMode) ...[
+                      _buildRequestedTypeBanner(l10n),
+                      const SizedBox(height: 8),
                     ],
                     Row(
                       children: [

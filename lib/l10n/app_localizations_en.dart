@@ -3445,4 +3445,24 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get upgradeOfferBanner =>
       'Expanding search to higher-tier drivers at the same fare';
+
+  @override
+  String requestedRide(Object rideType) {
+    return 'Requested: $rideType';
+  }
+
+  @override
+  String fareBasedOn(Object rideType) {
+    return 'Fare based on $rideType';
+  }
+
+  @override
+  String get freeUpgradeDriver =>
+      'Free upgrade — higher-tier car at the same fare';
+
+  @override
+  String get notEligibleForRideType => 'No longer eligible for this ride type';
+
+  @override
+  String get womenOnlyRide => 'Women drivers only for this ride';
 }

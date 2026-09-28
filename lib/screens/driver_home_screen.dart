@@ -458,12 +458,23 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
       'estimatedDistance': event['estimatedDistance'],
       'estimatedDuration': event['estimatedDuration'],
       'rideType': event['rideType'],
+      'requestedRideType': event['requestedRideType'] ?? event['rideType'],
+      'fareBasisType': event['fareBasisType'] ?? event['rideType'],
+      'isUpgrade': event['isUpgrade'] == true,
     };
 
     final pickupLat = (event['pickupLat'] as num?)?.toDouble() ?? 0.0;
     final pickupLng = (event['pickupLng'] as num?)?.toDouble() ?? 0.0;
     final dropoffLat = (event['dropoffLat'] as num?)?.toDouble() ?? 0.0;
     final dropoffLng = (event['dropoffLng'] as num?)?.toDouble() ?? 0.0;
+
+    // Free-upgrade flag from the viewing driver's own tier (server also sends
+    // isUpgrade, but the list-card path only has ride fields).
+    const tierRank = {'ECONOMY': 0, 'COMFORT': 1, 'LUXURY': 2};
+    final requested = ((event['requestedRideType'] ?? event['rideType']) as String?) ?? 'ECONOMY';
+    final ownTier = _driverProfile?.serviceTier ?? 'ECONOMY';
+    final isUpgrade = event['isUpgrade'] == true ||
+        ((tierRank[ownTier] ?? 0) > (tierRank[requested] ?? 0));
 
     Navigator.push(
       context,
@@ -477,6 +488,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
           dropoffAddress: event['dropoffAddress'] ?? '',
           estimatedFare: (event['estimatedFare'] as num?)?.toDouble(),
           driverMode: true,
+          requestedRideType: requested,
+          fareBasisType: (event['fareBasisType'] ?? event['rideType']) as String?,
+          isUpgrade: isUpgrade,
           onAccept: () => _acceptRide(rideData),
           onIgnore: () {
             _stopRideAlert();
@@ -521,6 +535,27 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
             'dropoffLat': ride.dropoffLatitude,
             'dropoffLng': ride.dropoffLongitude,
           },
+        );
+      } else if (mounted) {
+        // Tiered-dispatch 403 (leaked/stale card or lost race): friendly message
+        // + drop the card so it cannot be retapped.
+        final code = RideService.lastAcceptError;
+        final l10n = AppLocalizations.of(context);
+        final message = code == 'WOMEN_DRIVER_ONLY'
+            ? l10n.womenOnlyRide
+            : code == 'NOT_ELIGIBLE_FOR_RIDE_TYPE'
+                ? l10n.notEligibleForRideType
+                : 'Failed to accept ride${code != null ? ': $code' : ''}';
+        setState(() {
+          _availableRides.removeWhere((r) => r.id == rideId);
+        });
+        _stopRideAlert();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } catch (e) {
@@ -1471,8 +1506,33 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
     }
   }
 
-  Widget _buildRideCard(Ride ride) {
+  /// Requested-type chip for tiered dispatch (fare is based on requested type).
+  Widget _buildRequestedTypeChip(Ride ride) {
+    final apiName = ride.requestedRideType ?? ride.rideType;
+    final display = apiName.isEmpty
+        ? apiName
+        : apiName
+            .split('_')
+            .map((p) => p[0] + p.substring(1).toLowerCase())
+            .join(' ');
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: AppColors.outline),
+      ),
+      child: Text(
+        display,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+      ),
+    );
+  }
+
+  Widget _buildRideCard(Ride ride) {    return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -1525,6 +1585,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                         ),
                   ),
                 ),
+              const SizedBox(width: 8),
+              _buildRequestedTypeChip(ride),
             ],
           ),
           const SizedBox(height: 14),
@@ -1629,6 +1691,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> with RecordedScreen
                     'estimatedDistance': ride.estimatedDistance,
                     'estimatedDuration': ride.estimatedDuration,
                     'rideType': ride.rideType,
+                    'requestedRideType': ride.requestedRideType ?? ride.rideType,
+                    'fareBasisType': ride.fareBasisType ?? ride.rideType,
+                    'isUpgrade': ride.wasUpgraded,
                   }),
                   icon: const Icon(Icons.assignment_turned_in, size: 18),
                   label: Text(AppLocalizations.of(context).view, style: const TextStyle(fontWeight: FontWeight.w600)),

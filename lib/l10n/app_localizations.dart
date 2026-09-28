@@ -6409,6 +6409,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Expanding search to higher-tier drivers at the same fare'**
   String get upgradeOfferBanner;
+
+  /// No description provided for @requestedRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested: {rideType}'**
+  String requestedRide(Object rideType);
+
+  /// No description provided for @fareBasedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Fare based on {rideType}'**
+  String fareBasedOn(Object rideType);
+
+  /// No description provided for @freeUpgradeDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Free upgrade — higher-tier car at the same fare'**
+  String get freeUpgradeDriver;
+
+  /// No description provided for @notEligibleForRideType.
+  ///
+  /// In en, this message translates to:
+  /// **'No longer eligible for this ride type'**
+  String get notEligibleForRideType;
+
+  /// No description provided for @womenOnlyRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Women drivers only for this ride'**
+  String get womenOnlyRide;
 }
 
 class _AppLocalizationsDelegate

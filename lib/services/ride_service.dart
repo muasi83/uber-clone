@@ -188,7 +188,13 @@ class RideService {
   }
 
   // Accept ride (DRIVER)
+  // lastAcceptError holds the machine-readable server error from the most
+  // recent acceptRide call (e.g. NOT_ELIGIBLE_FOR_RIDE_TYPE, WOMEN_DRIVER_ONLY),
+  // so the driver UI can show a friendly message and drop the stale card.
+  static String? lastAcceptError;
+
   static Future<Ride?> acceptRide(int rideId, String token) async {
+    lastAcceptError = null;
     try {
       addDebugMessage('═══════════════════════════════════════');
       addDebugMessage('✅ ACCEPTING RIDE #$rideId');
@@ -213,10 +219,23 @@ class RideService {
         return Ride.fromJson(json);
       } else {
         addDebugMessage('❌ Error: ${response.statusCode}');
+        try {
+          final err = jsonDecode(response.body) as Map<String, dynamic>?;
+          final code = err?['error'] as String?;
+          if (code != null && code.isNotEmpty) {
+            lastAcceptError = code;
+            addDebugMessage('❌ Accept error code: $code');
+          } else {
+            lastAcceptError = 'HTTP_${response.statusCode}';
+          }
+        } catch (_) {
+          lastAcceptError = 'HTTP_${response.statusCode}';
+        }
         return null;
       }
     } catch (e) {
       addDebugMessage('❌ Exception: $e');
+      lastAcceptError = 'NETWORK_ERROR';
       return null;
     }
   }
