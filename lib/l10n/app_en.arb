@@ -1673,5 +1673,12 @@
   "fareBasedOn": "Fare based on {rideType}",
   "freeUpgradeDriver": "Free upgrade — higher-tier car at the same fare",
   "notEligibleForRideType": "No longer eligible for this ride type",
-  "womenOnlyRide": "Women drivers only for this ride"
+  "womenOnlyRide": "Women drivers only for this ride",
+  "gender": "Gender",
+  "serviceTier": "Service tier",
+  "editEligibility": "Edit gender & tier",
+  "tierServesLower": "Higher tiers also serve lower ride types at the same fare",
+  "eligibilityUpdated": "Eligibility updated",
+  "eligibilitySaveFailed": "Failed to save eligibility",
+  "pleaseWait": "Please wait..."
 }

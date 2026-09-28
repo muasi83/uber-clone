@@ -6439,6 +6439,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Women drivers only for this ride'**
   String get womenOnlyRide;
+
+  /// No description provided for @gender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get gender;
+
+  /// No description provided for @serviceTier.
+  ///
+  /// In en, this message translates to:
+  /// **'Service tier'**
+  String get serviceTier;
+
+  /// No description provided for @editEligibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit gender & tier'**
+  String get editEligibility;
+
+  /// No description provided for @tierServesLower.
+  ///
+  /// In en, this message translates to:
+  /// **'Higher tiers also serve lower ride types at the same fare'**
+  String get tierServesLower;
+
+  /// No description provided for @eligibilityUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Eligibility updated'**
+  String get eligibilityUpdated;
+
+  /// No description provided for @eligibilitySaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save eligibility'**
+  String get eligibilitySaveFailed;
+
+  /// No description provided for @pleaseWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait...'**
+  String get pleaseWait;
 }
 
 class _AppLocalizationsDelegate

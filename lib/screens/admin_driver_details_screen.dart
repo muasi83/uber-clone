@@ -36,6 +36,7 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
   Map<String, dynamic>? _detail;
   bool _loading = true;
   String? _token;
+  bool _savingEligibility = false;
 
   @override
   void initState() {
@@ -182,6 +183,8 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
               if (phone != null) _buildDetailRow(l10n.phoneNumber, phone),
               if (license != null) _buildDetailRow(l10n.licenseNumber, license),
             ],
+            const SizedBox(height: 4),
+            _buildDetailRow(l10n.gender, _displayGender(d['gender'] as String?)),
             const SizedBox(height: 14),
             Wrap(
               spacing: 8,
@@ -225,6 +228,20 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _savingEligibility ? null : () => _showEligibilityEditor(),
+                icon: const Icon(Icons.tune, size: 16),
+                label: Text(_savingEligibility
+                    ? l10n.pleaseWait
+                    : l10n.editEligibility),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                ),
+              ),
             ),
           ],
         ),
@@ -364,6 +381,10 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
             _buildDetailRow(l10n.plate, plate ?? '-'),
             if (type != null) _buildDetailRow(l10n.type, type),
             if (year != null) _buildDetailRow(l10n.vehicleYear, year.toString()),
+            _buildDetailRow(
+              l10n.serviceTier,
+              _displayTier(d['serviceTier'] as String?),
+            ),
           ],
         ),
       ),
@@ -930,8 +951,139 @@ class _AdminDriverDetailsScreenState extends State<AdminDriverDetailsScreen> wit
     }
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
+  static const _genders = ['MALE', 'FEMALE', 'PREFER_NOT_TO_SAY'];
+  static const _tiers = ['ECONOMY', 'COMFORT', 'LUXURY'];
+
+  String _displayGender(String? gender) {
+    switch (gender) {
+      case 'MALE':
+        return 'Male';
+      case 'FEMALE':
+        return 'Female';
+      case 'PREFER_NOT_TO_SAY':
+        return 'Prefer not to say';
+      default:
+        return gender ?? 'Not set';
+    }
+  }
+
+  String _displayTier(String? tier) {
+    switch (tier) {
+      case 'COMFORT':
+        return 'Comfort (serves Comfort + Economy)';
+      case 'LUXURY':
+        return 'Luxury (serves all types)';
+      case 'ECONOMY':
+        return 'Economy';
+      default:
+        return tier ?? 'Economy';
+    }
+  }
+
+  Future<void> _showEligibilityEditor() async {
+    final d = _detail;
+    if (d == null || _token == null) return;
+    final l10n = AppLocalizations.of(context);
+    String gender = (d['gender'] as String?) ?? 'PREFER_NOT_TO_SAY';
+    if (!_genders.contains(gender)) gender = 'PREFER_NOT_TO_SAY';
+    String tier = (d['serviceTier'] as String?) ?? 'ECONOMY';
+    if (!_tiers.contains(tier)) tier = 'ECONOMY';
+
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) {
+        String g = gender;
+        String t = tier;
+        return StatefulBuilder(
+          builder: (ctx, setDlg) => AlertDialog(
+            title: Text(l10n.editEligibility),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.gender,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  SegmentedButton<String>(
+                    segments: _genders
+                        .map((v) => ButtonSegment(
+                              value: v,
+                              label: Text(_displayGender(v),
+                                  style: const TextStyle(fontSize: 11)),
+                            ))
+                        .toList(),
+                    selected: {g},
+                    onSelectionChanged: (s) => setDlg(() => g = s.first),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(l10n.serviceTier,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  SegmentedButton<String>(
+                    segments: _tiers
+                        .map((v) => ButtonSegment(
+                              value: v,
+                              label: Text(v[0] + v.substring(1).toLowerCase(),
+                                  style: const TextStyle(fontSize: 11)),
+                            ))
+                        .toList(),
+                    selected: {t},
+                    onSelectionChanged: (s) => setDlg(() => t = s.first),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.tierServesLower,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.cancel),
+              ),
+              ElevatedButton(
+                onPressed: () =>
+                    Navigator.pop(ctx, {'gender': g, 'serviceTier': t}),
+                child: Text(l10n.save),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (result == null || !mounted) return;
+    setState(() => _savingEligibility = true);
+    final updated = await AdminDriversService.updateDriverEligibility(
+      widget.driverId,
+      _token!,
+      serviceTier: result['serviceTier'],
+      gender: result['gender'],
+    );
+    if (!mounted) return;
+    setState(() => _savingEligibility = false);
+    if (updated != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.eligibilityUpdated)),
+      );
+      _loadDetail();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.eligibilitySaveFailed),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Widget _buildDetailRow(String label, String value) {    return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [

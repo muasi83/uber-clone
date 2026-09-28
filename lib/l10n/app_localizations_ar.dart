@@ -3455,4 +3455,26 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get womenOnlyRide => 'Women drivers only for this ride';
+
+  @override
+  String get gender => 'Gender';
+
+  @override
+  String get serviceTier => 'Service tier';
+
+  @override
+  String get editEligibility => 'Edit gender & tier';
+
+  @override
+  String get tierServesLower =>
+      'Higher tiers also serve lower ride types at the same fare';
+
+  @override
+  String get eligibilityUpdated => 'Eligibility updated';
+
+  @override
+  String get eligibilitySaveFailed => 'Failed to save eligibility';
+
+  @override
+  String get pleaseWait => 'Please wait...';
 }

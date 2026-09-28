@@ -78,12 +78,39 @@ class AdminDriversService {
       return null;
     }
   }
-
   static Future<Map<String, dynamic>?> toggleBlock(int driverId, String token) async {
     try {
       final url = '${StorageService.getServerUrl()}/api/admin/drivers/$driverId/block';
       final response = await http
           .patch(Uri.parse(url), headers: _headers(token: token))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Admin-set gender + service tier (tiered dispatch).
+  /// Returns the updated `{driverId, gender, serviceTier}` or null on failure.
+  static Future<Map<String, dynamic>?> updateDriverEligibility(
+    int driverId,
+    String token, {
+    String? serviceTier,
+    String? gender,
+  }) async {
+    try {
+      final body = <String, String>{};
+      if (serviceTier != null && serviceTier.isNotEmpty) body['serviceTier'] = serviceTier;
+      if (gender != null && gender.isNotEmpty) body['gender'] = gender;
+      if (body.isEmpty) return null;
+
+      final url = '${StorageService.getServerUrl()}/api/admin/drivers/$driverId/eligibility';
+      final response = await http
+          .patch(Uri.parse(url), headers: _headers(token: token), body: jsonEncode(body))
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
