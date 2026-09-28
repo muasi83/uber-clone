@@ -338,6 +338,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             pickupAddress: pickup,
             dropoffAddress: dropoff,
             estimatedFare: fare,
+            requestedRideType:
+                (args['requestedRideType'] as String?) ?? 'ECONOMY',
           );
         },
 

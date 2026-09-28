@@ -22,6 +22,7 @@ class RiderSearchingDriverScreen extends StatefulWidget {
   final String pickupAddress;
   final String dropoffAddress;
   final double estimatedFare;
+  final String requestedRideType;
 
   const RiderSearchingDriverScreen({
     super.key,
@@ -29,6 +30,7 @@ class RiderSearchingDriverScreen extends StatefulWidget {
     required this.pickupAddress,
     required this.dropoffAddress,
     required this.estimatedFare,
+    this.requestedRideType = 'ECONOMY',
   });
 
   @override
@@ -42,6 +44,8 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
   late Animation<double> _pulseAnimation;
   bool _driverFound = false;
   bool _showTimeoutDialog = false;
+  // Informational banner from upgrade_offer (no action needed, same fare).
+  String? _upgradeBanner;
   Timer? _acceptanceTimer;
   int _searchSeconds = 0;
   Timer? _pollTimer;
@@ -206,6 +210,12 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
           _showSearchTimeoutDialog();
         } else if (type == 'women_driver_timeout') {
           _showWomenDriverTimeoutDialog();
+        } else if (type == 'women_driver_unavailable') {
+          _showWomenUnavailableDialog();
+        } else if (type == 'luxury_unavailable') {
+          _showLuxuryUnavailableDialog();
+        } else if (type == 'upgrade_offer') {
+          _showUpgradeBanner(event);
         } else if (type == 'ride_cancelled') {
           _handleRideCancelled(event);
         }
@@ -435,6 +445,156 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
     }
   }
 
+  void _showUpgradeBanner(Map<String, dynamic> event) {
+    if (_driverFound || !mounted) return;
+    final payload = event['payload'] as Map<String, dynamic>?;
+    final expanded = payload?['expandedTo'];
+    final detail = expanded is List && expanded.isNotEmpty
+        ? ' (${expanded.join(', ')})'
+        : '';
+    setState(() {
+      _upgradeBanner =
+          '${AppLocalizations.of(context).upgradeOfferBanner}$detail';
+    });
+    EventRecorderService.recordEvent(
+      rideId: widget.rideId,
+      eventName: 'UPGRADE_OFFER',
+      category: 'BUSINESS',
+      summary: 'Search expanded to higher tiers at same fare$detail',
+      screenName: 'RiderSearchingDriver',
+    );
+  }
+
+  void _showWomenUnavailableDialog() {
+    if (_showTimeoutDialog || _driverFound) return;
+
+    setState(() => _showTimeoutDialog = true);
+
+    EventRecorderService.recordEvent(
+      rideId: widget.rideId,
+      eventName: 'WOMEN_DRIVER_UNAVAILABLE',
+      category: 'BUSINESS',
+      summary: 'No female driver found; rider offered schedule/switch',
+      screenName: 'RiderSearchingDriver',
+    );
+
+    if (mounted) {
+      final l10n = AppLocalizations.of(context);
+      UiEventRecorder.showDialog(
+        context: context,
+        dialogType: 'WomenDriverUnavailable',
+        dialogText: 'Women drivers unavailable — schedule or switch',
+        triggerReason: 'women_driver_unavailable',
+        buttons: ['Schedule', 'Economy', 'Cancel'],
+        builder: (context) => AlertDialog(
+          icon: const Icon(Icons.event_available, color: AppColors.warning, size: 48),
+          title: Text(l10n.womenDriversUnavailable),
+          content: Text(l10n.womenNowNotAvailableSchedule),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _cancelSearch('Women unavailable - rider chose to schedule');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n.womenScheduleInstead),
+                      backgroundColor: AppColors.info,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              },
+              child: Text(l10n.scheduleWomenRide),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _switchRideType('ECONOMY');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              child: const Text('Economy'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _cancelSearch();
+              },
+              child: Text(
+                AppLocalizations.of(context).cancel,
+                style: TextStyle(color: AppColors.error),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _showLuxuryUnavailableDialog() {
+    if (_showTimeoutDialog || _driverFound) return;
+
+    setState(() => _showTimeoutDialog = true);
+
+    EventRecorderService.recordEvent(
+      rideId: widget.rideId,
+      eventName: 'LUXURY_UNAVAILABLE',
+      category: 'BUSINESS',
+      summary: 'No luxury driver found; rider offered downgrade',
+      screenName: 'RiderSearchingDriver',
+    );
+
+    if (mounted) {
+      final l10n = AppLocalizations.of(context);
+      UiEventRecorder.showDialog(
+        context: context,
+        dialogType: 'LuxuryUnavailable',
+        dialogText: 'No luxury drivers available — switch type',
+        triggerReason: 'luxury_unavailable',
+        buttons: ['Economy', 'Comfort', 'Cancel'],
+        builder: (context) => AlertDialog(
+          icon: const Icon(Icons.diamond_outlined, color: AppColors.warning, size: 48),
+          title: Text(l10n.noLuxuryDrivers),
+          content: Text(l10n.noLuxuryDriversSwitch),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _switchRideType('ECONOMY');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              child: const Text('Economy'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _switchRideType('COMFORT');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              child: const Text('Comfort'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _cancelSearch();
+              },
+              child: Text(
+                AppLocalizations.of(context).cancel,
+                style: TextStyle(color: AppColors.error),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   Future<void> _switchRideType(String newRideType) async {
     try {
       addDebugMessage('🔄 Switching to $newRideType...');
@@ -466,6 +626,7 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
 
       setState(() {
         _showTimeoutDialog = false;
+        _upgradeBanner = null;
         _searchSeconds = 0;
       });
 
@@ -699,6 +860,40 @@ class _RiderSearchingDriverScreenState extends State<RiderSearchingDriverScreen>
                 ),
               ),
               AppSpacing.gapXl,
+              if (_upgradeBanner != null)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.trending_up,
+                        color: AppColors.primaryLight,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _upgradeBanner!,
+                          style: TextStyle(
+                            color: AppColors.primaryLight.withValues(alpha: 0.9),
+                            fontSize: 12,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_upgradeBanner != null) AppSpacing.gapMd,
               Semantics(
                 label: 'Search duration $_searchSeconds seconds',
                 child: Container(

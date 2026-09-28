@@ -6373,6 +6373,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please schedule a women ride instead'**
   String get womenScheduleInstead;
+
+  /// No description provided for @womenDriversUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Women drivers unavailable'**
+  String get womenDriversUnavailable;
+
+  /// No description provided for @womenNowNotAvailableSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Women now not available, please schedule a women ride'**
+  String get womenNowNotAvailableSchedule;
+
+  /// No description provided for @scheduleWomenRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule women ride'**
+  String get scheduleWomenRide;
+
+  /// No description provided for @noLuxuryDrivers.
+  ///
+  /// In en, this message translates to:
+  /// **'No luxury drivers available'**
+  String get noLuxuryDrivers;
+
+  /// No description provided for @noLuxuryDriversSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'No luxury drivers available right now. Would you like to switch ride type?'**
+  String get noLuxuryDriversSwitch;
+
+  /// No description provided for @upgradeOfferBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Expanding search to higher-tier drivers at the same fare'**
+  String get upgradeOfferBanner;
 }
 
 class _AppLocalizationsDelegate

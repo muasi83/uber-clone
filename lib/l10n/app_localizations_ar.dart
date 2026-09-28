@@ -3414,4 +3414,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get womenScheduleInstead => 'Please schedule a women ride instead';
+
+  @override
+  String get womenDriversUnavailable => 'Women drivers unavailable';
+
+  @override
+  String get womenNowNotAvailableSchedule =>
+      'Women now not available, please schedule a women ride';
+
+  @override
+  String get scheduleWomenRide => 'Schedule women ride';
+
+  @override
+  String get noLuxuryDrivers => 'No luxury drivers available';
+
+  @override
+  String get noLuxuryDriversSwitch =>
+      'No luxury drivers available right now. Would you like to switch ride type?';
+
+  @override
+  String get upgradeOfferBanner =>
+      'Expanding search to higher-tier drivers at the same fare';
 }

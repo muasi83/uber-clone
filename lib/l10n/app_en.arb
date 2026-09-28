@@ -1662,5 +1662,11 @@
   "hereToHelpWithTrips": "Here to help you with your trips",
   "appName": "Taligo",
   "noWomenDriversNearby": "No women drivers nearby",
-  "womenScheduleInstead": "Please schedule a women ride instead"
+  "womenScheduleInstead": "Please schedule a women ride instead",
+  "womenDriversUnavailable": "Women drivers unavailable",
+  "womenNowNotAvailableSchedule": "Women now not available, please schedule a women ride",
+  "scheduleWomenRide": "Schedule women ride",
+  "noLuxuryDrivers": "No luxury drivers available",
+  "noLuxuryDriversSwitch": "No luxury drivers available right now. Would you like to switch ride type?",
+  "upgradeOfferBanner": "Expanding search to higher-tier drivers at the same fare"
 }

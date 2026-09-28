@@ -166,6 +166,7 @@ class _RiderTripDetailsScreenState extends State<RiderTripDetailsScreen> {
               pickupAddress: widget.pickupAddress,
               dropoffAddress: widget.dropoffAddress,
               estimatedFare: _selectedFare,
+              requestedRideType: _selectedRideType,
             ),
           ),
         );

@@ -897,6 +897,7 @@ class _RiderDropoffLocationScreenState
               pickupAddress: widget.pickupAddress,
               dropoffAddress: dropoffAddress,
               estimatedFare: _selectedFare,
+              requestedRideType: _selectedRideType,
             ),
           ),
         );
