@@ -381,6 +381,10 @@ class WebSocketService {
       case 'ride_started':
       case 'ride_completed':
       case 'search_timeout':
+      case 'women_driver_timeout':
+      case 'women_driver_unavailable':
+      case 'luxury_unavailable':
+      case 'upgrade_offer':
       case 'ride_cancelled':
       case 'payment_confirmed':
       case 'payment_finalized':

@@ -159,6 +159,22 @@ void _setupChatNotificationListener() {
         title = 'No Drivers Found';
         body = 'No drivers are available nearby right now';
         break;
+      case 'women_driver_timeout':
+        title = 'No Women Drivers Found';
+        body = 'No women drivers available. Switch ride type?';
+        break;
+      case 'women_driver_unavailable':
+        title = 'Women Drivers Unavailable';
+        body = 'Women now not available, please schedule a women ride';
+        break;
+      case 'luxury_unavailable':
+        title = 'No Luxury Drivers Found';
+        body = 'No luxury drivers available. Switch ride type?';
+        break;
+      case 'upgrade_offer':
+        title = 'Expanding Search';
+        body = 'Expanding search to higher-tier drivers at the same fare';
+        break;
       case 'payment_confirmed':
         title = 'Payment Confirmed';
         body = 'Payment has been confirmed';
