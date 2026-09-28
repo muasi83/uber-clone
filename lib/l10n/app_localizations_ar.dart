@@ -3410,71 +3410,70 @@ class AppLocalizationsAr extends AppLocalizations {
   String get appName => 'تاليجو';
 
   @override
-  String get noWomenDriversNearby => 'No women drivers nearby';
+  String get noWomenDriversNearby => 'لا توجد سائقات قريبات';
 
   @override
-  String get womenScheduleInstead => 'Please schedule a women ride instead';
+  String get womenScheduleInstead => 'يرجى جدولة رحلة نسائية بدلاً من ذلك';
 
   @override
-  String get womenDriversUnavailable => 'Women drivers unavailable';
+  String get womenDriversUnavailable => 'السائقات غير متوفرات';
 
   @override
   String get womenNowNotAvailableSchedule =>
-      'Women now not available, please schedule a women ride';
+      'السائقات غير متوفرات الآن، يرجى جدولة رحلة نسائية';
 
   @override
-  String get scheduleWomenRide => 'Schedule women ride';
+  String get scheduleWomenRide => 'جدولة رحلة نسائية';
 
   @override
-  String get noLuxuryDrivers => 'No luxury drivers available';
+  String get noLuxuryDrivers => 'لا توجد سيارات فاخرة متوفرة';
 
   @override
   String get noLuxuryDriversSwitch =>
-      'No luxury drivers available right now. Would you like to switch ride type?';
+      'لا توجد سيارات فاخرة متوفرة الآن. هل تريد تغيير نوع الرحلة؟';
 
   @override
   String get upgradeOfferBanner =>
-      'Expanding search to higher-tier drivers at the same fare';
+      'توسيع البحث لتشمل سائقين بفئة أعلى وبنفس الأجرة';
 
   @override
-  String requestedRide(Object rideType) {
-    return 'Requested: $rideType';
+  String requestedRide(String rideType) {
+    return 'النوع المطلوب: $rideType';
   }
 
   @override
-  String fareBasedOn(Object rideType) {
-    return 'Fare based on $rideType';
+  String fareBasedOn(String rideType) {
+    return 'الأجرة حسب: $rideType';
   }
 
   @override
-  String get freeUpgradeDriver =>
-      'Free upgrade — higher-tier car at the same fare';
+  String get freeUpgradeDriver => 'ترقية مجانية — سيارة بفئة أعلى وبنفس الأجرة';
 
   @override
-  String get notEligibleForRideType => 'No longer eligible for this ride type';
+  String get notEligibleForRideType => 'لم تعد مؤهلاً لهذا النوع من الرحلات';
 
   @override
-  String get womenOnlyRide => 'Women drivers only for this ride';
+  String get womenOnlyRide => 'هذه الرحلة للسائقات فقط';
 
   @override
-  String get gender => 'Gender';
+  String get gender => 'الجنس';
 
   @override
-  String get serviceTier => 'Service tier';
+  String get serviceTier => 'فئة الخدمة';
 
   @override
-  String get editEligibility => 'Edit gender & tier';
+  String get editEligibility => 'تعديل الجنس والفئة';
 
   @override
   String get tierServesLower =>
-      'Higher tiers also serve lower ride types at the same fare';
+      'الفئات الأعلى تخدم أيضًا أنواع الرحلات الأدنى بنفس الأجرة';
 
   @override
-  String get eligibilityUpdated => 'Eligibility updated';
+  String get eligibilityUpdated => 'تم تحديث الأهلية';
 
   @override
-  String get eligibilitySaveFailed => 'Failed to save eligibility';
+  String get eligibilitySaveFailed => 'فشل حفظ الأهلية';
 
   @override
-  String get pleaseWait => 'Please wait...';
+  String get pleaseWait => 'يرجى الانتظار...';
 }

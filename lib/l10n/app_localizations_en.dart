@@ -3447,12 +3447,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Expanding search to higher-tier drivers at the same fare';
 
   @override
-  String requestedRide(Object rideType) {
+  String requestedRide(String rideType) {
     return 'Requested: $rideType';
   }
 
   @override
-  String fareBasedOn(Object rideType) {
+  String fareBasedOn(String rideType) {
     return 'Fare based on $rideType';
   }
 

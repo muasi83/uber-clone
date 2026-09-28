@@ -1670,7 +1670,17 @@
   "noLuxuryDriversSwitch": "No luxury drivers available right now. Would you like to switch ride type?",
   "upgradeOfferBanner": "Expanding search to higher-tier drivers at the same fare",
   "requestedRide": "Requested: {rideType}",
+  "@requestedRide": {
+    "placeholders": {
+      "rideType": { "type": "String" }
+    }
+  },
   "fareBasedOn": "Fare based on {rideType}",
+  "@fareBasedOn": {
+    "placeholders": {
+      "rideType": { "type": "String" }
+    }
+  },
   "freeUpgradeDriver": "Free upgrade — higher-tier car at the same fare",
   "notEligibleForRideType": "No longer eligible for this ride type",
   "womenOnlyRide": "Women drivers only for this ride",

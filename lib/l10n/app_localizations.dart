@@ -6414,13 +6414,13 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Requested: {rideType}'**
-  String requestedRide(Object rideType);
+  String requestedRide(String rideType);
 
   /// No description provided for @fareBasedOn.
   ///
   /// In en, this message translates to:
   /// **'Fare based on {rideType}'**
-  String fareBasedOn(Object rideType);
+  String fareBasedOn(String rideType);
 
   /// No description provided for @freeUpgradeDriver.
   ///
