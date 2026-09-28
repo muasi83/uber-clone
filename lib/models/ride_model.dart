@@ -30,6 +30,12 @@ class Ride {
   final double? searchRadiusKm;
   final String? selectedRideType;
   final String? paymentMethod;
+  // Tiered dispatch (additive, null-safe for old payloads): requested type is
+  // always the fare basis; matchedTier/wasUpgraded audit free upgrades.
+  final String? requestedRideType;
+  final String? fareBasisType;
+  final String? matchedTier;
+  final bool wasUpgraded;
   final double? driverLatitude;
   final double? driverLongitude;
   final String? driverVehiclePhotoUrl;
@@ -66,6 +72,10 @@ class Ride {
     this.searchRadiusKm,
     this.selectedRideType,
     this.paymentMethod,
+    this.requestedRideType,
+    this.fareBasisType,
+    this.matchedTier,
+    this.wasUpgraded = false,
     this.driverLatitude,
     this.driverLongitude,
     this.driverVehiclePhotoUrl,
@@ -169,6 +179,14 @@ class Ride {
             : null,
         selectedRideType: json['selectedRideType'] as String?,
         paymentMethod: json['paymentMethod'] as String?,
+        requestedRideType: json['requestedRideType'] as String?
+            ?? json['rideType'] as String?
+            ?? 'ECONOMY',
+        fareBasisType: json['fareBasisType'] as String?
+            ?? json['rideType'] as String?
+            ?? 'ECONOMY',
+        matchedTier: json['matchedTier'] as String?,
+        wasUpgraded: json['wasUpgraded'] == true,
       );
     } catch (e) {
       print('❌ Error parsing Ride: $e');
@@ -204,6 +222,10 @@ class Ride {
     'searchRadiusKm': searchRadiusKm,
     'selectedRideType': selectedRideType,
     'paymentMethod': paymentMethod,
+    'requestedRideType': requestedRideType,
+    'fareBasisType': fareBasisType,
+    'matchedTier': matchedTier,
+    'wasUpgraded': wasUpgraded,
     'driverLatitude': driverLatitude,
     'driverLongitude': driverLongitude,
     'driverVehiclePhotoUrl': driverVehiclePhotoUrl,
@@ -235,6 +257,8 @@ class DriverProfile {
   final int? vehicleYear;
   final String? verificationStatus;
   final DateTime? verifiedAt;
+  // Driver capability tier (admin-set, default ECONOMY for old payloads).
+  final String serviceTier;
 
   DriverProfile({
     this.id,
@@ -256,6 +280,7 @@ class DriverProfile {
     this.vehicleYear,
     this.verificationStatus,
     this.verifiedAt,
+    this.serviceTier = 'ECONOMY',
   });
 
 factory DriverProfile.fromJson(Map<String, dynamic> json) {
@@ -315,6 +340,7 @@ factory DriverProfile.fromJson(Map<String, dynamic> json) {
       verifiedAt: json['verifiedAt'] != null
           ? DateTime.tryParse(json['verifiedAt'] as String)
           : null,
+      serviceTier: json['serviceTier'] as String? ?? 'ECONOMY',
     );
   } catch (e) {
     print('❌ Error parsing DriverProfile: $e');
@@ -343,5 +369,6 @@ factory DriverProfile.fromJson(Map<String, dynamic> json) {
     'vehicleYear': vehicleYear,
     'verificationStatus': verificationStatus,
     'verifiedAt': verifiedAt?.toIso8601String(),
+    'serviceTier': serviceTier,
   };
 }
