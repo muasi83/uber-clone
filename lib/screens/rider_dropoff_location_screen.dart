@@ -12,6 +12,7 @@ import '../services/location_service.dart';
 import '../services/place_search_service.dart';
 import '../services/driver_service.dart';
 import '../services/ride_service.dart';
+import '../services/ride_availability_service.dart';
 import '../services/storage_service.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/address_utils.dart';
@@ -114,6 +115,8 @@ class _RiderDropoffLocationScreenState
   String _selectedPaymentMethod = 'CASH';
   double _selectedFare = 0.0;
   bool _isSubmitting = false;
+  // Women availability probe (fail-closed: null/unknown => Women disabled).
+  bool? _womenAvailable;
 
   // Pulse animation
   Timer? _dotTimer;
@@ -431,6 +434,7 @@ class _RiderDropoffLocationScreenState
         _routeDurationMin = result.durationMinutes;
         _isLoadingRoute = false;
       });
+      _refreshWomenAvailability();
       if (_isAutoReviewing) _autoShowReview();
     } catch (e) {
       if (mounted) setState(() => _isLoadingRoute = false);
@@ -438,10 +442,23 @@ class _RiderDropoffLocationScreenState
     }
   }
 
+  /// Women availability probe at pickup (debounced + cached, fail-closed).
+  /// Refresh on route calc; pickup is fixed on this screen.
+  void _refreshWomenAvailability() {
+    RideAvailabilityService.checkDebounced(
+      rideType: 'WOMEN_DRIVER',
+      lat: widget.pickupLat,
+      lng: widget.pickupLng,
+      onResult: (result) {
+        if (!mounted) return;
+        setState(() => _womenAvailable = result.available);
+      },
+    );
+  }
+
   // ═════════════════════════════════════════════════════════════════
   // DRIVER MARKERS
   // ═════════════════════════════════════════════════════════════════
-
   Future<void> _initYellowPin() async {
     _yellowPinMarker = await getYellowPinMarker();
   }
@@ -839,6 +856,13 @@ class _RiderDropoffLocationScreenState
       final token = StorageService.getToken();
       if (token == null) {
         _showError(AppLocalizations.of(context).authenticationError);
+        return;
+      }
+
+      // Fail-closed: Women requests need a fresh available=true probe.
+      if (_selectedRideType == 'WOMEN_DRIVER' && _womenAvailable != true) {
+        final l10n = AppLocalizations.of(context);
+        _showError('${l10n.noWomenDriversNearby}. ${l10n.womenScheduleInstead}.');
         return;
       }
 
@@ -1474,6 +1498,11 @@ GoogleMap(
                       rideTypes: rideTypes,
                       selectedApiName: _selectedRideType,
                       variant: RideTypeSelectorVariant.cardHorizontal,
+                      disabledApiNames: _womenAvailable == true
+                          ? const {}
+                          : const {'WOMEN_DRIVER'},
+                      disabledReason:
+                          AppLocalizations.of(context).noWomenDriversNearby,
                       onChanged: (type) {
                         setState(() {
                           _selectedRideType = type;

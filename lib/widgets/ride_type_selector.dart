@@ -29,6 +29,10 @@ class RideTypeSelector extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final RideTypeSelectorVariant variant;
   final double? distanceKm;
+  // Availability gating: tiles in [disabledApiNames] are greyed out and ignore
+  // taps; [disabledReason] is shown as the caption on disabled tiles.
+  final Set<String> disabledApiNames;
+  final String? disabledReason;
 
   const RideTypeSelector({
     super.key,
@@ -37,6 +41,8 @@ class RideTypeSelector extends StatelessWidget {
     required this.onChanged,
     this.variant = RideTypeSelectorVariant.card,
     this.distanceKm,
+    this.disabledApiNames = const {},
+    this.disabledReason,
   });
 
   static String toApiName(String displayName) =>
@@ -85,14 +91,17 @@ class RideTypeSelector extends StatelessWidget {
       children: rideTypes.map((rt) {
         final apiName = toApiName(rt.name);
         final isSelected = selectedApiName == apiName;
+        final isDisabled = disabledApiNames.contains(apiName);
         final fare = distanceKm != null
             ? rt.baseFare + distanceKm! * rt.perKmRate
             : null;
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.md),
           child: GestureDetector(
-            onTap: () => onChanged(apiName),
-            child: AnimatedContainer(
+            onTap: isDisabled ? null : () => onChanged(apiName),
+            child: Opacity(
+              opacity: isDisabled ? 0.45 : 1.0,
+              child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
               decoration: BoxDecoration(
@@ -144,7 +153,9 @@ class RideTypeSelector extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            rt.description,
+                            isDisabled && disabledReason != null
+                                ? disabledReason!
+                                : rt.description,
                             style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textTertiary,
@@ -197,6 +208,7 @@ class RideTypeSelector extends StatelessWidget {
                   ],
                 ),
               ),
+              ),
             ),
           ),
         );
@@ -213,6 +225,7 @@ class RideTypeSelector extends StatelessWidget {
           children: rideTypes.map((rt) {
             final apiName = toApiName(rt.name);
             final isSelected = selectedApiName == apiName;
+            final isDisabled = disabledApiNames.contains(apiName);
             final fare = distanceKm != null
                 ? rt.baseFare + distanceKm! * rt.perKmRate
                 : null;
@@ -221,7 +234,9 @@ class RideTypeSelector extends StatelessWidget {
               child: SizedBox(
                 width: 155,
                 child: GestureDetector(
-                  onTap: () => onChanged(apiName),
+                  onTap: isDisabled ? null : () => onChanged(apiName),
+                  child: Opacity(
+                    opacity: isDisabled ? 0.45 : 1.0,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeInOut,
@@ -279,7 +294,9 @@ class RideTypeSelector extends StatelessWidget {
                               ),
                               const SizedBox(height: 1),
                               Text(
-                                rt.description,
+                                isDisabled && disabledReason != null
+                                    ? disabledReason!
+                                    : rt.description,
                                 style: const TextStyle(
                                   fontSize: 10,
                                   color: AppColors.textTertiary,
@@ -334,6 +351,7 @@ class RideTypeSelector extends StatelessWidget {
                         ],
                       ),
                     ),
+                    ),
                   ),
                 ),
               ),
@@ -351,10 +369,13 @@ class RideTypeSelector extends StatelessWidget {
         children: rideTypes.map((rt) {
           final apiName = toApiName(rt.name);
           final isSelected = selectedApiName == apiName;
+          final isDisabled = disabledApiNames.contains(apiName);
           return Padding(
             padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
             child: GestureDetector(
-              onTap: () => onChanged(apiName),
+              onTap: isDisabled ? null : () => onChanged(apiName),
+              child: Opacity(
+                opacity: isDisabled ? 0.45 : 1.0,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(
@@ -398,6 +419,7 @@ class RideTypeSelector extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
                 ),
               ),
             ),

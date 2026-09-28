@@ -6361,6 +6361,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Taligo'**
   String get appName;
+
+  /// No description provided for @noWomenDriversNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'No women drivers nearby'**
+  String get noWomenDriversNearby;
+
+  /// No description provided for @womenScheduleInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Please schedule a women ride instead'**
+  String get womenScheduleInstead;
 }
 
 class _AppLocalizationsDelegate

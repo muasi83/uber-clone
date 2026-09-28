@@ -3408,4 +3408,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get appName => 'تاليجو';
+
+  @override
+  String get noWomenDriversNearby => 'No women drivers nearby';
+
+  @override
+  String get womenScheduleInstead => 'Please schedule a women ride instead';
 }

@@ -114,6 +114,46 @@ class RideService {
     }
   }
 
+  // Check ride-type availability near a point (RIDER pre-request gating).
+  // Returns null when unknown (network/error) — callers treat unknown as
+  // unavailable (fail-closed) until a fresh available=true arrives.
+  static Future<({bool available, int count, double radiusKm})?> checkAvailability({
+    required String rideType,
+    required double latitude,
+    required double longitude,
+    double? radiusKm,
+    required String token,
+  }) async {
+    try {
+      final qp = <String, String>{
+        'rideType': rideType,
+        'latitude': '$latitude',
+        'longitude': '$longitude',
+      };
+      if (radiusKm != null) qp['radiusKm'] = '$radiusKm';
+      final url = Uri.parse('${StorageService.getServerUrl()}/api/rides/availability')
+          .replace(queryParameters: qp);
+
+      final response = await http
+          .get(url, headers: _headers(token: token))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return (
+          available: json['available'] == true,
+          count: (json['count'] as num?)?.toInt() ?? 0,
+          radiusKm: (json['radiusKm'] as num?)?.toDouble() ?? 15.0,
+        );
+      }
+      addDebugMessage('❌ Availability check: ${response.statusCode}');
+      return null;
+    } catch (e) {
+      addDebugMessage('❌ Availability exception: $e');
+      return null;
+    }
+  }
+
   // Get available rides (DRIVER)
   static Future<List<Ride>> getAvailableRides(String token) async {
     try {

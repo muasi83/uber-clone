@@ -1660,5 +1660,7 @@
   "noExpiringDocuments": "No documents in this window",
   "welcomeToTaligo": "Welcome to Taligo",
   "hereToHelpWithTrips": "Here to help you with your trips",
-  "appName": "Taligo"
+  "appName": "Taligo",
+  "noWomenDriversNearby": "No women drivers nearby",
+  "womenScheduleInstead": "Please schedule a women ride instead"
 }

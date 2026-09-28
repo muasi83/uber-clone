@@ -3418,4 +3418,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appName => 'Taligo';
+
+  @override
+  String get noWomenDriversNearby => 'No women drivers nearby';
+
+  @override
+  String get womenScheduleInstead => 'Please schedule a women ride instead';
 }
