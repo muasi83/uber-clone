@@ -79,6 +79,7 @@ class _DriverNavigationToRiderScreenState
   static const double _followMinMoveMeters = 50;
 
   StreamSubscription<Position>? _positionStream;
+  Timer? _routeDebounceTimer;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
   LatLng? _animatedDriverPos;
   Timer? _driverAnimTimer;
@@ -198,7 +199,12 @@ class _DriverNavigationToRiderScreenState
 
         if (mounted) {
           _updateMarkers();
-          _updateRoute();
+          // R1: debounce route recalc (1500ms, same as rider side).
+          // Marker animation above stays per-fix — only the paid route call slows.
+          _routeDebounceTimer?.cancel();
+          _routeDebounceTimer = Timer(const Duration(milliseconds: 1500), () {
+            if (mounted) _updateRoute();
+          });
           setState(() {});
         }
       },
@@ -1061,6 +1067,7 @@ class _DriverNavigationToRiderScreenState
     _stopLocationStream();
     _rideEventsSub?.cancel();
     _driverAnimTimer?.cancel();
+    _routeDebounceTimer?.cancel();
     mapController?.dispose();
     BackgroundNavigationService().stop();
     super.dispose();

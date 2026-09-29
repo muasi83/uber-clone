@@ -80,6 +80,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
   Timer? _paymentPollTimer;
 
   StreamSubscription<Position>? _positionStream;
+  Timer? _routeDebounceTimer;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
   LatLng? _animatedDriverPos;
   Timer? _driverAnimTimer;
@@ -203,7 +204,12 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
 
         if (mounted) {
           _updateMarkers();
-          _updateRoute();
+          // R1: debounce route recalc (1500ms, same as rider side).
+          // Marker animation above stays per-fix — only the paid route call slows.
+          _routeDebounceTimer?.cancel();
+          _routeDebounceTimer = Timer(const Duration(milliseconds: 1500), () {
+            if (mounted) _updateRoute();
+          });
           setState(() {});
         }
       },
@@ -1369,6 +1375,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
     _cancelFollowResume();
     _stopLocationStream();
     _driverAnimTimer?.cancel();
+    _routeDebounceTimer?.cancel();
     _rideTimer?.cancel();
     _paymentPollTimer?.cancel();
     _rideEventsSub?.cancel();
