@@ -487,12 +487,25 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
 
   /// R3: POST driver location at most every 15s. The timer advances ONLY on
   /// success — failures retry on the next fix (fail-open to old behavior).
-  /// [force] bypasses the gate for lifecycle moments (arrived/start/complete).
+  /// R5: skipped while the background writer is fresh (≤20s); if the
+  /// background flag is stale (>20s without success), foreground posts again.
+  /// [force] bypasses all gates for lifecycle moments (arrived/start/complete).
   Future<bool> _postRestThrottled(double lat, double lng,
       {bool force = false}) async {
     final token = StorageService.getToken();
     if (token == null) return false;
     final now = DateTime.now();
+    if (!force) {
+      final bg = BackgroundNavigationService();
+      if (bg.isRunning) {
+        final lastBg = bg.lastRestSuccessAt;
+        if (lastBg != null &&
+            now.difference(lastBg) <= const Duration(seconds: 20)) {
+          addDebugMessage('⏭️ REST skipped: background writer fresh');
+          return true;
+        }
+      }
+    }
     if (!force &&
         _lastRestPostAt != null &&
         now.difference(_lastRestPostAt!) < _restMinInterval) {

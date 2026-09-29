@@ -19,10 +19,13 @@ class BackgroundNavigationService {
   int? _rideId;
   String? _navigationType;
   bool _serviceInitialized = false;
+  // R5: last successful background REST post (foreground defers to it).
+  DateTime? _lastRestSuccessAt;
 
   static const String _channelId = 'navigation_channel';
 
   bool get isRunning => _isRunning;
+  DateTime? get lastRestSuccessAt => _lastRestSuccessAt;
 
   Future<void> initialize() async {
     if (_serviceInitialized) return;
@@ -100,6 +103,8 @@ class BackgroundNavigationService {
       await service.startService();
       addDebugMessage('✅ startService() returned successfully');
       _isRunning = true;
+      // R5: drop any timestamp from a previous ride.
+      _lastRestSuccessAt = null;
 
       _locationTimer = Timer.periodic(const Duration(seconds: 5), (_) {
         _sendLocation();
@@ -148,12 +153,14 @@ class BackgroundNavigationService {
 
       final token = StorageService.getToken();
       if (token != null) {
-        await RideService.updateDriverLocation(
+        final ok = await RideService.updateDriverLocation(
           rideId: rideId,
           latitude: position.latitude,
           longitude: position.longitude,
           token: token,
         );
+        // R5: foreground fail-open reads this timestamp.
+        if (ok) instance._lastRestSuccessAt = DateTime.now();
       }
 
       WebSocketService.sendRideMessage('driver_location', {
