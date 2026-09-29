@@ -83,6 +83,9 @@ class _DriverNavigationToRiderScreenState
   // R3: REST backup throttle (WS stays live per processed fix).
   DateTime? _lastRestPostAt;
   static const Duration _restMinInterval = Duration(seconds: 15);
+  // R4: network/route gate — visuals (heading/marker/follow) stay per-fix.
+  LatLng? _lastProcessedFix;
+  DateTime? _lastProcessedAt;
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
   LatLng? _animatedDriverPos;
   Timer? _driverAnimTimer;
@@ -176,17 +179,31 @@ class _DriverNavigationToRiderScreenState
           '📍 Driver moved 50m+ — ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
         );
 
-        try {
-          await _postRestThrottled(position.latitude, position.longitude);
+        // R4: process network + route work only on significant fixes.
+        // Dense fixes preserved within 500m of pickup (arrival UX).
+        final distToPickup = _distanceMeters(
+          newLocation,
+          LatLng(widget.pickupLat, widget.pickupLng),
+        );
+        final processFix = _shouldProcessFix(newLocation, distToPickup);
+        if (processFix) {
+          _lastProcessedFix = newLocation;
+          _lastProcessedAt = DateTime.now();
+        }
 
-          WebSocketService.sendRideMessage('driver_location', {
-            'driverId': StorageService.getUserId(),
-            'rideId': widget.rideId,
-            'latitude': position.latitude,
-            'longitude': position.longitude,
-            'heading': position.heading,
-          });
-          addDebugMessage('✅ Rider notified of driver location via WebSocket');
+        try {
+          if (processFix) {
+            await _postRestThrottled(position.latitude, position.longitude);
+
+            WebSocketService.sendRideMessage('driver_location', {
+              'driverId': StorageService.getUserId(),
+              'rideId': widget.rideId,
+              'latitude': position.latitude,
+              'longitude': position.longitude,
+              'heading': position.heading,
+            });
+            addDebugMessage('✅ Rider notified of driver location via WebSocket');
+          }
         } catch (e) {
           addDebugMessage('⚠️ Failed to update rider location: $e');
         }
@@ -195,10 +212,12 @@ class _DriverNavigationToRiderScreenState
           _updateMarkers();
           // R1: debounce route recalc (1500ms, same as rider side).
           // Marker animation above stays per-fix — only the paid route call slows.
-          _routeDebounceTimer?.cancel();
-          _routeDebounceTimer = Timer(const Duration(milliseconds: 1500), () {
-            if (mounted) _updateRoute();
-          });
+          if (processFix) {
+            _routeDebounceTimer?.cancel();
+            _routeDebounceTimer = Timer(const Duration(milliseconds: 1500), () {
+              if (mounted) _updateRoute();
+            });
+          }
           setState(() {});
         }
       },
@@ -444,6 +463,23 @@ class _DriverNavigationToRiderScreenState
   }
 
   double _toRadians(double deg) => deg * (math.pi / 180.0);
+
+  /// R4: a fix earns network + route work if ANY is true:
+  /// within 500m of the target (dense arrival fixes), moved ≥25m since the
+  /// last processed fix, or ≥5s elapsed. Visuals stay per-fix regardless.
+  bool _shouldProcessFix(LatLng fix, double distToTargetM) {
+    if (distToTargetM <= 500) return true;
+    final now = DateTime.now();
+    final lastFix = _lastProcessedFix;
+    if (lastFix == null) return true;
+    if (_distanceMeters(lastFix, fix) >= 25) return true;
+    final lastAt = _lastProcessedAt;
+    if (lastAt == null ||
+        now.difference(lastAt) >= const Duration(seconds: 5)) {
+      return true;
+    }
+    return false;
+  }
 
   /// R3: POST driver location at most every 15s. The timer advances ONLY on
   /// success — failures retry on the next fix (fail-open to old behavior).
