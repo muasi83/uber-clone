@@ -81,6 +81,9 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
 
   StreamSubscription<Position>? _positionStream;
   Timer? _routeDebounceTimer;
+  // R3: REST backup throttle (WS stays live per processed fix).
+  DateTime? _lastRestPostAt;
+  static const Duration _restMinInterval = Duration(seconds: 15);
   StreamSubscription<Map<String, dynamic>>? _rideEventsSub;
   LatLng? _animatedDriverPos;
   Timer? _driverAnimTimer;
@@ -179,16 +182,7 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
         );
 
         try {
-          final token = StorageService.getToken();
-          if (token != null) {
-            await RideService.updateDriverLocation(
-              rideId: widget.rideId,
-              latitude: position.latitude,
-              longitude: position.longitude,
-              token: token,
-            );
-            addDebugMessage('✅ Rider notified of driver location via REST');
-          }
+          await _postRestThrottled(position.latitude, position.longitude);
 
           WebSocketService.sendRideMessage('driver_location', {
             'driverId': StorageService.getUserId(),
@@ -454,6 +448,39 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
 
   double _toRadians(double deg) => deg * (math.pi / 180.0);
 
+  /// R3: POST driver location at most every 15s. The timer advances ONLY on
+  /// success — failures retry on the next fix (fail-open to old behavior).
+  /// [force] bypasses the gate for lifecycle moments (arrived/start/complete).
+  Future<bool> _postRestThrottled(double lat, double lng,
+      {bool force = false}) async {
+    final token = StorageService.getToken();
+    if (token == null) return false;
+    final now = DateTime.now();
+    if (!force &&
+        _lastRestPostAt != null &&
+        now.difference(_lastRestPostAt!) < _restMinInterval) {
+      return true;
+    }
+    final ok = await RideService.updateDriverLocation(
+      rideId: widget.rideId,
+      latitude: lat,
+      longitude: lng,
+      token: token,
+    );
+    if (ok) {
+      _lastRestPostAt = DateTime.now();
+      addDebugMessage('✅ Rider notified of driver location via REST');
+    }
+    return ok;
+  }
+
+  /// Forced REST post at lifecycle moments (safe no-op without a fix yet).
+  Future<void> _forceRestPost() async {
+    final loc = _driverLocation;
+    if (loc == null) return;
+    await _postRestThrottled(loc.latitude, loc.longitude, force: true);
+  }
+
   Future<void> _startRide() async {
     try {
       setState(() {
@@ -467,6 +494,8 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
 
       final token = StorageService.getToken();
       if (token != null) {
+        // R3: force one fresh location so server state is consistent at start.
+        await _forceRestPost();
         await RideService.startRide(widget.rideId, token);
       }
 
@@ -628,6 +657,8 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> with Re
 
       final token = StorageService.getToken();
       if (token != null) {
+        // R3: force one fresh location so server state is consistent at finish.
+        await _forceRestPost();
         final ride = await RideService.completeRide(widget.rideId, token);
         if (ride != null && ride.paymentMethod != null) {
           _paymentMethod = ride.paymentMethod!;
