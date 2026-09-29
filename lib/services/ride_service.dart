@@ -482,13 +482,22 @@ class RideService {
     try {
       final url = '${StorageService.getServerUrl()}/api/rides/$rideId/location';
 
-      await http
+      final response = await http
           .post(
             Uri.parse(url),
             headers: _headers(token: token),
             body: jsonEncode({'latitude': latitude, 'longitude': longitude}),
           )
           .timeout(const Duration(seconds: 10));
+
+      // R3 safeguard: only HTTP 2xx counts as success. Anything else returns
+      // false so throttle timers don't advance on server errors (fail-open:
+      // the next fix retries instead of waiting out the interval).
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        addDebugMessage(
+            '⚠️ Location update rejected: ${response.statusCode}');
+        return false;
+      }
 
       return true;
     } catch (e) {
