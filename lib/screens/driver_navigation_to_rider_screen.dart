@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/ride_service.dart';
+import '../services/route_throttle_service.dart';
 import '../services/directions_service.dart';
 import '../services/background_navigation_service.dart';
 import '../services/storage_service.dart';
@@ -79,7 +80,6 @@ class _DriverNavigationToRiderScreenState
   static const double _followMinMoveMeters = 50;
 
   StreamSubscription<Position>? _positionStream;
-  Timer? _routeDebounceTimer;
   // R3: REST backup throttle (WS stays live per processed fix).
   DateTime? _lastRestPostAt;
   static const Duration _restMinInterval = Duration(seconds: 15);
@@ -139,7 +139,14 @@ class _DriverNavigationToRiderScreenState
       addDebugMessage('✅ Driver location: ${position.latitude}, ${position.longitude}');
 
       _updateMarkers();
-      _updateRoute();
+      // Screen-entry first route call (bounded: rare entries only).
+      RouteThrottleService.primeRoute(
+        rideId: widget.rideId,
+        fix: _driverLocation!,
+        request: () async {
+          if (mounted) await _updateRoute();
+        },
+      );
       _startLocationStream();
 
       if (mounted) setState(() {});
@@ -210,13 +217,16 @@ class _DriverNavigationToRiderScreenState
 
         if (mounted) {
           _updateMarkers();
-          // R1: debounce route recalc (1500ms, same as rider side).
-          // Marker animation above stays per-fix — only the paid route call slows.
+          // Route calls go through the trip-scoped throttle (500m OR 30s,
+          // debounced + serialized). Markers above stay per-fix.
           if (processFix) {
-            _routeDebounceTimer?.cancel();
-            _routeDebounceTimer = Timer(const Duration(milliseconds: 1500), () {
-              if (mounted) _updateRoute();
-            });
+            RouteThrottleService.maybeRequestRoute(
+              rideId: widget.rideId,
+              fix: newLocation,
+              request: () async {
+                if (mounted) await _updateRoute();
+              },
+            );
           }
           setState(() {});
         }
@@ -1145,7 +1155,6 @@ class _DriverNavigationToRiderScreenState
     _stopLocationStream();
     _rideEventsSub?.cancel();
     _driverAnimTimer?.cancel();
-    _routeDebounceTimer?.cancel();
     mapController?.dispose();
     BackgroundNavigationService().stop();
     super.dispose();
